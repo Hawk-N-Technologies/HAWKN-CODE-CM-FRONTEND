@@ -8,6 +8,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLE_DASHBOARD_PATH } from "../../constants/roles";
 import { EMAIL_PATTERN, required } from "../../utils/validators";
 import logo from "../../assets/hawkn-logo.png";
+import logo2 from "../../assets/hawkn-logo-2.png";
 
 /**
  * Single login page for every role. After authenticating, the user is
@@ -48,9 +49,9 @@ function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-cm-navy-900 via-cm-navy-950 to-cm-navy-950" />
         <div className="relative">
           <img
-            src={logo}
+            src={logo2}
             alt="Hawk'N Technologies"
-            className="h-10 w-auto rounded bg-white/5 p-1"
+            className="h-15 w-auto rounded bg-white/5 p-1"
           />
         </div>
         <div className="relative max-w-sm">
@@ -74,7 +75,7 @@ function Login() {
             <img
               src={logo}
               alt="Hawk'N Technologies"
-              className="h-9 w-auto lg:hidden"
+              className="h-12 w-auto lg:hidden"
             />
             <div className="text-center lg:text-left">
               <h2 className="text-2xl font-bold text-cm-text">Sign in</h2>
