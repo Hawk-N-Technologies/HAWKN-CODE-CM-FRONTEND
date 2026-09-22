@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import logo from "../../assets/hawkn-logo.jpeg";
+import logo from "../../assets/hawkn-logo.png";
 
 /**
  * Fixed dark-navy app sidebar, shared by every role's DashboardLayout.
@@ -31,7 +31,11 @@ function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
         ].join(" ")}
       >
         <div className="flex h-16 shrink-0 items-center gap-2 border-b border-white/10 px-5">
-          <img src={logo} alt="Hawk'N Technologies" className="h-8 w-auto rounded bg-white/5 p-1" />
+          <img
+            src={logo}
+            alt="Hawk'N Technologies"
+            className="h-8 w-auto rounded bg-white/5 p-1"
+          />
         </div>
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
@@ -53,7 +57,7 @@ function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
                           "flex items-center gap-3 rounded-cm-md px-3 py-2 text-sm font-medium",
                           "transition-colors duration-150",
                           isActive
-                            ? "bg-[#000052] text-white"
+                            ? "bg-cm-blue-600 text-white"
                             : "text-cm-text-inverse/70 hover:bg-white/5 hover:text-white",
                         ].join(" ")
                       }
