@@ -20,6 +20,11 @@ const ICONS = {
       <path d="M3 21h18M6 21V7l6-4 6 4v14M10 21v-6h4v6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  policies: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M14 3v5a2 2 0 0 0 2 2h5M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2ZM9 13h6M9 17h6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   people: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <circle cx="9" cy="8" r="3" />
@@ -79,6 +84,7 @@ const ADMIN_NAV_SECTIONS = [
     title: "Company",
     items: [
       { label: "Company Profile", path: "/admin/company-profile", icon: ICONS.company },
+      { label: "Company Policies", path: "/admin/company-policies", icon: ICONS.policies },
       { label: "People Management", path: "/admin/people-management", icon: ICONS.people },
       { label: "HRMS", path: "/admin/hrms", icon: ICONS.hrms },
     ],
