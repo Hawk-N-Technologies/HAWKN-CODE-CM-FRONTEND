@@ -1,0 +1,52 @@
+/**
+ * CM Design Tokens
+ * ------------------------------------------------------------------
+ * Centralized design system for the CM Company Management System.
+ * Tailwind v4 reads this @theme block and generates matching utility
+ * classes (e.g. --color-cm-navy-900 -> bg-cm-navy-900, text-cm-navy-900).
+ *
+ * Do not hardcode raw hex values in components -- reference these
+ * tokens via Tailwind utilities so the theme stays centralized and
+ * easy to re-brand from one place.
+ */
+
+@theme {
+  /* Primary -- deep navy (sidebar, headings, brand) */
+  --color-cm-navy-950: #0a1830;
+  --color-cm-navy-900: #0f2242;
+  --color-cm-navy-800: #16305a;
+  --color-cm-navy-700: #1e3f73;
+
+  /* Primary action -- royal / medium blue (buttons, links, active states) */
+  --color-cm-blue-700: #1d4ed8;
+  --color-cm-blue-600: #2563eb;
+  --color-cm-blue-500: #3b82f6;
+  --color-cm-blue-100: #dbeafe;
+  --color-cm-blue-50: #eff6ff;
+
+  /* Secondary status accent -- light blue / purple */
+  --color-cm-purple-500: #8b5cf6;
+  --color-cm-purple-100: #ede9fe;
+
+  /* Background & surfaces */
+  --color-cm-bg: #f5f7fa;
+  --color-cm-card: #ffffff;
+  --color-cm-border: #e2e8f0;
+
+  /* Status colors */
+  --color-cm-success-600: #16a34a;
+  --color-cm-success-100: #dcfce7;
+  --color-cm-warning-600: #d97706;
+  --color-cm-warning-100: #fef3c7;
+  --color-cm-danger-600: #dc2626;
+  --color-cm-danger-100: #fee2e2;
+
+  /* Text */
+  --color-cm-text: #0f172a;
+  --color-cm-text-muted: #64748b;
+  --color-cm-text-inverse: #f8fafc;
+
+  /* Shape */
+  --radius-cm-md: 0.5rem;
+  --radius-cm-lg: 0.75rem;
+}
