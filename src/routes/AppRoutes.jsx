@@ -5,6 +5,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoutes from "./ProtectedRoutes";
 import RoleRoute from "./RoleRoute";
 import AdminDashboard from "../pages/admin/Dashboard";
+import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import { ADMIN_NAV_SECTIONS } from "./routeConfig";
 import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
@@ -30,10 +31,11 @@ function AppRoutes() {
         <Route element={<RoleRoute allowedRoles={[ROLES.ADMIN]} />}>
           <Route element={<DashboardLayout sections={ADMIN_NAV_SECTIONS} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            {/* Remaining Admin modules (Company Profile, People Management,
-                HRMS, Clients, Projects, Operations, Deployment, Development,
-                Delivery, Notifications) are linked from the sidebar already
-                and will route here as each page gets built. */}
+            <Route path="/admin/company-profile" element={<AdminCompanyProfile />} />
+            {/* Remaining Admin modules (People Management, HRMS, Clients,
+                Projects, Operations, Deployment, Development, Delivery,
+                Notifications) are linked from the sidebar already and will
+                route here as each page gets built. */}
           </Route>
         </Route>
       </Route>

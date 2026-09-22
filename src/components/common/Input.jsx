@@ -20,6 +20,8 @@ const Input = forwardRef(function Input(
     required = false,
     disabled = false,
     readOnly = false,
+    multiline = false,
+    rows = 4,
     className = "",
     containerClassName = "",
     ...rest
@@ -34,6 +36,19 @@ const Input = forwardRef(function Input(
 
   const isPassword = type === "password";
   const resolvedType = isPassword && showPassword ? "text" : type;
+
+  const fieldClassName = [
+    "w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text",
+    "placeholder:text-cm-text-muted",
+    "transition-colors duration-150",
+    "focus:outline-none focus:ring-2 focus:ring-cm-blue-500 focus:border-cm-blue-500",
+    "disabled:cursor-not-allowed disabled:bg-cm-bg disabled:text-cm-text-muted",
+    "read-only:bg-cm-bg",
+    error ? "border-cm-danger-600" : "border-cm-border",
+    multiline ? "py-2 resize-y" : "h-10",
+    isPassword ? "pr-10" : "",
+    className,
+  ].join(" ");
 
   return (
     <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
@@ -52,32 +67,39 @@ const Input = forwardRef(function Input(
       )}
 
       <div className="relative">
-        <input
-          ref={ref}
-          id={inputId}
-          name={name}
-          type={resolvedType}
-          placeholder={placeholder}
-          disabled={disabled}
-          readOnly={readOnly}
-          required={required}
-          aria-invalid={Boolean(error) || undefined}
-          aria-describedby={error ? errorId : helperText ? helperId : undefined}
-          className={[
-            "h-10 w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text",
-            "placeholder:text-cm-text-muted",
-            "transition-colors duration-150",
-            "focus:outline-none focus:ring-2 focus:ring-cm-blue-500 focus:border-cm-blue-500",
-            "disabled:cursor-not-allowed disabled:bg-cm-bg disabled:text-cm-text-muted",
-            "read-only:bg-cm-bg",
-            error ? "border-cm-danger-600" : "border-cm-border",
-            isPassword ? "pr-10" : "",
-            className,
-          ].join(" ")}
-          {...rest}
-        />
+        {multiline ? (
+          <textarea
+            ref={ref}
+            id={inputId}
+            name={name}
+            placeholder={placeholder}
+            disabled={disabled}
+            readOnly={readOnly}
+            required={required}
+            rows={rows}
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={fieldClassName}
+            {...rest}
+          />
+        ) : (
+          <input
+            ref={ref}
+            id={inputId}
+            name={name}
+            type={resolvedType}
+            placeholder={placeholder}
+            disabled={disabled}
+            readOnly={readOnly}
+            required={required}
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={fieldClassName}
+            {...rest}
+          />
+        )}
 
-        {isPassword && (
+        {isPassword && !multiline && (
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
