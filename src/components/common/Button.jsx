@@ -11,7 +11,7 @@ import { forwardRef } from "react";
  */
 const VARIANT_CLASSES = {
   primary:
-    "bg-cm-blue-600 text-white hover:bg-cm-blue-700 focus-visible:outline-cm-blue-600 disabled:bg-cm-blue-600/50",
+    "bg-[#000052] text-white hover:bg-cm-blue-700 focus-visible:outline-cm-blue-600 disabled:bg-cm-blue-600/50",
   secondary:
     "bg-cm-navy-900 text-white hover:bg-cm-navy-800 focus-visible:outline-cm-navy-900 disabled:bg-cm-navy-900/50",
   outline:

@@ -7,7 +7,7 @@ import { showToast } from "../../components/common/Toast";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLE_DASHBOARD_PATH } from "../../constants/roles";
 import { EMAIL_PATTERN, required } from "../../utils/validators";
-import logo from "../../assets/hawkn-logo.jpeg";
+import logo from "../../assets/hawkn-logo.png";
 
 /**
  * Single login page for every role. After authenticating, the user is
@@ -47,7 +47,11 @@ function Login() {
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-cm-navy-950 p-12 text-cm-text-inverse lg:flex">
         <div className="absolute inset-0 bg-gradient-to-br from-cm-navy-900 via-cm-navy-950 to-cm-navy-950" />
         <div className="relative">
-          <img src={logo} alt="Hawk'N Technologies" className="h-10 w-auto rounded bg-white/5 p-1" />
+          <img
+            src={logo}
+            alt="Hawk'N Technologies"
+            className="h-10 w-auto rounded bg-white/5 p-1"
+          />
         </div>
         <div className="relative max-w-sm">
           <h1 className="text-3xl font-bold leading-tight">
@@ -67,7 +71,11 @@ function Login() {
       <div className="flex w-full flex-col items-center justify-center px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center gap-4 lg:items-start">
-            <img src={logo} alt="Hawk'N Technologies" className="h-9 w-auto lg:hidden" />
+            <img
+              src={logo}
+              alt="Hawk'N Technologies"
+              className="h-9 w-auto lg:hidden"
+            />
             <div className="text-center lg:text-left">
               <h2 className="text-2xl font-bold text-cm-text">Sign in</h2>
               <p className="mt-1 text-sm text-cm-text-muted">
