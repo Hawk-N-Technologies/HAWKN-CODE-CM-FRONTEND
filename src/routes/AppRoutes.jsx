@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "../pages/auth/Login";
+import NotFound from "../pages/NotFound";
 
 /**
  * Route tree for the app.
@@ -14,14 +15,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route
-        path="*"
-        element={
-          <div className="flex min-h-screen items-center justify-center bg-cm-bg text-cm-text-muted">
-            Page not found.
-          </div>
-        }
-      />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
