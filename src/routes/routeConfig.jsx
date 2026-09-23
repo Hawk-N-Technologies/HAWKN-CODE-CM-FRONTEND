@@ -19,125 +19,56 @@ import { ROLES } from "../constants/roles";
  * route block (see AppRoutes.jsx).
  */
 const ICONS = {
-  overview: <LayoutDashboard aria-hidden="true" />,
-  company: <Building2 aria-hidden="true" />,
-  people: <Users aria-hidden="true" />,
-  hrms: <Settings2 aria-hidden="true" />,
-  clients: <UserRound aria-hidden="true" />,
-  projects: <FolderKanban aria-hidden="true" />,
-  operations: <Workflow aria-hidden="true" />,
-  deployment: <Rocket aria-hidden="true" />,
-  development: <Activity aria-hidden="true" />,
-  delivery: <PackageCheckIcon aria-hidden="true" />,
-  notifications: <Bell aria-hidden="true" />,
-};
-
-// Kept local so the sidebar only needs lucide-react icons.
-function PackageCheckIcon(props) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5M12 22V12" />
-      <path d="m9.5 16.5 1.5 1.5 3.5-3.5" />
+  overview: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
     </svg>
-  );
-}
+  ),
+  company: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M3 21h18M6 21V7l6-4 6 4v14M10 21v-6h4v6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  policies: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M14 3v5a2 2 0 0 0 2 2h5M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2ZM9 13h6M9 17h6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  sop: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  people: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="9" cy="8" r="3" />
+      <path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6M16 11a3 3 0 1 0 0-6M17 21c0-2.2-.9-4-2.3-5.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+};
 
 const ADMIN_NAV_SECTIONS = [
   {
-    items: [
-      {
-        label: "Overview",
-        path: "/admin/dashboard",
-        icon: ICONS.overview,
-      },
-    ],
+    items: [{ label: "Overview", path: "/admin/dashboard", icon: ICONS.overview }],
   },
   {
     title: "Company",
     items: [
-      {
-        label: "Company Profile & Policies",
-        path: "/admin/company-profile",
-        icon: ICONS.company,
-      },
-      {
-        label: "People Management",
-        path: "/admin/people-management",
-        icon: ICONS.people,
-      },
-      {
-        label: "HRMS",
-        path: "/admin/hrms",
-        icon: ICONS.hrms,
-      },
-      {
-        label: "Client Management",
-        path: "/admin/client-management",
-        icon: ICONS.clients,
-      },
-      {
-        label: "Project Management",
-        path: "/admin/project-management",
-        icon: ICONS.projects,
-      },
-      {
-        label: "Operations",
-        path: "/admin/operations",
-        icon: ICONS.operations,
-      },
-      {
-        label: "Deployment Planning",
-        path: "/admin/deployment-planning",
-        icon: ICONS.deployment,
-      },
-      {
-        label: "Development Monitoring",
-        path: "/admin/development-monitoring",
-        icon: ICONS.development,
-      },
-      {
-        label: "Delivery & Handover",
-        path: "/admin/delivery-handover",
-        icon: ICONS.delivery,
-      },
-      {
-        label: "Notifications",
-        path: "/admin/notifications",
-        icon: ICONS.notifications,
-      },
+      { label: "Company Profile", path: "/admin/company-profile", icon: ICONS.company },
+      { label: "Company Policies", path: "/admin/company-policies", icon: ICONS.policies },
+      { label: "People Management", path: "/admin/people-management", icon: ICONS.people },
+      { label: "SOP Management", path: "/admin/sop-management", icon: ICONS.sop },
     ],
   },
 ];
 
-const BD_NAV_SECTIONS = [
-  {
-    items: [
-      {
-        label: "Overview",
-        path: "/bd/dashboard",
-        icon: ICONS.overview,
-      },
-    ],
-  },
-  {
-    items: [
-      {
-        label: "Clients",
-        path: "/bd/clients",
-        icon: ICONS.clients,
-      },
-    ],
-  },
-];
-
+/**
+ * Nav sections keyed by role. Only ADMIN is populated for now — add
+ * HR/BD/etc. here as each role's module pages get built out.
+ */
 export const NAV_SECTIONS_BY_ROLE = {
   [ROLES.ADMIN]: ADMIN_NAV_SECTIONS,
   [ROLES.BD]: BD_NAV_SECTIONS,
