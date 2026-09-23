@@ -54,13 +54,13 @@ function Client() {
       (c) =>
         c.companyName.toLowerCase().includes(query) ||
         c.contactName.toLowerCase().includes(query) ||
-        c.email.toLowerCase().includes(query)
+        c.email.toLowerCase().includes(query),
     );
   }, [clients, search]);
 
   const paginated = useMemo(
     () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page]
+    [filtered, page],
   );
 
   const handleDeleteClick = async (id) => {
@@ -100,17 +100,27 @@ function Client() {
     {
       key: "status",
       header: "Status",
-      render: (row) => <Badge tone={STATUS_TONE[row.status] ?? "neutral"}>{row.status}</Badge>,
+      render: (row) => (
+        <Badge tone={STATUS_TONE[row.status] ?? "neutral"}>{row.status}</Badge>
+      ),
     },
     {
       key: "actions",
       header: "",
       render: (row) => (
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => navigate(`/bd/clients/${row.id}`)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/bd/clients/${row.id}`)}
+          >
             View
           </Button>
-          <Button size="sm" variant="danger" onClick={() => handleDeleteClick(row.id)}>
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => handleDeleteClick(row.id)}
+          >
             {pendingDeleteId === row.id ? "Confirm?" : "Remove"}
           </Button>
         </div>
@@ -123,7 +133,9 @@ function Client() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-cm-text">Client Management</h1>
-          <p className="mt-1 text-sm text-cm-text-muted">Leads and active clients.</p>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            Leads and active clients.
+          </p>
         </div>
         <Button onClick={() => navigate("/bd/clients/new")}>Add Client</Button>
       </div>
