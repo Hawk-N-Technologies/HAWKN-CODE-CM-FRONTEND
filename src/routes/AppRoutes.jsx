@@ -7,7 +7,13 @@ import RoleRoute from "./RoleRoute";
 import AdminDashboard from "../pages/admin/Dashboard";
 import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import AdminCompanyPolicies from "../pages/admin/CompanyPolicies";
-import { ADMIN_NAV_SECTIONS } from "./routeConfig";
+import AdminPeopleManagement from "../pages/admin/PeopleManagement";
+import AdminSOPManagement from "../pages/admin/SOPManagement";
+import BDDashboard from "../pages/bd/Dashboard";
+import BDClient from "../pages/bd/Client";
+import BDCreateClient from "../pages/bd/CreateClient";
+import BDClientDetails from "../pages/bd/ClientDetails";
+import { ADMIN_NAV_SECTIONS, BD_NAV_SECTIONS } from "./routeConfig";
 import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
 
@@ -34,10 +40,20 @@ function AppRoutes() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/company-profile" element={<AdminCompanyProfile />} />
             <Route path="/admin/company-policies" element={<AdminCompanyPolicies />} />
-            {/* Remaining Admin modules (People Management, HRMS, Clients,
-                Projects, Operations, Deployment, Development, Delivery,
-                Notifications) are linked from the sidebar already and will
-                route here as each page gets built. */}
+            <Route path="/admin/people-management" element={<AdminPeopleManagement />} />
+            <Route path="/admin/sop-management" element={<AdminSOPManagement />} />
+            {/* That's every Admin page in the current scaffold — Phase 2
+                for Admin is complete. */}
+          </Route>
+        </Route>
+
+        <Route element={<RoleRoute allowedRoles={[ROLES.BD]} />}>
+          <Route element={<DashboardLayout sections={BD_NAV_SECTIONS} />}>
+            <Route path="/bd/dashboard" element={<BDDashboard />} />
+            <Route path="/bd/clients" element={<BDClient />} />
+            <Route path="/bd/clients/new" element={<BDCreateClient />} />
+            <Route path="/bd/clients/:clientId" element={<BDClientDetails />} />
+            {/* Projects, BRD Upload/Approval are next. */}
           </Route>
         </Route>
       </Route>
