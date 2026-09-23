@@ -2,7 +2,7 @@ import { useState } from "react";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Select from "../../components/common/Select";
-import Textarea from "../../components/common/Textarea";
+import Textarea from "../../components/common/TextArea";
 import { showToast } from "../../components/common/Toast";
 const INITIAL = [
   { id: "TASK-002", title: "Dashboard UI", result: "Pending", notes: "" },

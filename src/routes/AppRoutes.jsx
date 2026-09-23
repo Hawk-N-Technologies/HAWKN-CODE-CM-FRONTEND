@@ -50,6 +50,15 @@ import Tasks from "../pages/projectLead/Tasks";
 import KanbanBoard from "../pages/projectLead/KanbanBoard";
 import ProjectProgress from "../pages/projectLead/ProjectProgress";
 
+import { DEVELOPER_NAV_SECTIONS } from "./developerRouteConfig";
+import Dashboard from "../pages/developer/Dashboard";
+import MyProjects from "../pages/developer/MyProjects";
+import MyTasks from "../pages/developer/MyTasks";
+import DEVKanbanBoard from "../pages/developer/KanbanBoard";
+import DevelopmentProgress from "../pages/developer/DevelopmentProgress";
+import DeveloperTesting from "../pages/developer/DeveloperTesting";
+import BugFixing from "../pages/developer/BugsFixing";
+import Notifications from "../pages/developer/Notifications";
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
@@ -173,6 +182,21 @@ function AppRoutes() {
           <Route path="/project-lead/tasks" element={<Tasks />} />
           <Route path="/project-lead/kanban" element={<KanbanBoard />} />
           <Route path="/project-lead/progress" element={<ProjectProgress />} />
+        </Route>
+      </Route>
+
+      <Route
+        element={<RoleRoute allowedRoles={[ROLES.DEVELOPER ?? "developer"]} />}
+      >
+        <Route element={<DashboardLayout sections={DEVELOPER_NAV_SECTIONS} />}>
+          <Route path="/developer/dashboard" element={<Dashboard />} />
+          <Route path="/developer/projects" element={<MyProjects />} />
+          <Route path="/developer/tasks" element={<MyTasks />} />
+          <Route path="/developer/kanban" element={<KanbanBoard />} />
+          <Route path="/developer/progress" element={<DevelopmentProgress />} />
+          <Route path="/developer/testing" element={<DeveloperTesting />} />
+          <Route path="/developer/bugs" element={<BugFixing />} />
+          <Route path="/developer/notifications" element={<Notifications />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />

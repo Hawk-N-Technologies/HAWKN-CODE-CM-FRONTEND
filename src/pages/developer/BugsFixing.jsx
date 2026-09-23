@@ -3,7 +3,7 @@ import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
-import Textarea from "../../components/common/Textarea";
+import Textarea from "../../components/common/TextArea";
 import { showToast } from "../../components/common/Toast";
 const STATUSES = ["Open", "In Progress", "Fixed", "Retest", "Closed"];
 export default function BugFixing() {
