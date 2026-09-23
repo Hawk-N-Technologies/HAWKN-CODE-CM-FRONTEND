@@ -1,14 +1,15 @@
 import StatCard from "../../components/cards/StatCard";
+import { MOCK_EMPLOYEES } from "../../data/employees";
 
 /**
  * Admin overview dashboard.
  *
- * KPI numbers and the two list panels below are static placeholders —
- * src/data/employees.js, clients.js, and projects.js are still empty
- * stubs (People Management / Client Management / Project Management
- * haven't been built yet). Swap `kpis`/`pendingApprovals`/`activityFeed`
- * for real data as those modules land; nothing else on this page
- * should need to change.
+ * Total Employees is real (src/data/employees.js). The rest are still
+ * static placeholders — src/data/clients.js and projects.js are still
+ * empty stubs (Client Management / Project Management haven't been
+ * built yet, and belong to BD/Project Lead, not Admin). Swap those
+ * once those modules land; nothing else on this page should need to
+ * change.
  */
 const ICONS = {
   employees: (
@@ -42,7 +43,7 @@ const ICONS = {
 };
 
 const kpis = [
-  { label: "Total Employees", value: "0", icon: ICONS.employees, accent: "blue" },
+  { label: "Total Employees", value: String(MOCK_EMPLOYEES.length), icon: ICONS.employees, accent: "blue" },
   { label: "Active Projects", value: "0", icon: ICONS.projects, accent: "success" },
   { label: "Active Clients", value: "0", icon: ICONS.clients, accent: "purple" },
   { label: "Pending Approvals", value: "0", icon: ICONS.approvals, accent: "warning" },
