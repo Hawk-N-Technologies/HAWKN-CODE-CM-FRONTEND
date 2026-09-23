@@ -21,7 +21,7 @@ import AdminNotifications from "../pages/admin/Notifications";
 import HRAttendance from "../pages/hr/Attendance";
 import HRDashboard from "../pages/hr/Dashboard";
 import HREmployeeOnboarding from "../pages/hr/EmployeeOnboarding";
-import HREmployeeProfile from "../pages/hr/EmployeeProfile";
+import HREmployeeHierarchy from "../pages/hr/EmployeeHierarchy";
 import HREmployees from "../pages/hr/Employees";
 import HRLeaveLOP from "../pages/hr/LeaveLOP";
 import HRPayroll from "../pages/hr/Payroll";
@@ -116,8 +116,8 @@ function AppRoutes() {
               element={<HRInternshipProbation />}
             />
             <Route
-              path="/hr/employee-profile"
-              element={<HREmployeeProfile />}
+              path="/hr/employee-heirarchy"
+              element={<HREmployeeHierarchy />}
             />
             <Route path="/hr/sops" element={<HRSOPs />} />
             <Route path="/hr/notifications" element={<HRNotifications />} />

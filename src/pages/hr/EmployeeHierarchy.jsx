@@ -8,7 +8,7 @@ const HIERARCHY = [
   { level: "Testers", people: ["Mira Patel", "Aisha Khan"] },
 ];
 
-function EmployeeProfile() {
+function EmployeeHierarchy() {
   const [selected, setSelected] = useState(null);
 
   return (
@@ -63,4 +63,4 @@ function EmployeeProfile() {
   );
 }
 
-export default EmployeeProfile;
+export default EmployeeHierarchy;

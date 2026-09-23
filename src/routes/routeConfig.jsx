@@ -141,7 +141,7 @@ const HR_NAV_SECTIONS = [
       },
       {
         label: "Employee Hierarchy",
-        path: "/hr/employee-hierarchy",
+        path: "/hr/employee-heirarchy",
         icon: ICONS.hierarchy,
       },
       { label: "SOPs", path: "/hr/sops", icon: ICONS.checklist },
