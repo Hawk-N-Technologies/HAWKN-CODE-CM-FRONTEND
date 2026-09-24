@@ -61,8 +61,8 @@ import BugFixing from "../pages/developer/BugFixing";
 import Notifications from "../pages/developer/Notifications";
 
 import { TESTER_NAV_SECTIONS } from "./testerRouteConfig";
-import Dashboard from "../pages/tester/Dashboard";
-import AssignedProjects from "../pages/tester/AssignedProjects";
+import TESTDashboard from "../pages/tester/Dashboard";
+import TESTAssignedProjects from "../pages/tester/AssignedProjects";
 import TestingQueue from "../pages/tester/TestingQueue";
 import PhaseTesting from "../pages/tester/PhaseTesting";
 import Bugs from "../pages/tester/Bugs";
@@ -214,8 +214,8 @@ function AppRoutes() {
 
       <Route element={<RoleRoute allowedRoles={[ROLES.TESTER ?? "tester"]} />}>
         <Route element={<DashboardLayout sections={TESTER_NAV_SECTIONS} />}>
-          <Route path="/tester/dashboard" element={<Dashboard />} />
-          <Route path="/tester/projects" element={<AssignedProjects />} />
+          <Route path="/tester/dashboard" element={<TESTDashboard />} />
+          <Route path="/tester/projects" element={<TESTAssignedProjects />} />
           <Route path="/tester/testing-queue" element={<TestingQueue />} />
           <Route path="/tester/phase-testing" element={<PhaseTesting />} />
           <Route path="/tester/bugs" element={<Bugs />} />
