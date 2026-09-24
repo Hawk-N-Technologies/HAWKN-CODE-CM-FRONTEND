@@ -224,15 +224,6 @@ function Login() {
                     required: required("Password"),
                   })}
                 />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-[36px] flex h-8 w-8 items-center justify-center rounded-lg text-[#98A2B3] transition hover:bg-[#F2F4F7] hover:text-[#000052] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#000052]/30"
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
               </div>
 
               {/* Remember / Forgot */}
