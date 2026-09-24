@@ -57,7 +57,7 @@ import MyTasks from "../pages/developer/MyTasks";
 import DEVKanbanBoard from "../pages/developer/KanbanBoard";
 import DevelopmentProgress from "../pages/developer/DevelopmentProgress";
 import DeveloperTesting from "../pages/developer/DeveloperTesting";
-import BugFixing from "../pages/developer/BugsFixing";
+import BugFixing from "../pages/developer/BugFixing";
 import Notifications from "../pages/developer/Notifications";
 import {
   ADMIN_NAV_SECTIONS,
@@ -192,7 +192,7 @@ function AppRoutes() {
           <Route path="/developer/dashboard" element={<Dashboard />} />
           <Route path="/developer/projects" element={<MyProjects />} />
           <Route path="/developer/tasks" element={<MyTasks />} />
-          <Route path="/developer/kanban" element={<KanbanBoard />} />
+          <Route path="/developer/kanban" element={<DEVKanbanBoard />} />
           <Route path="/developer/progress" element={<DevelopmentProgress />} />
           <Route path="/developer/testing" element={<DeveloperTesting />} />
           <Route path="/developer/bugs" element={<BugFixing />} />
