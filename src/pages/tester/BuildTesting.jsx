@@ -4,17 +4,17 @@ import Button from "../../components/common/Button";
 import Select from "../../components/common/Select";
 import Textarea from "../../components/common/TextArea";
 import { showToast } from "../../components/common/Toast";
-export default function Retesting() {
+export default function BuildTesting() {
   const [data, setData] = useState([
-    ["BUG-003", "Validation message", "v1.4.2", "Pending", ""],
-    ["BUG-005", "Login timeout", "v1.4.2", "Passed", "Verified after fix."],
+    ["BUILD-142", "Acme Retail ERP", "Staging", "v1.4.2", "Pending"],
+    ["BUILD-091", "Internal HRMS", "QA", "v0.9.1", "Passed"],
   ]);
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-bold text-cm-text">Retesting</h1>
+        <h1 className="text-xl font-bold text-cm-text">Build Testing</h1>
         <p className="mt-1 text-sm text-cm-text-muted">
-          Verify fixes for bugs returned for retesting.
+          Validate application builds in assigned environments.
         </p>
       </div>
       {data.map((x) => (
@@ -25,35 +25,23 @@ export default function Retesting() {
           <div className="flex justify-between">
             <div>
               <p className="text-xs text-cm-text-muted">
-                {x[0]} · {x[2]}
+                {x[0]} · {x[3]}
               </p>
               <h2 className="font-semibold text-cm-text">{x[1]}</h2>
+              <p className="text-sm text-cm-text-muted">{x[2]}</p>
             </div>
-            <Badge tone={x[3] === "Passed" ? "success" : "warning"}>
-              {x[3]}
+            <Badge tone={x[4] === "Passed" ? "success" : "warning"}>
+              {x[4]}
             </Badge>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Select
-              label="Retest Result"
-              value={x[3]}
+              label="Build Result"
+              value={x[4]}
               options={["Pending", "Passed", "Failed"].map((v) => ({
                 value: v,
                 label: v,
               }))}
-              onChange={(e) =>
-                setData((p) =>
-                  p.map((y) =>
-                    y[0] === x[0]
-                      ? [y[0], y[1], y[2], e.target.value, y[4]]
-                      : y,
-                  ),
-                )
-              }
-            />
-            <Textarea
-              label="Retest Notes"
-              value={x[4]}
               onChange={(e) =>
                 setData((p) =>
                   p.map((y) =>
@@ -64,13 +52,17 @@ export default function Retesting() {
                 )
               }
             />
+            <Textarea
+              label="Build Notes"
+              placeholder="Add build testing notes..."
+            />
           </div>
           <div className="mt-4 flex justify-end">
             <Button
               size="sm"
-              onClick={() => showToast.success("Retest result saved.")}
+              onClick={() => showToast.success("Build test result saved.")}
             >
-              Save Retest
+              Save Result
             </Button>
           </div>
         </section>
