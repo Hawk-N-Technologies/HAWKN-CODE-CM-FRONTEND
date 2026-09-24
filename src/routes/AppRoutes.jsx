@@ -59,6 +59,18 @@ import DevelopmentProgress from "../pages/developer/DevelopmentProgress";
 import DeveloperTesting from "../pages/developer/DeveloperTesting";
 import BugFixing from "../pages/developer/BugFixing";
 import Notifications from "../pages/developer/Notifications";
+
+import { TESTER_NAV_SECTIONS } from "./testerRouteConfig";
+import Dashboard from "../pages/tester/Dashboard";
+import AssignedProjects from "../pages/tester/AssignedProjects";
+import TestingQueue from "../pages/tester/TestingQueue";
+import PhaseTesting from "../pages/tester/PhaseTesting";
+import Bugs from "../pages/tester/Bugs";
+import Retesting from "../pages/tester/Retesting";
+import ClientTesting from "../pages/tester/ClientTesting";
+import BuildTesting from "../pages/tester/BuildTesting";
+import FieldTraining from "../pages/tester/FieldTraining";
+
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
@@ -197,6 +209,20 @@ function AppRoutes() {
           <Route path="/developer/testing" element={<DeveloperTesting />} />
           <Route path="/developer/bugs" element={<BugFixing />} />
           <Route path="/developer/notifications" element={<Notifications />} />
+        </Route>
+      </Route>
+
+      <Route element={<RoleRoute allowedRoles={[ROLES.TESTER ?? "tester"]} />}>
+        <Route element={<DashboardLayout sections={TESTER_NAV_SECTIONS} />}>
+          <Route path="/tester/dashboard" element={<Dashboard />} />
+          <Route path="/tester/projects" element={<AssignedProjects />} />
+          <Route path="/tester/testing-queue" element={<TestingQueue />} />
+          <Route path="/tester/phase-testing" element={<PhaseTesting />} />
+          <Route path="/tester/bugs" element={<Bugs />} />
+          <Route path="/tester/retesting" element={<Retesting />} />
+          <Route path="/tester/client-testing" element={<ClientTesting />} />
+          <Route path="/tester/build-testing" element={<BuildTesting />} />
+          <Route path="/tester/field-training" element={<FieldTraining />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
