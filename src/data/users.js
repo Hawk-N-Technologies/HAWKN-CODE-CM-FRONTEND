@@ -45,6 +45,13 @@ export const MOCK_USERS = [
     role: ROLES.DEVELOPER,
   },
   {
+    id: "u-005",
+    name: "Tejprakash Mirashi",
+    email: "dev2@cm.dev",
+    password: "Dev@1234",
+    role: ROLES.DEVELOPER,
+  },
+  {
     id: "u-006",
     name: "Meera Joshi",
     email: "tester@cm.dev",
