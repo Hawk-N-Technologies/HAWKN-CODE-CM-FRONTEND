@@ -1,66 +1,60 @@
 import {
-  Activity,
-  Bell,
-  Building2,
-  FolderKanban,
   LayoutDashboard,
-  Rocket,
-  Settings2,
+  Building2,
+  FileText,
+  CircleCheck,
   Users,
   UserRound,
-  Workflow,
-  PoundSterlingIcon,
-  FileText,
+  UserCog,
+  UserPlus,
+  CalendarCheck,
+  CalendarDays,
+  WalletCards,
+  TrendingUp,
+  GraduationCap,
+  Network,
+  ClipboardList,
+  Bell,
+  FolderKanban,
+  Settings2,
+  Rocket,
+  Code2,
+  Handshake,
+  UsersRound,
 } from "lucide-react";
 
 import { ROLES } from "../constants/roles";
 
-/**
- * Per-role sidebar navigation, keyed by role.
- * Passed straight into <DashboardLayout sections={...}> for that role's
- * route block (see AppRoutes.jsx).
- */
 const ICONS = {
   overview: <LayoutDashboard aria-hidden="true" />,
   company: <Building2 aria-hidden="true" />,
   policy: <FileText aria-hidden="true" />,
+  roles: <UsersRound aria-hidden="true" />,
+  sop: <CircleCheck aria-hidden="true" />,
   people: <Users aria-hidden="true" />,
-  hrms: <Settings2 aria-hidden="true" />,
   clients: <UserRound aria-hidden="true" />,
-  projects: <FolderKanban aria-hidden="true" />,
-  operations: <Workflow aria-hidden="true" />,
-  deployment: <Rocket aria-hidden="true" />,
-  development: <Activity aria-hidden="true" />,
-  delivery: <PackageCheckIcon aria-hidden="true" />,
+  hrms: <UserCog aria-hidden="true" />,
+  employees: <Users aria-hidden="true" />,
+  onboarding: <UserPlus aria-hidden="true" />,
+  attendance: <CalendarCheck aria-hidden="true" />,
+  leave: <CalendarDays aria-hidden="true" />,
+  payroll: <WalletCards aria-hidden="true" />,
+  compensation: <TrendingUp aria-hidden="true" />,
+  internship: <GraduationCap aria-hidden="true" />,
+  hierarchy: <Network aria-hidden="true" />,
+  checklist: <ClipboardList aria-hidden="true" />,
   notifications: <Bell aria-hidden="true" />,
+  projects: <FolderKanban aria-hidden="true" />,
+  operations: <Settings2 aria-hidden="true" />,
+  deployment: <Rocket aria-hidden="true" />,
+  development: <Code2 aria-hidden="true" />,
+  delivery: <Handshake aria-hidden="true" />,
 };
-
-// Kept local so the sidebar only needs lucide-react icons.
-function PackageCheckIcon(props) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5M12 22V12" />
-      <path d="m9.5 16.5 1.5 1.5 3.5-3.5" />
-    </svg>
-  );
-}
 
 const ADMIN_NAV_SECTIONS = [
   {
     items: [
-      {
-        label: "Overview",
-        path: "/admin/dashboard",
-        icon: ICONS.overview,
-      },
+      { label: "Overview", path: "/admin/dashboard", icon: ICONS.overview },
     ],
   },
   {
@@ -77,23 +71,29 @@ const ADMIN_NAV_SECTIONS = [
         icon: ICONS.policy,
       },
       {
+        label: "Roles & Responsibilities",
+        path: "/admin/roles-responsibilities",
+        icon: ICONS.roles,
+      },
+      {
+        label: "Employee Hierarchy",
+        path: "/admin/employee-hierarchy",
+        icon: ICONS.hierarchy,
+      },
+      {
         label: "People Management",
         path: "/admin/people-management",
         icon: ICONS.people,
       },
-      {
-        label: "HRMS",
-        path: "/admin/hrms",
-        icon: ICONS.hrms,
-      },
+      { label: "HRMS", path: "/admin/hrms", icon: ICONS.hrms },
       {
         label: "Client Management",
-        path: "/admin/client-management",
+        path: "/admin/clients",
         icon: ICONS.clients,
       },
       {
         label: "Project Management",
-        path: "/admin/project-management",
+        path: "/admin/projects",
         icon: ICONS.projects,
       },
       {
@@ -103,17 +103,17 @@ const ADMIN_NAV_SECTIONS = [
       },
       {
         label: "Deployment Planning",
-        path: "/admin/deployment-planning",
+        path: "/admin/deployment",
         icon: ICONS.deployment,
       },
       {
         label: "Development Monitoring",
-        path: "/admin/development-monitoring",
+        path: "/admin/development",
         icon: ICONS.development,
       },
       {
         label: "Delivery & Handover",
-        path: "/admin/delivery-handover",
+        path: "/admin/delivery",
         icon: ICONS.delivery,
       },
       {
@@ -125,31 +125,60 @@ const ADMIN_NAV_SECTIONS = [
   },
 ];
 
-const BD_NAV_SECTIONS = [
+const HR_NAV_SECTIONS = [
   {
-    items: [
-      {
-        label: "Overview",
-        path: "/bd/dashboard",
-        icon: ICONS.overview,
-      },
-    ],
+    items: [{ label: "Overview", path: "/hr/dashboard", icon: ICONS.overview }],
   },
   {
+    title: "HR Management",
     items: [
+      { label: "Employees", path: "/hr/employees", icon: ICONS.employees },
       {
-        label: "Clients",
-        path: "/bd/clients",
-        icon: ICONS.clients,
+        label: "Employee Onboarding",
+        path: "/hr/onboarding",
+        icon: ICONS.onboarding,
+      },
+      { label: "Attendance", path: "/hr/attendance", icon: ICONS.attendance },
+      { label: "Leave & LOP", path: "/hr/leave-lop", icon: ICONS.leave },
+      { label: "Payroll", path: "/hr/payroll", icon: ICONS.payroll },
+      {
+        label: "Bonuses & Increments",
+        path: "/hr/bonuses-increments",
+        icon: ICONS.compensation,
+      },
+      {
+        label: "Internship / Probation",
+        path: "/hr/internship-probation",
+        icon: ICONS.internship,
+      },
+      // {
+      //   label: "Employee Hierarchy",
+      //   path: "/hr/employee-heirarchy",
+      //   icon: ICONS.hierarchy,
+      // },
+      { label: "SOPs", path: "/hr/sops", icon: ICONS.checklist },
+      {
+        label: "Notifications",
+        path: "/hr/notifications",
+        icon: ICONS.notifications,
       },
     ],
   },
 ];
 
+const BD_NAV_SECTIONS = [
+  {
+    items: [{ label: "Overview", path: "/bd/dashboard", icon: ICONS.overview }],
+  },
+  {
+    items: [{ label: "Clients", path: "/bd/clients", icon: ICONS.clients }],
+  },
+];
+
 export const NAV_SECTIONS_BY_ROLE = {
   [ROLES.ADMIN]: ADMIN_NAV_SECTIONS,
+  [ROLES.HR ?? "hr"]: HR_NAV_SECTIONS,
   [ROLES.BD]: BD_NAV_SECTIONS,
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
-export { ADMIN_NAV_SECTIONS, BD_NAV_SECTIONS };
+export { ADMIN_NAV_SECTIONS, HR_NAV_SECTIONS, BD_NAV_SECTIONS };
