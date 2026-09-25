@@ -23,7 +23,7 @@ function DashboardLayout({ sections = [], notificationCount = 0 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-cm-bg">
+    <div className="flex h-screen overflow-hidden bg-cm-bg">
       <Sidebar
         sections={sections}
         isOpen={isSidebarOpen}
