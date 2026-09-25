@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { showToast } from "../../components/common/Toast";
+import Button from "../../components/common/Button";
 
 function EmployeeHierarchy() {
   const [image, setImage] = useState(null);
@@ -45,12 +46,12 @@ function EmployeeHierarchy() {
           />
 
           {/* Upload button */}
-          <label
+          <Button
             htmlFor="hierarchy-upload"
             className="inline-flex cursor-pointer items-center justify-center rounded-md bg-cm-primary px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
           >
             Upload Hierarchy
-          </label>
+          </Button>
 
           {/* Image preview */}
           {image && (
