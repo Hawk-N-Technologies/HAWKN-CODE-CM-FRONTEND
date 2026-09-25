@@ -8,6 +8,7 @@ import RoleRoute from "./RoleRoute";
 import AdminDashboard from "../pages/admin/Dashboard";
 import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import AdminCompanyPolicies from "../pages/admin/CompanyPolicies";
+import AdminRolesResponsibilities from "../pages/admin/RolesResponsibilities";
 import AdminPeopleManagement from "../pages/admin/PeopleManagement";
 import AdminSOPManagement from "../pages/admin/SOPManagement";
 
@@ -112,6 +113,10 @@ function AppRoutes() {
             <Route
               path="/admin/company-policies"
               element={<AdminCompanyPolicies />}
+            />
+            <Route
+              path="/admin/roles-responsibilities"
+              element={<AdminRolesResponsibilities />}
             />
             <Route
               path="/admin/people-management"
