@@ -66,7 +66,7 @@ const ADMIN_NAV_SECTIONS = [
       {
         label: "Company Policies",
         path: "/admin/company-policies",
-        icon: ICONS.policies,
+        icon: ICONS.policy,
       },
       {
         label: "People Management",
