@@ -1,15 +1,6 @@
 import { NavLink } from "react-router-dom";
 import logo from "../../assets/hawkn-logo-2.png";
 
-/**
- * Fixed dark-navy app sidebar, shared by every role's DashboardLayout.
- *
- * Each role passes its own `sections` — this component only knows how
- * to render {label, path, icon}[] groups and highlight the active
- * route; it has no idea what "HR" or "Admin" means.
- *
- * sections: Array<{ title?: string, items: Array<{ label, path, icon? }> }>
- */
 function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
   return (
     <>
@@ -25,11 +16,14 @@ function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-cm-navy-950 text-cm-text-inverse",
+          // Pin to viewport, fixed height = full screen
+          "fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col",
+          "bg-cm-navy-950 text-cm-text-inverse",
           "transition-transform duration-200 lg:static lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
+        {/* Logo — fixed at top, never scrolls */}
         <div className="flex h-16 shrink-0 items-center justify-center border-b border-white/10 px-5">
           <img
             src={logo}
@@ -38,6 +32,7 @@ function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
           />
         </div>
 
+        {/* Nav — the ONLY part that scrolls, with its own scrollbar */}
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {sections.map((section) => (
             <div key={section.title ?? section.items[0]?.path}>
