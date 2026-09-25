@@ -158,10 +158,10 @@ function AppRoutes() {
               path="/hr/internship-probation"
               element={<HRInternshipProbation />}
             />
-            <Route
+            {/* <Route
               path="/hr/employee-heirarchy"
               element={<HREmployeeHierarchy />}
-            />
+            /> */}
             <Route path="/hr/sops" element={<HRSOPs />} />
             <Route path="/hr/notifications" element={<HRNotifications />} />
           </Route>
