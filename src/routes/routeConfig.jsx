@@ -20,6 +20,7 @@ import {
   Rocket,
   Code2,
   Handshake,
+  UsersRound,
 } from "lucide-react";
 
 import { ROLES } from "../constants/roles";
@@ -28,6 +29,7 @@ const ICONS = {
   overview: <LayoutDashboard aria-hidden="true" />,
   company: <Building2 aria-hidden="true" />,
   policy: <FileText aria-hidden="true" />,
+  roles: <UsersRound aria-hidden="true" />,
   sop: <CircleCheck aria-hidden="true" />,
   people: <Users aria-hidden="true" />,
   clients: <UserRound aria-hidden="true" />,
@@ -67,6 +69,11 @@ const ADMIN_NAV_SECTIONS = [
         label: "Company Policies",
         path: "/admin/company-policies",
         icon: ICONS.policy,
+      },
+      {
+        label: "Roles & Responsibilities",
+        path: "/admin/roles-responsibilities",
+        icon: ICONS.roles,
       },
       {
         label: "People Management",
