@@ -27,7 +27,7 @@ import { ROLES } from "../constants/roles";
 const ICONS = {
   overview: <LayoutDashboard aria-hidden="true" />,
   company: <Building2 aria-hidden="true" />,
-  policies: <FileText aria-hidden="true" />,
+  policy: <FileText aria-hidden="true" />,
   sop: <CircleCheck aria-hidden="true" />,
   people: <Users aria-hidden="true" />,
   clients: <UserRound aria-hidden="true" />,

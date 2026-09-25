@@ -10,8 +10,7 @@ import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import AdminCompanyPolicies from "../pages/admin/CompanyPolicies";
 import AdminPeopleManagement from "../pages/admin/PeopleManagement";
 import AdminSOPManagement from "../pages/admin/SOPManagement";
-<<<<<<<<< Temporary merge branch 1
-=========
+
 import AdminHRMS from "../pages/admin/HRMS";
 import AdminClientManagement from "../pages/admin/ClientManagement";
 import AdminProjectManagement from "../pages/admin/ProjectManagement";
