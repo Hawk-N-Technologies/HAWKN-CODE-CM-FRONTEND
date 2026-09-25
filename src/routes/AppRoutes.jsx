@@ -81,6 +81,7 @@ import {
 } from "./routeConfig";
 import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
+import AdminEmployeeHierarchy from "../pages/admin/EmployeeHierarchy";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -117,6 +118,10 @@ function AppRoutes() {
             <Route
               path="/admin/roles-responsibilities"
               element={<AdminRolesResponsibilities />}
+            />
+            <Route
+              path="/admin/employee-hierarchy"
+              element={<AdminEmployeeHierarchy />}
             />
             <Route
               path="/admin/people-management"
