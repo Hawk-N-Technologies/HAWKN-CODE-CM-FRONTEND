@@ -78,7 +78,7 @@ const ADMIN_NAV_SECTIONS = [
       {
         label: "Employee Hierarchy",
         path: "/admin/employee-hierarchy",
-        icon: ICONS.people,
+        icon: ICONS.hierarchy,
       },
       {
         label: "People Management",
