@@ -9,17 +9,22 @@ import { forwardRef } from "react";
  * `loading` disables the button and swaps its label for a spinner so a
  * user cannot trigger the same action twice while a request is in flight.
  */
+
 const VARIANT_CLASSES = {
   primary:
-    "bg-[#000052] text-white hover:bg-cm-blue-700 focus-visible:outline-cm-blue-600 disabled:bg-cm-blue-600/50",
+    "bg-[#000052] text-[#FFFFFF] hover:bg-[#00003D] focus-visible:outline-[#000052] disabled:bg-[#000052]/50",
+
   secondary:
-    "bg-cm-navy-900 text-white hover:bg-cm-navy-800 focus-visible:outline-cm-navy-900 disabled:bg-cm-navy-900/50",
+    "bg-[#F1F4FF] text-[#000052] hover:bg-[#E5E9FF] focus-visible:outline-[#000052] disabled:bg-[#F1F4FF]/50",
+
   outline:
-    "border border-cm-border bg-white text-cm-text hover:bg-cm-bg focus-visible:outline-cm-blue-600 disabled:text-cm-text-muted",
+    "border border-[#D9DDEB] bg-white text-[#000052] hover:bg-[#F7F8FC] hover:border-[#000052]/30 focus-visible:outline-[#000052] disabled:text-[#98A2B3]",
+
   ghost:
-    "bg-transparent text-cm-text hover:bg-cm-bg focus-visible:outline-cm-blue-600 disabled:text-cm-text-muted",
+    "bg-transparent text-[#000052] hover:bg-[#F1F4FF] focus-visible:outline-[#000052] disabled:text-[#98A2B3]",
+
   danger:
-    "bg-cm-danger-600 text-white hover:bg-red-700 focus-visible:outline-cm-danger-600 disabled:bg-cm-danger-600/50",
+    "bg-[#DC2626] text-white hover:bg-[#B91C1C] focus-visible:outline-[#DC2626] disabled:bg-[#DC2626]/50",
 };
 
 const SIZE_CLASSES = {
@@ -29,7 +34,9 @@ const SIZE_CLASSES = {
 };
 
 function Spinner({ size }) {
-  const dim = size === "sm" ? "h-3.5 w-3.5" : size === "lg" ? "h-5 w-5" : "h-4 w-4";
+  const dim =
+    size === "sm" ? "h-3.5 w-3.5" : size === "lg" ? "h-5 w-5" : "h-4 w-4";
+
   return (
     <svg
       className={`${dim} animate-spin`}
@@ -45,6 +52,7 @@ function Spinner({ size }) {
         stroke="currentColor"
         strokeWidth="4"
       />
+
       <path
         className="opacity-75"
         fill="currentColor"
@@ -68,7 +76,7 @@ const Button = forwardRef(function Button(
     className = "",
     ...rest
   },
-  ref
+  ref,
 ) {
   const isDisabled = disabled || loading;
 
@@ -87,7 +95,9 @@ const Button = forwardRef(function Button(
         SIZE_CLASSES[size],
         fullWidth ? "w-full" : "",
         className,
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
       {...rest}
     >
       {loading ? (
