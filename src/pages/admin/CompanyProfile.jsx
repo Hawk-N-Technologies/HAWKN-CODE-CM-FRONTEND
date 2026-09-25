@@ -2,44 +2,85 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
+import RichTextEditor from "../../components/common/RichTextEditor";
 import { showToast } from "../../components/common/Toast";
-import { required } from "../../utils/validators";
-import { EMAIL_PATTERN } from "../../utils/validators";
+import { required, EMAIL_PATTERN } from "../../utils/validators";
 
-/**
- * Admin -> Company Profile (BRD 2.1: identity, mission/vision, story).
- *
- * No backend yet, so `save()` just simulates a round trip. Swap it for a
- * real API call once one exists — the form itself won't need to change.
- * Common Policies is a separate page (pages/admin/CompanyPolicies.jsx,
- * still a stub) since the BRD treats policies as its own thing.
- */
 const DEFAULT_VALUES = {
   officialName: "Hawk'N Technologies",
   officialEmail: "hello@hawkn.dev",
-  vision: "",
-  mission: "",
-  whatPeopleShouldKnow: "",
-  whyCustomersShouldCare: "",
-  cultureAndValues: "",
-  companyStory: "",
+
+  vision:
+    "To build innovative technology solutions that help businesses grow, operate efficiently, and create meaningful digital experiences.",
+
+  mission:
+    "Our mission is to deliver reliable, scalable, and user-focused technology solutions while maintaining quality, transparency, and long-term relationships with our clients.",
+
+  blog: `
+    <h2>What People Should Know About Us</h2>
+    <p>
+      Hawk'N Technologies is a technology company focused on building
+      modern digital solutions for businesses and organizations. We combine
+      technology, creativity, and business understanding to deliver solutions
+      that solve real-world problems.
+    </p>
+
+    <h2>Why Customers Should Care About Us</h2>
+    <p>
+      We focus on understanding our customers' needs before building a
+      solution. Our goal is to provide reliable, scalable, and easy-to-use
+      products that create long-term value for our customers.
+    </p>
+
+    <h2>Culture &amp; Values</h2>
+    <p>
+      Our culture is built around innovation, integrity, teamwork, continuous
+      learning, and customer success.
+    </p>
+
+    <ul>
+      <li>Innovation and continuous improvement</li>
+      <li>Integrity and transparency</li>
+      <li>Teamwork and collaboration</li>
+      <li>Customer-focused thinking</li>
+      <li>Quality and accountability</li>
+    </ul>
+
+    <h2>Company Story</h2>
+    <p>
+      Hawk'N Technologies was created with the vision of helping businesses
+      use technology more effectively. From our early projects to our
+      growing range of digital solutions, we continue to focus on creating
+      meaningful technology experiences for our customers.
+    </p>
+  `,
 };
 
 function CompanyProfile() {
   const [isSaving, setIsSaving] = useState(false);
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isDirty },
-  } = useForm({ defaultValues: DEFAULT_VALUES });
+  } = useForm({
+    defaultValues: DEFAULT_VALUES,
+  });
+
+  const blog = watch("blog");
 
   const onSubmit = async (values) => {
     setIsSaving(true);
+
     try {
-      // TODO: replace with a real save once the backend exists.
+      // TODO: Replace with real API call.
       await new Promise((resolve) => setTimeout(resolve, 600));
-      reset(values); // clears isDirty, keeps the values just saved
+
+      reset(values);
+
       showToast.success("Company profile updated.");
     } catch {
       showToast.error("Couldn't save the company profile. Try again.");
@@ -50,8 +91,10 @@ function CompanyProfile() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-cm-text">Company Profile</h1>
+
         <p className="mt-1 text-sm text-cm-text-muted">
           This information represents the company internally and externally.
         </p>
@@ -62,13 +105,17 @@ function CompanyProfile() {
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col gap-6 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm"
       >
+        {/* Company Identity */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="Official Company Name"
             required
             error={errors.officialName?.message}
-            {...register("officialName", { required: required("Company name") })}
+            {...register("officialName", {
+              required: required("Company name"),
+            })}
           />
+
           <Input
             label="Official Email"
             type="email"
@@ -81,6 +128,7 @@ function CompanyProfile() {
           />
         </div>
 
+        {/* Vision */}
         <Input
           label="Vision"
           multiline
@@ -91,6 +139,7 @@ function CompanyProfile() {
           {...register("vision")}
         />
 
+        {/* Mission */}
         <Input
           label="Mission"
           multiline
@@ -100,39 +149,20 @@ function CompanyProfile() {
           {...register("mission")}
         />
 
-        <Input
-          label="What People Should Know About Us"
-          multiline
-          rows={3}
-          error={errors.whatPeopleShouldKnow?.message}
-          {...register("whatPeopleShouldKnow")}
+        {/* Blog - Everything after Mission */}
+        <RichTextEditor
+          label="Blog"
+          value={blog}
+          onChange={(content) =>
+            setValue("blog", content, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+          error={errors.blog?.message}
         />
 
-        <Input
-          label="Why Customers Should Care About Us"
-          multiline
-          rows={3}
-          error={errors.whyCustomersShouldCare?.message}
-          {...register("whyCustomersShouldCare")}
-        />
-
-        <Input
-          label="Culture & Values"
-          multiline
-          rows={3}
-          error={errors.cultureAndValues?.message}
-          {...register("cultureAndValues")}
-        />
-
-        <Input
-          label="Company Story"
-          multiline
-          rows={5}
-          helperText="Accessible to both employees and customers."
-          error={errors.companyStory?.message}
-          {...register("companyStory")}
-        />
-
+        {/* Save */}
         <div className="flex items-center justify-end gap-3 border-t border-cm-border pt-4">
           <Button
             type="button"
@@ -142,6 +172,7 @@ function CompanyProfile() {
           >
             Reset
           </Button>
+
           <Button type="submit" loading={isSaving} disabled={!isDirty}>
             Save Changes
           </Button>

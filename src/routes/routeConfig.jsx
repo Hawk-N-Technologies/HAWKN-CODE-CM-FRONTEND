@@ -9,6 +9,8 @@ import {
   Users,
   UserRound,
   Workflow,
+  PoundSterlingIcon,
+  FileText,
 } from "lucide-react";
 
 import { ROLES } from "../constants/roles";
@@ -21,6 +23,7 @@ import { ROLES } from "../constants/roles";
 const ICONS = {
   overview: <LayoutDashboard aria-hidden="true" />,
   company: <Building2 aria-hidden="true" />,
+  policy: <FileText aria-hidden="true" />,
   people: <Users aria-hidden="true" />,
   hrms: <Settings2 aria-hidden="true" />,
   clients: <UserRound aria-hidden="true" />,
@@ -64,9 +67,14 @@ const ADMIN_NAV_SECTIONS = [
     title: "Company",
     items: [
       {
-        label: "Company Profile & Policies",
+        label: "Company Profile",
         path: "/admin/company-profile",
         icon: ICONS.company,
+      },
+      {
+        label: "Company Policies",
+        path: "/admin/company-policies",
+        icon: ICONS.policy,
       },
       {
         label: "People Management",

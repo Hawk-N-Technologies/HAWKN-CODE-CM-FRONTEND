@@ -1,168 +1,208 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
+import RichTextEditor from "../../components/common/RichTextEditor";
 import { showToast } from "../../components/common/Toast";
-import { required } from "../../utils/validators";
 
-/**
- * Admin -> Company Policies (BRD 2.1: "Maintain common company policies").
- *
- * Kept separate from Company Profile because the BRD/planning doc treats
- * them as distinct pages. All state is local (no backend yet) — swap
- * `policies` for a real fetch and the add/edit/delete handlers for real
- * API calls once the backend exists; the JSX below shouldn't need to change.
- */
-const EMPTY_FORM = { title: "", content: "" };
+const DEFAULT_VALUES = {
+  policies: `
+    <h2>Leave Policy</h2>
+    <p>
+      Employees are required to follow the company's leave request and
+      approval process. Leave should be requested in advance whenever possible.
+    </p>
+
+    <h2>Attendance Policy</h2>
+    <p>
+      Employees are expected to maintain regular attendance and follow the
+      company's working hours and attendance procedures.
+    </p>
+
+    <h2>Code of Conduct</h2>
+    <p>
+      All employees are expected to maintain professional behavior,
+      respect colleagues, and follow company rules and standards.
+    </p>
+
+    <h2>Data &amp; Security Policy</h2>
+    <p>
+      Company information, client information, credentials, and other
+      confidential data must be handled securely and responsibly.
+    </p>
+  `,
+
+  rolesResponsibilities: `
+    <h2>Admin</h2>
+    <p>
+      Responsible for overall administration, system management, user
+      management, and maintaining proper access and permissions.
+    </p>
+    <ul>
+      <li>Manage users and system access.</li>
+      <li>Maintain administrative settings.</li>
+      <li>Manage permissions.</li>
+      <li>Monitor internal systems.</li>
+    </ul>
+
+    <h2>HR</h2>
+    <p>
+      Responsible for recruitment, employee management, workplace policies,
+      and employee support.
+    </p>
+    <ul>
+      <li>Manage recruitment and onboarding.</li>
+      <li>Maintain employee records.</li>
+      <li>Manage leave and attendance.</li>
+      <li>Support employee-related concerns.</li>
+    </ul>
+
+    <h2>Project Lead</h2>
+    <p>
+      Responsible for project planning, team coordination, task assignment,
+      progress tracking, and client communication.
+    </p>
+    <ul>
+      <li>Plan and coordinate projects.</li>
+      <li>Assign tasks to team members.</li>
+      <li>Monitor project progress.</li>
+      <li>Communicate with clients and stakeholders.</li>
+    </ul>
+
+    <h2>Developer</h2>
+    <p>
+      Responsible for developing, maintaining, and improving software
+      applications according to project requirements.
+    </p>
+    <ul>
+      <li>Develop application features.</li>
+      <li>Write clean and maintainable code.</li>
+      <li>Fix bugs and technical issues.</li>
+      <li>Collaborate with the project team.</li>
+    </ul>
+
+    <h2>BD</h2>
+    <p>
+      Responsible for identifying business opportunities, generating leads,
+      and maintaining relationships with clients.
+    </p>
+    <ul>
+      <li>Generate new business opportunities.</li>
+      <li>Communicate with prospective clients.</li>
+      <li>Maintain client relationships.</li>
+      <li>Support proposals and negotiations.</li>
+    </ul>
+
+    <h2>Tester</h2>
+    <p>
+      Responsible for testing applications and ensuring that software meets
+      functional and quality requirements.
+    </p>
+    <ul>
+      <li>Create and execute test cases.</li>
+      <li>Identify and report bugs.</li>
+      <li>Perform functional and regression testing.</li>
+      <li>Verify bug fixes.</li>
+    </ul>
+  `,
+};
 
 function CompanyPolicies() {
-  const [policies, setPolicies] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({ defaultValues: EMPTY_FORM });
+  const { handleSubmit, setValue, watch } = useForm({
+    defaultValues: DEFAULT_VALUES,
+  });
 
-  const startEdit = (policy) => {
-    setEditingId(policy.id);
-    setPendingDeleteId(null);
-    reset({ title: policy.title, content: policy.content });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    reset(EMPTY_FORM);
-  };
+  const policies = watch("policies");
+  const rolesResponsibilities = watch("rolesResponsibilities");
 
   const onSubmit = async (values) => {
     setIsSaving(true);
+
     try {
-      // TODO: replace with a real API call once the backend exists.
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      // TODO: Replace this with your real API call.
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
-      if (editingId) {
-        setPolicies((prev) =>
-          prev.map((policy) =>
-            policy.id === editingId ? { ...policy, ...values } : policy
-          )
-        );
-        showToast.success("Policy updated.");
-      } else {
-        setPolicies((prev) => [
-          ...prev,
-          { id: crypto.randomUUID(), ...values },
-        ]);
-        showToast.success("Policy added.");
-      }
+      console.log("Company Policies:", values.policies);
+      console.log("Roles & Responsibilities:", values.rolesResponsibilities);
 
-      setEditingId(null);
-      reset(EMPTY_FORM);
+      showToast.success("Company policies and roles updated.");
     } catch {
-      showToast.error("Couldn't save the policy. Try again.");
+      showToast.error("Couldn't save the information. Try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteClick = (id) => {
-    if (pendingDeleteId === id) {
-      setPolicies((prev) => prev.filter((policy) => policy.id !== id));
-      setPendingDeleteId(null);
-      showToast.info("Policy removed.");
-      if (editingId === id) cancelEdit();
-    } else {
-      setPendingDeleteId(id);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-6">
+      {/* Page Header */}
       <div>
         <h1 className="text-xl font-bold text-cm-text">Company Policies</h1>
+
         <p className="mt-1 text-sm text-cm-text-muted">
-          Policies employees and, where relevant, clients are expected to follow.
+          Manage company policies, roles, and responsibilities.
         </p>
       </div>
 
-      {/* Add / edit form */}
-      <form
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm"
-      >
-        <h2 className="text-sm font-semibold text-cm-text">
-          {editingId ? "Edit Policy" : "Add a Policy"}
-        </h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+        {/* ================= COMPANY POLICIES ================= */}
 
-        <Input
-          label="Title"
-          required
-          placeholder="e.g. Leave Policy"
-          error={errors.title?.message}
-          {...register("title", { required: required("Title") })}
-        />
+        <section className="rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm">
+          <div className="mb-5 border-b border-cm-border pb-4">
+            <h2 className="text-lg font-semibold text-cm-text">
+              Company Policies
+            </h2>
 
-        <Input
-          label="Content"
-          multiline
-          rows={4}
-          required
-          placeholder="What the policy covers…"
-          error={errors.content?.message}
-          {...register("content", { required: required("Content") })}
-        />
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Add and manage common company policies using the editor below.
+            </p>
+          </div>
 
-        <div className="flex items-center justify-end gap-3">
-          {editingId && (
-            <Button type="button" variant="outline" disabled={isSaving} onClick={cancelEdit}>
-              Cancel
-            </Button>
-          )}
+          <RichTextEditor
+            label="Policies"
+            value={policies}
+            onChange={(content) =>
+              setValue("policies", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+        </section>
+
+        {/* ================= ROLES & RESPONSIBILITIES ================= */}
+
+        <section className="rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm">
+          <div className="mb-5 border-b border-cm-border pb-4">
+            <h2 className="text-lg font-semibold text-cm-text">
+              Roles & Responsibilities
+            </h2>
+
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Define the responsibilities of Admin, HR, Project Lead, Developer,
+              BD, Tester, and other team members.
+            </p>
+          </div>
+
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={rolesResponsibilities}
+            onChange={(content) =>
+              setValue("rolesResponsibilities", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+        </section>
+
+        {/* ================= SAVE ================= */}
+
+        <div className="flex justify-end border-t border-cm-border pt-4">
           <Button type="submit" loading={isSaving}>
-            {editingId ? "Save Changes" : "Add Policy"}
+            Save Changes
           </Button>
         </div>
       </form>
-
-      {/* Policy list */}
-      <div className="flex flex-col gap-4">
-        {policies.length === 0 ? (
-          <div className="rounded-cm-lg border border-cm-border bg-cm-card p-6 text-center text-sm text-cm-text-muted shadow-sm">
-            No policies added yet. Use the form above to add the first one.
-          </div>
-        ) : (
-          policies.map((policy) => (
-            <div
-              key={policy.id}
-              className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="font-semibold text-cm-text">{policy.title}</h3>
-                <div className="flex shrink-0 gap-2">
-                  <Button size="sm" variant="outline" onClick={() => startEdit(policy)}>
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleDeleteClick(policy.id)}
-                  >
-                    {pendingDeleteId === policy.id ? "Confirm delete?" : "Delete"}
-                  </Button>
-                </div>
-              </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-cm-text-muted">
-                {policy.content}
-              </p>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   );
 }
