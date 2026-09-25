@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
 
 function EmployeeHierarchy() {
@@ -16,6 +15,7 @@ function EmployeeHierarchy() {
     }
 
     const imageUrl = URL.createObjectURL(file);
+
     setImage(imageUrl);
 
     showToast.success("Employee hierarchy uploaded.");
@@ -34,28 +34,31 @@ function EmployeeHierarchy() {
 
       {/* Upload Section */}
       <div className="rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm">
-        <div className="flex flex-col items-center justify-center gap-4">
+        <div className="flex flex-col items-center gap-6">
+          {/* Hidden file input */}
           <input
             id="hierarchy-upload"
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
             onChange={handleUpload}
             className="hidden"
           />
 
-          <label htmlFor="hierarchy-upload">
-            <Button type="button" as="span">
-              Upload Hierarchy
-            </Button>
+          {/* Upload button */}
+          <label
+            htmlFor="hierarchy-upload"
+            className="inline-flex cursor-pointer items-center justify-center rounded-md bg-cm-primary px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            Upload Hierarchy
           </label>
 
-          {/* Uploaded Image */}
+          {/* Image preview */}
           {image && (
-            <div className="mt-4 w-full">
+            <div className="w-full">
               <img
                 src={image}
                 alt="Employee hierarchy"
-                className="mx-auto max-h-[700px] w-auto max-w-full rounded-lg border border-cm-border object-contain"
+                className="mx-auto max-h-[700px] max-w-full rounded-lg border border-cm-border object-contain"
               />
             </div>
           )}
