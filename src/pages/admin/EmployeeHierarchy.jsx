@@ -1,21 +1,28 @@
 import { useState } from "react";
+import FileUpload from "../../components/common/FileUpload";
 import { showToast } from "../../components/common/Toast";
-import Button from "../../components/common/Button";
 
 function EmployeeHierarchy() {
   const [image, setImage] = useState(null);
 
-  const handleUpload = (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
+  const handleFileSelect = (file) => {
+    if (!file) {
+      setImage(null);
+      return;
+    }
 
     if (!file.type.startsWith("image/")) {
       showToast.error("Please upload an image file.");
       return;
     }
 
+    // Create preview URL
     const imageUrl = URL.createObjectURL(file);
+
+    // Remove previous preview URL
+    if (image) {
+      URL.revokeObjectURL(image);
+    }
 
     setImage(imageUrl);
 
@@ -35,32 +42,27 @@ function EmployeeHierarchy() {
 
       {/* Upload Section */}
       <div className="rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm">
-        <div className="flex flex-col items-center gap-6">
-          {/* Hidden file input */}
-          <input
-            id="hierarchy-upload"
-            type="file"
+        <div className="flex flex-col gap-5">
+          <FileUpload
+            label="Employee Hierarchy"
             accept="image/png,image/jpeg,image/jpg,image/webp"
-            onChange={handleUpload}
-            className="hidden"
+            maxSizeMB={10}
+            onFileSelect={handleFileSelect}
+            helperText="Upload PNG, JPG, JPEG, or WEBP image up to 10MB."
           />
 
-          {/* Upload button */}
-          <Button
-            htmlFor="hierarchy-upload"
-            className="inline-flex cursor-pointer items-center justify-center rounded-md bg-cm-primary px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
-          >
-            Upload Hierarchy
-          </Button>
-
-          {/* Image preview */}
+          {/* Preview */}
           {image && (
-            <div className="w-full">
-              <img
-                src={image}
-                alt="Employee hierarchy"
-                className="mx-auto max-h-[700px] max-w-full rounded-lg border border-cm-border object-contain"
-              />
+            <div className="rounded-cm-md border border-cm-border bg-cm-bg p-4">
+              <p className="mb-3 text-sm font-medium text-cm-text">Preview</p>
+
+              <div className="flex justify-center overflow-auto">
+                <img
+                  src={image}
+                  alt="Employee hierarchy"
+                  className="max-h-[700px] max-w-full rounded-lg object-contain"
+                />
+              </div>
             </div>
           )}
         </div>
