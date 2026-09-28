@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { showToast } from "../../components/common/Toast";
 import { required, EMAIL_PATTERN } from "../../utils/validators";
+import axios from "axios";
 
 const DEFAULT_VALUES = {
   officialName: "Hawk'N Technologies",
@@ -58,6 +59,30 @@ const DEFAULT_VALUES = {
 
 function CompanyProfile() {
   const [isSaving, setIsSaving] = useState(false);
+  const [profile, setProfile] = useState({});
+  const getProfile = async () => {
+    try {
+      const res = await axios.get("/api/company/profile", {
+        withCredentials: true,
+      });
+      if (res.status == 200) {
+        const data = res.data.data;
+
+        reset({
+          officialName: data.officialCompanyName,
+          officialEmail: data.officialEmail,
+          vision: data.vision,
+          mission: data.mission,
+          blog: data.blogContent,
+        });
+        console.log(res.data.data);
+      }
+    } catch (error) {}
+  };
+
+  useEffect(() => {
+    getProfile();
+  }, []);
 
   const {
     register,
