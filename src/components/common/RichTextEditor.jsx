@@ -1,4 +1,6 @@
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEffect } from "react";
+import { EditorContent, useEditor } from "@tiptap/react";
+
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -9,6 +11,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-text-style";
+
 import {
   Bold,
   Italic,
@@ -37,7 +40,13 @@ import {
   RemoveFormatting,
 } from "lucide-react";
 
-function ToolbarButton({ onClick, active, disabled, title, children }) {
+function ToolbarButton({
+  onClick,
+  active = false,
+  disabled = false,
+  title,
+  children,
+}) {
   return (
     <button
       type="button"
@@ -63,7 +72,7 @@ function Divider() {
 
 function RichTextEditor({
   label,
-  value,
+  value = "",
   onChange,
   error,
   placeholder = "Start writing…",
@@ -80,83 +89,266 @@ function RichTextEditor({
         },
         codeBlock: false,
       }),
+
       Underline,
+
       TextStyle,
+
       Color,
-      Highlight.configure({ multicolor: true }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
+
+      Highlight.configure({
+        multicolor: true,
+      }),
+
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+
       Link.configure({
         openOnClick: false,
         autolink: true,
-        HTMLAttributes: { rel: "noopener noreferrer nofollow" },
+        HTMLAttributes: {
+          rel: "noopener noreferrer nofollow",
+        },
       }),
-      Image.configure({ inline: false, allowBase64: true }),
-      Placeholder.configure({ placeholder }),
-      CharacterCount.configure({ limit: maxLength }),
+
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+      }),
+
+      Placeholder.configure({
+        placeholder,
+      }),
+
+      CharacterCount.configure({
+        limit: maxLength,
+      }),
     ],
+
+    // Initial value
     content: value || "",
+
     editorProps: {
       attributes: {
         class:
           "rte-editor min-h-[300px] px-4 py-4 focus:outline-none max-w-none",
       },
     },
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+
+    onUpdate: ({ editor }) => {
+      onChange?.(editor.getHTML());
+    },
   });
 
-  if (!editor) return null;
+  /**
+   * IMPORTANT:
+   *
+   * Tiptap only uses `content` when the editor is initialized.
+   *
+   * When your API request finishes, the `value` prop changes,
+   * but Tiptap does not automatically update its internal state.
+   *
+   * This effect synchronizes React's value with Tiptap.
+   */
+  useEffect(() => {
+    if (!editor) return;
+
+    const currentContent = editor.getHTML();
+    const newContent = value || "";
+
+    if (currentContent !== newContent) {
+      editor.commands.setContent(newContent, false);
+    }
+  }, [editor, value]);
+
+  if (!editor) {
+    return null;
+  }
+
+  // =========================
+  // Toolbar actions
+  // =========================
 
   const addLink = () => {
     const previousUrl = editor.getAttributes("link").href;
+
     const url = window.prompt("Enter URL", previousUrl || "");
-    if (url === null) return;
+
+    if (url === null) {
+      return;
+    }
+
     if (url === "") {
       editor.chain().focus().unsetLink().run();
       return;
     }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({
+        href: url,
+      })
+      .run();
   };
 
   const addImage = () => {
     const url = window.prompt("Image URL");
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+
+    if (url) {
+      editor
+        .chain()
+        .focus()
+        .setImage({
+          src: url,
+        })
+        .run();
+    }
   };
 
   const textColor = () => {
     const color = window.prompt("Text color (hex, e.g. #ff6600)", "#000000");
-    if (color) editor.chain().focus().setColor(color).run();
+
+    if (color) {
+      editor.chain().focus().setColor(color).run();
+    }
   };
 
   const highlight = () => {
     const color = window.prompt("Highlight color (hex)", "#fef08a");
-    if (color) editor.chain().focus().toggleHighlight({ color }).run();
+
+    if (color) {
+      editor
+        .chain()
+        .focus()
+        .toggleHighlight({
+          color,
+        })
+        .run();
+    }
   };
 
+  // =========================
+  // Character count
+  // =========================
+
   const chars = editor.storage.characterCount?.characters?.() ?? 0;
+
   const words = editor.storage.characterCount?.words?.() ?? 0;
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Label */}
       {label && (
         <label className="text-sm font-medium text-cm-text">{label}</label>
       )}
 
+      {/* Editor wrapper */}
       <style>{`
-        .rte-editor h1 { font-size: 2rem; font-weight: 700; line-height: 1.2; margin: 1.5rem 0 0.75rem; color: #111827; }
-        .rte-editor h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 1.25rem 0 0.6rem; color: #111827; }
-        .rte-editor h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.4; margin: 1rem 0 0.5rem; color: #111827; }
-        .rte-editor p { margin: 0 0 0.75rem; line-height: 1.7; color: #374151; }
-        .rte-editor ul { list-style: disc; padding-left: 1.5rem; margin: 0 0 1rem; }
-        .rte-editor ol { list-style: decimal; padding-left: 1.5rem; margin: 0 0 1rem; }
-        .rte-editor li { margin-bottom: 0.25rem; }
-        .rte-editor blockquote { border-left: 4px solid #c7d2fe; padding-left: 1rem; margin: 1rem 0; color: #4b5563; font-style: italic; }
-        .rte-editor code { background: #f3f4f6; border-radius: 4px; padding: 0.1rem 0.35rem; font-family: ui-monospace, monospace; font-size: 0.875em; }
-        .rte-editor pre { background: #1e293b; color: #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 1rem 0; }
-        .rte-editor pre code { background: transparent; color: inherit; padding: 0; }
-        .rte-editor a { color: #4f46e5; text-decoration: underline; cursor: pointer; }
-        .rte-editor img { max-width: 100%; height: auto; border-radius: 6px; margin: 1rem 0; }
-        .rte-editor hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
-        .rte-editor mark { border-radius: 2px; padding: 0 2px; background-color: #fef08a; }
+        .rte-editor h1 {
+          font-size: 2rem;
+          font-weight: 700;
+          line-height: 1.2;
+          margin: 1.5rem 0 0.75rem;
+          color: #111827;
+        }
+
+        .rte-editor h2 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          line-height: 1.3;
+          margin: 1.25rem 0 0.6rem;
+          color: #111827;
+        }
+
+        .rte-editor h3 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          line-height: 1.4;
+          margin: 1rem 0 0.5rem;
+          color: #111827;
+        }
+
+        .rte-editor p {
+          margin: 0 0 0.75rem;
+          line-height: 1.7;
+          color: #374151;
+        }
+
+        .rte-editor ul {
+          list-style: disc;
+          padding-left: 1.5rem;
+          margin: 0 0 1rem;
+        }
+
+        .rte-editor ol {
+          list-style: decimal;
+          padding-left: 1.5rem;
+          margin: 0 0 1rem;
+        }
+
+        .rte-editor li {
+          margin-bottom: 0.25rem;
+        }
+
+        .rte-editor blockquote {
+          border-left: 4px solid #c7d2fe;
+          padding-left: 1rem;
+          margin: 1rem 0;
+          color: #4b5563;
+          font-style: italic;
+        }
+
+        .rte-editor code {
+          background: #f3f4f6;
+          border-radius: 4px;
+          padding: 0.1rem 0.35rem;
+          font-family: ui-monospace, monospace;
+          font-size: 0.875em;
+        }
+
+        .rte-editor pre {
+          background: #1e293b;
+          color: #e2e8f0;
+          border-radius: 8px;
+          padding: 1rem;
+          overflow-x: auto;
+          margin: 1rem 0;
+        }
+
+        .rte-editor pre code {
+          background: transparent;
+          color: inherit;
+          padding: 0;
+        }
+
+        .rte-editor a {
+          color: #4f46e5;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+
+        .rte-editor img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 6px;
+          margin: 1rem 0;
+        }
+
+        .rte-editor hr {
+          border: none;
+          border-top: 1px solid #e5e7eb;
+          margin: 1.5rem 0;
+        }
+
+        .rte-editor mark {
+          border-radius: 2px;
+          padding: 0 2px;
+          background-color: #fef08a;
+        }
+
         .rte-editor p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
@@ -171,8 +363,13 @@ function RichTextEditor({
           error ? "border-red-500" : "border-cm-border"
         }`}
       >
-        {/* ============ TOOLBAR ============ */}
+        {/* =========================
+            TOOLBAR
+        ========================== */}
+
         <div className="flex flex-wrap items-center gap-0.5 border-b border-cm-border bg-gray-50 p-1.5">
+          {/* Undo / Redo */}
+
           <ToolbarButton
             title="Undo"
             disabled={!editor.can().undo()}
@@ -180,6 +377,7 @@ function RichTextEditor({
           >
             <Undo2 size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Redo"
             disabled={!editor.can().redo()}
@@ -187,36 +385,68 @@ function RichTextEditor({
           >
             <Redo2 size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Headings */}
 
           <ToolbarButton
             title="Heading 1"
-            active={editor.isActive("heading", { level: 1 })}
+            active={editor.isActive("heading", {
+              level: 1,
+            })}
             onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
+              editor
+                .chain()
+                .focus()
+                .toggleHeading({
+                  level: 1,
+                })
+                .run()
             }
           >
             <Heading1 size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Heading 2"
-            active={editor.isActive("heading", { level: 2 })}
+            active={editor.isActive("heading", {
+              level: 2,
+            })}
             onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
+              editor
+                .chain()
+                .focus()
+                .toggleHeading({
+                  level: 2,
+                })
+                .run()
             }
           >
             <Heading2 size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Heading 3"
-            active={editor.isActive("heading", { level: 3 })}
+            active={editor.isActive("heading", {
+              level: 3,
+            })}
             onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 3 }).run()
+              editor
+                .chain()
+                .focus()
+                .toggleHeading({
+                  level: 3,
+                })
+                .run()
             }
           >
             <Heading3 size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Text formatting */}
 
           <ToolbarButton
             title="Bold"
@@ -225,6 +455,7 @@ function RichTextEditor({
           >
             <Bold size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Italic"
             active={editor.isActive("italic")}
@@ -232,6 +463,7 @@ function RichTextEditor({
           >
             <Italic size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Underline"
             active={editor.isActive("underline")}
@@ -239,6 +471,7 @@ function RichTextEditor({
           >
             <UnderlineIcon size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Strikethrough"
             active={editor.isActive("strike")}
@@ -246,6 +479,7 @@ function RichTextEditor({
           >
             <Strikethrough size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Inline code"
             active={editor.isActive("code")}
@@ -253,7 +487,10 @@ function RichTextEditor({
           >
             <Code size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Color */}
 
           <ToolbarButton
             title="Text color"
@@ -262,6 +499,7 @@ function RichTextEditor({
           >
             <Palette size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Highlight"
             active={editor.isActive("highlight")}
@@ -269,37 +507,54 @@ function RichTextEditor({
           >
             <Highlighter size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Alignment */}
 
           <ToolbarButton
             title="Align left"
-            active={editor.isActive({ textAlign: "left" })}
+            active={editor.isActive({
+              textAlign: "left",
+            })}
             onClick={() => editor.chain().focus().setTextAlign("left").run()}
           >
             <AlignLeft size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Align center"
-            active={editor.isActive({ textAlign: "center" })}
+            active={editor.isActive({
+              textAlign: "center",
+            })}
             onClick={() => editor.chain().focus().setTextAlign("center").run()}
           >
             <AlignCenter size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Align right"
-            active={editor.isActive({ textAlign: "right" })}
+            active={editor.isActive({
+              textAlign: "right",
+            })}
             onClick={() => editor.chain().focus().setTextAlign("right").run()}
           >
             <AlignRight size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Justify"
-            active={editor.isActive({ textAlign: "justify" })}
+            active={editor.isActive({
+              textAlign: "justify",
+            })}
             onClick={() => editor.chain().focus().setTextAlign("justify").run()}
           >
             <AlignJustify size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Lists */}
 
           <ToolbarButton
             title="Bullet list"
@@ -308,6 +563,7 @@ function RichTextEditor({
           >
             <List size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Numbered list"
             active={editor.isActive("orderedList")}
@@ -315,6 +571,9 @@ function RichTextEditor({
           >
             <ListOrdered size={16} />
           </ToolbarButton>
+
+          {/* Blockquote */}
+
           <ToolbarButton
             title="Blockquote"
             active={editor.isActive("blockquote")}
@@ -322,6 +581,9 @@ function RichTextEditor({
           >
             <Quote size={16} />
           </ToolbarButton>
+
+          {/* Code block */}
+
           <ToolbarButton
             title="Code block"
             active={editor.isActive("codeBlock")}
@@ -329,13 +591,19 @@ function RichTextEditor({
           >
             <Code2 size={16} />
           </ToolbarButton>
+
+          {/* Horizontal rule */}
+
           <ToolbarButton
             title="Divider"
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
           >
             <Minus size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Links */}
 
           <ToolbarButton
             title="Add link"
@@ -344,6 +612,7 @@ function RichTextEditor({
           >
             <LinkIcon size={16} />
           </ToolbarButton>
+
           <ToolbarButton
             title="Remove link"
             disabled={!editor.isActive("link")}
@@ -351,10 +620,16 @@ function RichTextEditor({
           >
             <Unlink size={16} />
           </ToolbarButton>
+
+          {/* Image */}
+
           <ToolbarButton title="Insert image" onClick={addImage}>
             <ImageIcon size={16} />
           </ToolbarButton>
+
           <Divider />
+
+          {/* Clear formatting */}
 
           <ToolbarButton
             title="Clear formatting"
@@ -366,22 +641,31 @@ function RichTextEditor({
           </ToolbarButton>
         </div>
 
-        {/* ============ EDITOR ============ */}
+        {/* =========================
+            EDITOR
+        ========================== */}
+
         <div className="bg-white">
           <EditorContent editor={editor} />
         </div>
 
-        {/* ============ FOOTER ============ */}
+        {/* =========================
+            FOOTER
+        ========================== */}
+
         <div className="flex items-center justify-between border-t border-cm-border bg-gray-50 px-4 py-2 text-xs text-gray-500">
           <span>
             {words} words · {chars} characters
             {maxLength ? ` / ${maxLength}` : ""}
           </span>
+
           {maxLength && chars >= maxLength && (
             <span className="font-medium text-red-500">Limit reached</span>
           )}
         </div>
       </div>
+
+      {/* Error */}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
     </div>

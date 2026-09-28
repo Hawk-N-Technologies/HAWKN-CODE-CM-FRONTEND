@@ -18,48 +18,12 @@ const DEFAULT_VALUES = {
     "Our mission is to deliver reliable, scalable, and user-focused technology solutions while maintaining quality, transparency, and long-term relationships with our clients.",
 
   blog: `
-    <h2>What People Should Know About Us</h2>
-    <p>
-      Hawk'N Technologies is a technology company focused on building
-      modern digital solutions for businesses and organizations. We combine
-      technology, creativity, and business understanding to deliver solutions
-      that solve real-world problems.
-    </p>
-
-    <h2>Why Customers Should Care About Us</h2>
-    <p>
-      We focus on understanding our customers' needs before building a
-      solution. Our goal is to provide reliable, scalable, and easy-to-use
-      products that create long-term value for our customers.
-    </p>
-
-    <h2>Culture &amp; Values</h2>
-    <p>
-      Our culture is built around innovation, integrity, teamwork, continuous
-      learning, and customer success.
-    </p>
-
-    <ul>
-      <li>Innovation and continuous improvement</li>
-      <li>Integrity and transparency</li>
-      <li>Teamwork and collaboration</li>
-      <li>Customer-focused thinking</li>
-      <li>Quality and accountability</li>
-    </ul>
-
-    <h2>Company Story</h2>
-    <p>
-      Hawk'N Technologies was created with the vision of helping businesses
-      use technology more effectively. From our early projects to our
-      growing range of digital solutions, we continue to focus on creating
-      meaningful technology experiences for our customers.
-    </p>
+   
   `,
 };
 
 function CompanyProfile() {
   const [isSaving, setIsSaving] = useState(false);
-  const [profile, setProfile] = useState({});
   const getProfile = async () => {
     try {
       const res = await axios.get("/api/company/profile", {
@@ -74,6 +38,7 @@ function CompanyProfile() {
           vision: data.vision,
           mission: data.mission,
           blog: data.blogContent,
+          uuid: data.uuid,
         });
         console.log(res.data.data);
       }
@@ -101,13 +66,23 @@ function CompanyProfile() {
     setIsSaving(true);
 
     try {
-      // TODO: Replace with real API call.
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const payload = {
+        officialCompanyName: values.officialName,
+        officialEmail: values.officialEmail,
+        vision: values.vision,
+        mission: values.mission,
+        blogContent: values.blog,
+      };
+
+      await axios.put(`/api/company/profile/${values.uuid}`, payload, {
+        withCredentials: true,
+      });
 
       reset(values);
 
       showToast.success("Company profile updated.");
-    } catch {
+    } catch (error) {
+      console.error(error);
       showToast.error("Couldn't save the company profile. Try again.");
     } finally {
       setIsSaving(false);
