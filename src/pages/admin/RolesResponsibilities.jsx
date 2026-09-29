@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Button from "../../components/common/Button";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { showToast } from "../../components/common/Toast";
+import { useEditor } from "@tiptap/react";
+import axios from "axios";
 
 const DEFAULT_VALUES = {
   rolesResponsibilities: `
@@ -99,18 +101,52 @@ function RolesResponsibilities() {
     setIsSaving(true);
 
     try {
-      // TODO: Replace with real API call.
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      console.log("Roles & Responsibilities:", values.rolesResponsibilities);
+      await axios.put(
+        `/api/company/roles-responsibilities/${values.uuid}`,
+        {
+          content: values.rolesResponsibilities,
+        },
+        {
+          withCredentials: true,
+        },
+      );
 
       showToast.success("Roles & responsibilities updated.");
-    } catch {
-      showToast.error("Couldn't save roles & responsibilities. Try again.");
+    } catch (error) {
+      console.error("Failed to update roles & responsibilities:", error);
+
+      showToast.error(
+        "Couldn't save roles & responsibilities. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
   };
+
+  const getRoleAndRes = async () => {
+    try {
+      const res = await axios.get("/api/company/roles-responsibilities", {
+        withCredentials: true,
+      });
+
+      const data = res.data.data;
+
+      console.log("Roles & responsibilities response:", data);
+
+      setValue("uuid", data.uuid);
+      setValue("rolesResponsibilities", data.content || "");
+    } catch (error) {
+      console.error("Failed to get roles & responsibilities:", error);
+
+      showToast.error(
+        "Couldn't load roles & responsibilities. Please try again.",
+      );
+    }
+  };
+
+  useEffect(() => {
+    getRoleAndRes();
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
