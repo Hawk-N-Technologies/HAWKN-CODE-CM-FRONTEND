@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Button from "../../components/common/Button";
 import RichTextEditor from "../../components/common/RichTextEditor";
 import { showToast } from "../../components/common/Toast";
+import axios from "axios";
 
 const DEFAULT_VALUES = {
   policies: `
@@ -45,19 +46,46 @@ function CompanyPolicies() {
     setIsSaving(true);
 
     try {
-      // TODO: Replace with real API call.
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      console.log("Company Policies:", values.policies);
+      await axios.put(
+        `/api/company/policies/${values.uuid}`,
+        {
+          content: values.policies,
+        },
+        {
+          withCredentials: true,
+        },
+      );
 
       showToast.success("Company policies updated.");
-    } catch {
+    } catch (error) {
+      console.error(error);
       showToast.error("Couldn't save company policies. Try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
+  const getPolicies = async () => {
+    try {
+      const res = await axios.get("/api/company/policies", {
+        withCredentials: true,
+      });
+
+      const data = res.data.data;
+
+      console.log("Policy response:", data);
+
+      setValue("uuid", data.uuid);
+      setValue("policies", data.content || "");
+    } catch (error) {
+      console.error("Get policies failed:", error);
+      showToast.error("Couldn't load company policies.");
+    }
+  };
+
+  useEffect(() => {
+    getPolicies();
+  }, []);
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -88,6 +116,7 @@ function CompanyPolicies() {
             onChange={(content) =>
               setValue("policies", content, {
                 shouldDirty: true,
+                shouldValidate: true,
               })
             }
           />
