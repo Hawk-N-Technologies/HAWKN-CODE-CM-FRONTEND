@@ -11,6 +11,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-text-style";
+import DOMPurify from "dompurify";
 
 import {
   Bold,
@@ -114,7 +115,7 @@ function RichTextEditor({
 
       Image.configure({
         inline: false,
-        allowBase64: true,
+        allowBase64: false,
       }),
 
       Placeholder.configure({
@@ -137,7 +138,13 @@ function RichTextEditor({
     },
 
     onUpdate: ({ editor }) => {
-      onChange?.(editor.getHTML());
+      const html = editor.getHTML();
+
+      const sanitizedHtml = DOMPurify.sanitize(html, {
+        USE_PROFILES: { html: true },
+      });
+
+      onChange?.(sanitizedHtml);
     },
   });
 
@@ -155,7 +162,9 @@ function RichTextEditor({
     if (!editor) return;
 
     const currentContent = editor.getHTML();
-    const newContent = value || "";
+    const newContent = DOMPurify.sanitize(value || "", {
+      USE_PROFILES: { html: true },
+    });
 
     if (currentContent !== newContent) {
       editor.commands.setContent(newContent, false);
