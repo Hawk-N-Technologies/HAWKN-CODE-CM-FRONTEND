@@ -29,7 +29,6 @@ function Login() {
   const { login, isAuthenticating } = useAuth();
 
   const [formError, setFormError] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -52,9 +51,9 @@ function Login() {
         password,
       });
 
-      showToast.success(`Welcome back, ${user.name.split(" ")[0]}.`);
-
-      navigate(ROLE_DASHBOARD_PATH[user.role] ?? "/", {
+      console.log(user);
+      showToast.success(`Welcome back, ${user.firstName}`);
+      navigate(ROLE_DASHBOARD_PATH[user.role.name] ?? "/", {
         replace: true,
       });
     } catch (err) {

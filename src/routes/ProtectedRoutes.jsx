@@ -1,22 +1,22 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { Navigate, Outlet } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
-/**
- * Base authentication guard. Wrap any route block that requires a
- * signed-in user with this; unauthenticated visitors are bounced to
- * /login, with the page they wanted preserved so Login can send them
- * back after a successful sign-in.
- *
- * Frontend-only: this protects the UI, not the data. The backend must
- * independently reject unauthorized requests regardless of what the
- * frontend shows or hides.
- */
 function ProtectedRoutes() {
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
+  const { isAuthenticated, isAuthenticating, user } = useContext(AuthContext);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+  console.log("ProtectedRoutes:", {
+    user,
+    isAuthenticated,
+    isAuthenticating,
+  });
+
+  if (isAuthenticating) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;

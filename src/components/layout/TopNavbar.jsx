@@ -36,7 +36,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
     navigate("/login", { replace: true });
   };
 
-  const initials = (user?.name ?? "?")
+  const initials = (user?.firstName ?? "?")
     .split(" ")
     .map((part) => part[0])
     .join("")
@@ -51,8 +51,19 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
         className="flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg lg:hidden"
         aria-label="Open menu"
       >
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          className="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="M4 6h16M4 12h16M4 18h16"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
 
@@ -66,8 +77,18 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
           strokeWidth="2"
           aria-hidden="true"
         >
-          <circle cx="11" cy="11" r="7" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="m20 20-3.5-3.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle
+            cx="11"
+            cy="11"
+            r="7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="m20 20-3.5-3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         <input
           type="search"
@@ -84,9 +105,24 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
           className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg"
           aria-label={`Notifications${notificationCount ? `, ${notificationCount} unread` : ""}`}
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            className="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M13.73 21a2 2 0 0 1-3.46 0"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           {notificationCount > 0 && (
             <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-cm-danger-600 px-1 text-[10px] font-semibold text-white">
@@ -109,14 +145,26 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
             </span>
             <span className="hidden text-left sm:block">
               <span className="block text-sm font-medium leading-tight text-cm-text">
-                {user?.name ?? "Guest"}
+                {user ? `${user.firstName} ${user.lastName}` : "Guest"}
               </span>
+
               <span className="block text-xs leading-tight text-cm-text-muted">
-                {user?.role ? ROLE_LABEL[user.role] : ""}
+                {user?.role.name ? ROLE_LABEL[user.role.name] : ""}
               </span>
             </span>
-            <svg className="h-4 w-4 text-cm-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              className="h-4 w-4 text-cm-text-muted"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path
+                d="m6 9 6 6 6-6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
 
@@ -126,8 +174,12 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
               className="absolute right-0 top-full mt-2 w-48 rounded-cm-md border border-cm-border bg-cm-card py-1 shadow-lg"
             >
               <div className="border-b border-cm-border px-3 py-2 sm:hidden">
-                <p className="text-sm font-medium text-cm-text">{user?.name ?? "Guest"}</p>
-                <p className="text-xs text-cm-text-muted">{user?.role ? ROLE_LABEL[user.role] : ""}</p>
+                <p className="text-sm font-medium text-cm-text">
+                  {user?.name ?? "Guest"}
+                </p>
+                <p className="text-xs text-cm-text-muted">
+                  {user?.role ? ROLE_LABEL[user.role] : ""}
+                </p>
               </div>
               <button
                 type="button"
@@ -135,9 +187,24 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-cm-danger-600 hover:bg-cm-danger-100"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="m16 17 5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="m16 17 5-5-5-5M21 12H9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Logout
               </button>

@@ -14,7 +14,8 @@ import { ROLE_DASHBOARD_PATH } from "../constants/roles";
  */
 function RoleRoute({ allowedRoles = [] }) {
   const { role } = useAuth();
-
+  console.log(role);
+  console.log("jkldjfkl;sj klfjdkl;sf jdklsjfkldsjfkl;s j;kls");
   if (!allowedRoles.includes(role)) {
     return <Navigate to={ROLE_DASHBOARD_PATH[role] ?? "/login"} replace />;
   }
