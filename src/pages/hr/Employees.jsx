@@ -89,6 +89,8 @@ const EMPTY_FORM = {
   whatsapp: "",
   email: "",
   companyEmail: "",
+  password: "",
+  confirmPassword: "",
   joiningDate: "",
   dob: "",
   linkedin: "",
@@ -98,7 +100,6 @@ const EMPTY_FORM = {
   status: "Active",
   type: "Full Time",
 };
-
 const STATUS_TONE = {
   Active: "success",
   "On Leave": "warning",
@@ -138,24 +139,44 @@ function Employees() {
 
   const save = (event) => {
     event.preventDefault();
+
     if (!form.name.trim() || !form.email.trim()) {
       showToast.error("Name and email are required.");
       return;
     }
 
+    // Password required only while creating
+    if (!form.id && !form.password) {
+      showToast.error("Password is required.");
+      return;
+    }
+
+    // Validate password confirmation
+    if (!form.id && form.password !== form.confirmPassword) {
+      showToast.error("Passwords do not match.");
+      return;
+    }
+
     const existing = employees.find((employee) => employee.id === form.id);
+
     if (existing) {
       setEmployees((prev) =>
         prev.map((employee) => (employee.id === form.id ? form : employee)),
       );
+
       showToast.success("Employee updated.");
     } else {
       setEmployees((prev) => [
-        { ...form, id: `EMP-${String(prev.length + 1).padStart(3, "0")}` },
+        {
+          ...form,
+          id: `EMP-${String(prev.length + 1).padStart(3, "0")}`,
+        },
         ...prev,
       ]);
+
       showToast.success("Employee added.");
     }
+
     setIsFormOpen(false);
   };
 
@@ -216,12 +237,50 @@ function Employees() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
+
             <Input
               label="Email"
               type="email"
               required
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+
+            <Input
+              label="Company Email"
+              value={form.companyEmail}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  companyEmail: e.target.value,
+                })
+              }
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              required={!form.id}
+              value={form.password}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  password: e.target.value,
+                })
+              }
+            />
+
+            <Input
+              label="Confirm Password"
+              type="password"
+              required={!form.id}
+              value={form.confirmPassword}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  confirmPassword: e.target.value,
+                })
+              }
             />
             <Input
               label="Phone 1"
