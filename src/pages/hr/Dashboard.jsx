@@ -1,4 +1,5 @@
 import Badge from "../../components/common/Badge";
+import AttendanceButton from "../../components/common/AttendanceButton";
 
 const KPIS = [
   ["Total Employees", "25"],
@@ -11,11 +12,17 @@ const KPIS = [
 function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">HR Dashboard</h1>
-        <p className="mt-1 text-sm text-cm-text-muted">
-          Employee, attendance, leave, payroll and people overview.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-cm-text">HR Dashboard</h1>
+
+          <p className="mt-1 text-sm text-cm-text-muted">
+            Employee, attendance, leave, payroll and people overview.
+          </p>
+        </div>
+
+        {/* Common attendance component */}
+        <AttendanceButton />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -25,6 +32,7 @@ function Dashboard() {
             className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm"
           >
             <p className="text-xs text-cm-text-muted">{label}</p>
+
             <p className="mt-2 text-2xl font-bold text-cm-text">{value}</p>
           </div>
         ))}
@@ -35,6 +43,7 @@ function Dashboard() {
           <h2 className="text-sm font-semibold text-cm-text">
             Today's Attendance
           </h2>
+
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge tone="success">Present 21</Badge>
             <Badge tone="warning">On Leave 2</Badge>
@@ -44,6 +53,7 @@ function Dashboard() {
 
         <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-cm-text">HR Actions</h2>
+
           <ul className="mt-4 space-y-2 text-sm text-cm-text-muted">
             <li>2 employees are awaiting onboarding completion.</li>
             <li>2 leave requests need review.</li>
