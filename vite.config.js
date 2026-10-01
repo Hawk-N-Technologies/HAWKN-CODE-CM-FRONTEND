@@ -6,7 +6,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   const backendUrl =
-    mode === "development" ? env.VITE_BACKEND_URL : "http://internal-project-codebackendtemp-9tb1ne-6636bb-194-164-148-10.sslip.io";
+    env.VITE_BACKEND_URL ||
+    env.BACKEND_URL ||
+    "http://internal-project-codebackendtemp-9tb1ne-6636bb-194-164-148-10.sslip.io";
 
   return {
     plugins: [react(), tailwindcss()],

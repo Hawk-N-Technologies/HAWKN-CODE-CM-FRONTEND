@@ -13,8 +13,11 @@ RUN npm run build
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
 
-# Copy custom Nginx configuration
+# Copy fallback configuration, template and entrypoint
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Copy build artifacts to Nginx default public directory
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -22,5 +25,5 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Expose port 12123
 EXPOSE 12123
 
-# Start Nginx server
-CMD ["nginx", "-g", "daemon off;"]
+# Start Nginx server via entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]
