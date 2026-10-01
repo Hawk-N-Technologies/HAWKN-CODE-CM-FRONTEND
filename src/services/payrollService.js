@@ -37,6 +37,32 @@ export async function processPayroll(uuid) {
   return res.data.data;
 }
 
+// ---------- Salary Structure ----------
+
+// Autocomplete that only returns people with an employee record
+export async function searchSalaryEmployees(q, signal) {
+  const res = await axios.get(`${BASE}/salaries/employees/search`, {
+    ...config,
+    params: { q },
+    signal,
+  });
+  return res.data.data;
+}
+
+// Optional userUuid = one exact employee
+export async function getSalaries(userUuid) {
+  const res = await axios.get(`${BASE}/salaries`, {
+    ...config,
+    params: userUuid ? { userUuid } : {},
+  });
+  return res.data.data;
+}
+
+// Creates the salary the first time, updates it after
+export async function setSalary(userUuid, salary) {
+  const res = await axios.put(`${BASE}/salaries`, { userUuid, salary }, config);
+  return res.data;
+}
 // Any axios error → a message a human can read
 export function getErrorMessage(error, fallback = "Something went wrong. Please try again.") {
   if (error?.response?.status === 401) return "Your session has expired. Please log in again.";

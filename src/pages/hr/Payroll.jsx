@@ -8,6 +8,7 @@ import Select from "../../components/common/Select";
 import ErrorState from "../../components/common/ErrorState";
 import DataTable from "../../components/tables/DataTable";
 import EmployeeAutocomplete from "../../components/payroll/EmployeeAutocomplete";
+import SalaryStructure from "../../components/payroll/SalaryStructure";
 import { showToast } from "../../components/common/Toast";
 import {
   createPayroll,
@@ -78,6 +79,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     handleSubmit,
     control,
     setError,
+    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm({ defaultValues: FORM_DEFAULTS() });
@@ -129,17 +131,30 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       onSubmit={handleSubmit(onSubmit)}
       className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
     >
-      <EmployeeAutocomplete
-        label="Employee"
-        required
-        selected={employee}
-        onSelect={(picked) => {
-          setEmployee(picked);
-          if (picked) setEmployeeError("");
-        }}
-        error={employeeError}
-        placeholder="Start typing a name…"
-      />
+      <div className="flex flex-col gap-1">
+        <EmployeeAutocomplete
+          label="Employee"
+          required
+          selected={employee}
+          onSelect={(picked) => {
+            setEmployee(picked);
+            if (picked) setEmployeeError("");
+            // Auto-fill Base Salary from Salary Structure (HR can still change it)
+            if (picked?.salary != null) {
+              setValue("baseSalary", picked.salary, { shouldValidate: true });
+            }
+          }}
+          error={employeeError}
+          placeholder="Start typing a name…"
+        />
+        {employee && (
+          <p className="text-xs text-cm-text-muted">
+            {employee.salary != null
+              ? `Base salary auto-filled from Salary Structure (${formatMoney(employee.salary)}).`
+              : "No salary set in Salary Structure — enter base salary manually."}
+          </p>
+        )}
+      </div>
 
       <Input
         label="Month"
@@ -214,10 +229,10 @@ function CreatePayrollForm({ onCreated, onCancel }) {
 }
 
 // ---------------------------------------------------------------------------
-// Page
+// Payroll Runs tab
 // ---------------------------------------------------------------------------
 
-function Payroll() {
+function PayrollRuns() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -352,14 +367,8 @@ function Payroll() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">Payroll</h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Payroll based on attendance and LOP, payment methods and people ledger.
-          </p>
-        </div>
+        <p className="text-sm text-cm-text-muted">Monthly payroll records — create, filter and process.</p>
         <Button onClick={() => setShowForm((value) => !value)}>
           {showForm ? "Close" : "Create Payroll"}
         </Button>
@@ -454,6 +463,56 @@ function Payroll() {
           emptyMessage={hasActiveFilters ? "No payroll records for these filters." : "No payroll records yet."}
         />
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page: tabs
+// ---------------------------------------------------------------------------
+
+const TABS = [
+  { id: "runs", label: "Payroll Runs" },
+  { id: "salaries", label: "Salary Structure" },
+];
+
+function Payroll() {
+  const [activeTab, setActiveTab] = useState("runs");
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-bold text-cm-text">Payroll</h1>
+        <p className="mt-1 text-sm text-cm-text-muted">
+          Payroll based on attendance and LOP, payment methods and people ledger.
+        </p>
+      </div>
+
+      <div role="tablist" aria-label="Payroll sections" className="flex gap-1 border-b border-cm-border">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            id={`payroll-tab-${tab.id}`}
+            aria-selected={activeTab === tab.id}
+            aria-controls={`payroll-panel-${tab.id}`}
+            onClick={() => setActiveTab(tab.id)}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? "border-[#000052] text-[#000052]"
+                : "border-transparent text-cm-text-muted hover:text-cm-text"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Only the active tab is mounted → it always loads fresh data */}
+      <div role="tabpanel" id={`payroll-panel-${activeTab}`} aria-labelledby={`payroll-tab-${activeTab}`}>
+        {activeTab === "runs" ? <PayrollRuns /> : <SalaryStructure />}
+      </div>
     </div>
   );
 }

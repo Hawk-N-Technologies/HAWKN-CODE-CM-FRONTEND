@@ -40,11 +40,14 @@ function PredictedName({ fullName, typed }) {
  *   onSelect  — (employee | null) => void   (null = selection cleared)
  *   onTextChange — (text) => void (optional) lets the parent spot
  *                  "typed a name but never picked a suggestion"
+ *   searchFn  — (q, signal) => Promise<employee[]> (optional) which endpoint to search; defaults to the payroll employee search
+ * 
  */
 function EmployeeAutocomplete({
   selected,
   onSelect,
   onTextChange,
+  searchFn = searchPayrollEmployees,
   label,
   placeholder = "Search employee by name…",
   error,
@@ -77,7 +80,7 @@ function EmployeeAutocomplete({
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchPayrollEmployees(query, controller.signal)
+        searchFn(query, controller.signal)
         .then((items) => setResults({ query, items, failed: false }))
         .catch((err) => {
           if (err?.name === "CanceledError") return; // outdated request, ignore
@@ -89,7 +92,7 @@ function EmployeeAutocomplete({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, isSearchable]);
+  }, [query, isSearchable, searchFn]);
 
   useEffect(() => () => clearTimeout(blurTimer.current), []);
 
