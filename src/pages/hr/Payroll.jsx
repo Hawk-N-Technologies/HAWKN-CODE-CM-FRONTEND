@@ -12,10 +12,12 @@ import SalaryStructure from "../../components/payroll/SalaryStructure";
 import { showToast } from "../../components/common/Toast";
 import {
   createPayroll,
+  deletePayroll,
   getErrorMessage,
   getFieldErrors,
   getPayroll,
   processPayroll,
+  updatePayroll,
 } from "../../services/payrollService";
 
 // ---------------------------------------------------------------------------
@@ -68,10 +70,17 @@ const FORM_DEFAULTS = () => ({
 });
 
 // ---------------------------------------------------------------------------
-// Create Payroll form
+// Create / Edit Payroll form
 // ---------------------------------------------------------------------------
 
-function CreatePayrollForm({ onCreated, onCancel }) {
+/**
+ * editing = null → create a new payroll.
+ * editing = a payroll row → edit it. Only amounts + payment method can change;
+ * employee and month are shown read-only (to change those, delete + re-create).
+ * The parent re-mounts this form (key) when switching, so defaults are always right.
+ */
+function PayrollForm({ editing, onSaved, onCancel }) {
+  const isEdit = Boolean(editing);
   const [employee, setEmployee] = useState(null);
   const [employeeError, setEmployeeError] = useState("");
   const {
@@ -82,7 +91,17 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     setValue,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: FORM_DEFAULTS() });
+  } = useForm({
+    defaultValues: isEdit
+      ? {
+          payPeriod: editing.payPeriod,
+          baseSalary: editing.baseSalary,
+          lopDeduction: editing.lopDeduction,
+          bonus: editing.bonus,
+          paymentMethod: editing.paymentMethod,
+        }
+      : FORM_DEFAULTS(),
+  });
 
   // Live values for the net-salary preview (useWatch = React-19-safe version of watch)
   const [baseSalary, lopDeduction, bonus] = useWatch({
@@ -92,26 +111,32 @@ function CreatePayrollForm({ onCreated, onCancel }) {
   const net = calcNet(baseSalary, lopDeduction, bonus);
 
   const onSubmit = async (values) => {
-    if (!employee) {
+    if (!isEdit && !employee) {
       setEmployeeError("Select an employee from the suggestions");
       return;
     }
 
-    try {
-      // netSalary is NOT sent — the server calculates it
-      const record = await createPayroll({
-        userUuid: employee.uuid,
-        payPeriod: values.payPeriod,
-        baseSalary: toNumber(values.baseSalary),
-        lopDeduction: toNumber(values.lopDeduction),
-        bonus: toNumber(values.bonus),
-        paymentMethod: values.paymentMethod,
-      });
+    // netSalary is NOT sent — the server calculates it
+    const amounts = {
+      baseSalary: toNumber(values.baseSalary),
+      lopDeduction: toNumber(values.lopDeduction),
+      bonus: toNumber(values.bonus),
+      paymentMethod: values.paymentMethod,
+    };
 
-      showToast.success(`Payroll created for ${record.employee.fullName} (${formatMonth(record.payPeriod)}).`);
-      reset(FORM_DEFAULTS());
-      setEmployee(null);
-      onCreated(record);
+    try {
+      const record = isEdit
+        ? await updatePayroll(editing.uuid, amounts)
+        : await createPayroll({ userUuid: employee.uuid, payPeriod: values.payPeriod, ...amounts });
+
+      showToast.success(
+        `Payroll ${isEdit ? "updated" : "created"} for ${record.employee.fullName} (${formatMonth(record.payPeriod)}).`,
+      );
+      if (!isEdit) {
+        reset(FORM_DEFAULTS());
+        setEmployee(null);
+      }
+      onSaved(record, isEdit);
     } catch (error) {
       // Show backend validation errors under the matching fields
       const fieldErrors = getFieldErrors(error);
@@ -121,7 +146,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
           else setError(field, { type: "server", message });
         });
       }
-      showToast.error(getErrorMessage(error, "Couldn't create payroll."));
+      showToast.error(getErrorMessage(error, `Couldn't ${isEdit ? "update" : "create"} payroll.`));
     }
   };
 
@@ -131,38 +156,52 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       onSubmit={handleSubmit(onSubmit)}
       className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
     >
-      <div className="flex flex-col gap-1">
-        <EmployeeAutocomplete
-          label="Employee"
-          required
-          selected={employee}
-          onSelect={(picked) => {
-            setEmployee(picked);
-            if (picked) setEmployeeError("");
-            // Auto-fill Base Salary from Salary Structure (HR can still change it)
-            if (picked?.salary != null) {
-              setValue("baseSalary", picked.salary, { shouldValidate: true });
-            }
-          }}
-          error={employeeError}
-          placeholder="Start typing a name…"
-        />
-        {employee && (
-          <p className="text-xs text-cm-text-muted">
-            {employee.salary != null
-              ? `Base salary auto-filled from Salary Structure (${formatMoney(employee.salary)}).`
-              : "No salary set in Salary Structure — enter base salary manually."}
-          </p>
-        )}
-      </div>
+      <h2 className="text-sm font-semibold text-cm-text md:col-span-3">
+        {isEdit ? "Edit Payroll" : "New Payroll"}
+      </h2>
 
-      <Input
-        label="Month"
-        type="month"
-        required
-        error={errors.payPeriod?.message}
-        {...register("payPeriod", { required: "Month is required" })}
-      />
+      {isEdit ? (
+        // Locked in edit mode — plain read-only fields, not part of the form data
+        <>
+          <Input label="Employee" value={editing.employee?.fullName ?? "—"} readOnly disabled />
+          <Input label="Month" value={formatMonth(editing.payPeriod)} readOnly disabled />
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1">
+            <EmployeeAutocomplete
+              label="Employee"
+              required
+              selected={employee}
+              onSelect={(picked) => {
+                setEmployee(picked);
+                if (picked) setEmployeeError("");
+                // Auto-fill Base Salary from Salary Structure (HR can still change it)
+                if (picked?.salary != null) {
+                  setValue("baseSalary", picked.salary, { shouldValidate: true });
+                }
+              }}
+              error={employeeError}
+              placeholder="Start typing a name…"
+            />
+            {employee && (
+              <p className="text-xs text-cm-text-muted">
+                {employee.salary != null
+                  ? `Base salary auto-filled from Salary Structure (${formatMoney(employee.salary)}).`
+                  : "No salary set in Salary Structure — enter base salary manually."}
+              </p>
+            )}
+          </div>
+
+          <Input
+            label="Month"
+            type="month"
+            required
+            error={errors.payPeriod?.message}
+            {...register("payPeriod", { required: "Month is required" })}
+          />
+        </>
+      )}
 
       <Input
         label="Base Salary (₹)"
@@ -221,7 +260,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
           Cancel
         </Button>
         <Button type="submit" loading={isSubmitting}>
-          Save Payroll
+          {isEdit ? "Update Payroll" : "Save Payroll"}
         </Button>
       </div>
     </form>
@@ -236,8 +275,12 @@ function PayrollRuns() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [processingUuid, setProcessingUuid] = useState(null);
+  // Form: closed (null), create ({ mode: "create" }) or edit ({ mode: "edit", record })
+  const [form, setForm] = useState(null);
+  const [formKey, setFormKey] = useState(0);
+  // One row action at a time: { uuid, type: "process" | "delete" }
+  const [busy, setBusy] = useState(null);
+  const [confirmDeleteUuid, setConfirmDeleteUuid] = useState(null);
 
   // What's typed in the filter bar right now…
   const [draft, setDraft] = useState(EMPTY_FILTERS);
@@ -309,22 +352,58 @@ function PayrollRuns() {
     setReloadKey((key) => key + 1);
   };
 
-  const handleCreated = () => {
-    setShowForm(false);
-    // Re-run the current search so the list stays correct for the active filters
-    retry();
+  const openForm = (next) => {
+    setForm(next);
+    setFormKey((key) => key + 1); // fresh form with the right defaults
+    setConfirmDeleteUuid(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const replaceRow = (updated) =>
+    setRecords((prev) => prev.map((record) => (record.uuid === updated.uuid ? updated : record)));
+
+  const handleSaved = (record, wasEdit) => {
+    setForm(null);
+    if (wasEdit) {
+      replaceRow(record);
+    } else {
+      // Re-run the current search so the list stays correct for the active filters
+      retry();
+    }
   };
 
   const handleProcess = async (row) => {
-    setProcessingUuid(row.uuid);
+    setBusy({ uuid: row.uuid, type: "process" });
     try {
       const updated = await processPayroll(row.uuid);
-      setRecords((prev) => prev.map((record) => (record.uuid === updated.uuid ? updated : record)));
+      replaceRow(updated);
+      // If this row was open in the edit form, close it — it's locked now
+      if (form?.record?.uuid === row.uuid) setForm(null);
       showToast.success(`Payroll processed for ${updated.employee.fullName}.`);
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't process payroll."));
     } finally {
-      setProcessingUuid(null);
+      setBusy(null);
+    }
+  };
+
+  const handleDelete = async (row) => {
+    // First click asks, second click deletes
+    if (confirmDeleteUuid !== row.uuid) {
+      setConfirmDeleteUuid(row.uuid);
+      return;
+    }
+    setBusy({ uuid: row.uuid, type: "delete" });
+    try {
+      await deletePayroll(row.uuid);
+      setRecords((prev) => prev.filter((record) => record.uuid !== row.uuid));
+      if (form?.record?.uuid === row.uuid) setForm(null); // was being edited
+      showToast.success(`Payroll deleted for ${row.employee?.fullName ?? "employee"}.`);
+    } catch (error) {
+      showToast.error(getErrorMessage(error, "Couldn't delete payroll."));
+    } finally {
+      setBusy(null);
+      setConfirmDeleteUuid(null);
     }
   };
 
@@ -348,17 +427,48 @@ function PayrollRuns() {
     {
       key: "actions",
       header: "",
-      render: (row) =>
-        row.status === "Pending" ? (
-          <Button
-            size="sm"
-            loading={processingUuid === row.uuid}
-            disabled={processingUuid !== null && processingUuid !== row.uuid}
-            onClick={() => handleProcess(row)}
-          >
-            Process
-          </Button>
-        ) : null,
+      render: (row) => {
+        // Processed payroll is locked — no actions
+        if (row.status !== "Pending") return null;
+
+        const isRowBusy = busy?.uuid === row.uuid;
+        const isConfirming = confirmDeleteUuid === row.uuid;
+
+        return (
+          <div className="flex justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null}
+              onClick={() => openForm({ mode: "edit", record: row })}
+            >
+              Edit
+            </Button>
+            {isConfirming && !isRowBusy && (
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteUuid(null)}>
+                Keep
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="danger"
+              loading={isRowBusy && busy.type === "delete"}
+              disabled={busy !== null && !isRowBusy}
+              onClick={() => handleDelete(row)}
+            >
+              {isConfirming ? "Confirm delete?" : "Delete"}
+            </Button>
+            <Button
+              size="sm"
+              loading={isRowBusy && busy.type === "process"}
+              disabled={busy !== null && !isRowBusy}
+              onClick={() => handleProcess(row)}
+            >
+              Process
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -369,12 +479,19 @@ function PayrollRuns() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-cm-text-muted">Monthly payroll records — create, filter and process.</p>
-        <Button onClick={() => setShowForm((value) => !value)}>
-          {showForm ? "Close" : "Create Payroll"}
+        <Button onClick={() => (form ? setForm(null) : openForm({ mode: "create" }))}>
+          {form ? "Close" : "Create Payroll"}
         </Button>
       </div>
 
-      {showForm && <CreatePayrollForm onCreated={handleCreated} onCancel={() => setShowForm(false)} />}
+      {form && (
+        <PayrollForm
+          key={formKey}
+          editing={form.mode === "edit" ? form.record : null}
+          onSaved={handleSaved}
+          onCancel={() => setForm(null)}
+        />
+      )}
 
       {/* Filter bar: employee | start date – end date | search */}
       <form onSubmit={runSearch} className="flex flex-col gap-2" role="search" aria-label="Filter payroll">
