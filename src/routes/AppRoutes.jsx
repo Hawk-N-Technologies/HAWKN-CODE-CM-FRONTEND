@@ -25,6 +25,7 @@ import HRAttendance from "../pages/hr/Attendance";
 import HRDashboard from "../pages/hr/Dashboard";
 import HREmployeeOnboarding from "../pages/hr/EmployeeOnboarding";
 import HREmployeeHierarchy from "../pages/hr/EmployeeHierarchy";
+import HRHoliday from "../pages/hr/Holiday";
 import HREmployees from "../pages/hr/Employees";
 import HRLeaveLOP from "../pages/hr/LeaveLOP";
 import HRPayroll from "../pages/hr/Payroll";
@@ -158,6 +159,7 @@ function AppRoutes() {
             <Route path="/hr/attendance" element={<HRAttendance />} />
             <Route path="/hr/leave-lop" element={<HRLeaveLOP />} />
             <Route path="/hr/payroll" element={<HRPayroll />} />
+            <Route path="/hr/holiday" element={<HRHoliday />} />
             <Route path="/hr/bonuses-increments" element={<HRIncrements />} />
             <Route
               path="/hr/internship-probation"
