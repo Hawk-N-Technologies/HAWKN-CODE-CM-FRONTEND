@@ -21,6 +21,7 @@ import {
   Code2,
   Handshake,
   UsersRound,
+  CalendarHeart,
 } from "lucide-react";
 
 import { ROLES } from "../constants/roles";
@@ -38,6 +39,7 @@ const ICONS = {
   onboarding: <UserPlus aria-hidden="true" />,
   attendance: <CalendarCheck aria-hidden="true" />,
   leave: <CalendarDays aria-hidden="true" />,
+  holiday: <CalendarHeart aria-hidden="true" />,
   payroll: <WalletCards aria-hidden="true" />,
   compensation: <TrendingUp aria-hidden="true" />,
   internship: <GraduationCap aria-hidden="true" />,
@@ -140,6 +142,7 @@ const HR_NAV_SECTIONS = [
       },
       { label: "Attendance", path: "/hr/attendance", icon: ICONS.attendance },
       { label: "Leave & LOP", path: "/hr/leave-lop", icon: ICONS.leave },
+      { label: "Holiday", path: "/hr/holiday", icon: ICONS.holiday },
       { label: "Payroll", path: "/hr/payroll", icon: ICONS.payroll },
       {
         label: "Bonuses & Increments",
