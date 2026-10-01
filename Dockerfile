@@ -7,17 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copy source code
 COPY . .
-
-# Build arguments for Vite environment variables
-ARG VITE_API_BASE_URL
-ARG VITE_BACKEND_URL
-ARG VITE_APP_ENV=production
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
-ENV VITE_APP_ENV=$VITE_APP_ENV
-
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
