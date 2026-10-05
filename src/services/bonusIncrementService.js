@@ -42,6 +42,12 @@ export async function createIncrement(payload) {
   return res.data.data;
 }
 
+// Edit the latest increment — also updates Salary Structure
+export async function updateIncrement(uuid, payload) {
+  const res = await axios.put(`/api/increments/${uuid}`, payload, config);
+  return res.data.data;
+}
+
 // Latest increment only — restores the previous salary
 export async function revertIncrement(uuid) {
   await axios.delete(`/api/increments/${uuid}`, config);
