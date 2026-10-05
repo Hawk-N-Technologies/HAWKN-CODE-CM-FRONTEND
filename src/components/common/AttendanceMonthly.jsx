@@ -1,350 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
-import Badge from "./Badge";
 import Button from "./Button";
 import Loader from "./Loader";
 import { showToast } from "./Toast";
-
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function getCurrentMonthYear() {
-  const now = new Date();
-
-  return {
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
-  };
-}
-
-function formatCheckIn(value) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }).format(new Date(value));
-  } catch {
-    return null;
-  }
-}
-
-function getMonthDays(year, month) {
-  const daysInMonth = new Date(year, month, 0).getDate();
-
-  return Array.from({ length: daysInMonth }, (_, index) => index + 1);
-}
-
-function getCalendarStartOffset(year, month) {
-  return new Date(year, month - 1, 1).getDay();
-}
-
-function getSessionLabel(session) {
-  if (session === "FIRST_HALF") {
-    return "First Half";
-  }
-
-  if (session === "SECOND_HALF") {
-    return "Second Half";
-  }
-
-  return session || "—";
-}
-
-function getStatusLabel(session) {
-  if (!session) {
-    return "—";
-  }
-
-  if (session.type === "ATTENDANCE") {
-    return session.status || "Attendance";
-  }
-
-  if (session.type === "LEAVE") {
-    return session.status || "Leave";
-  }
-
-  if (session.type === "HOLIDAY") {
-    return session.status || "Holiday";
-  }
-
-  if (session.type === "WEEKEND") {
-    return "Weekend";
-  }
-
-  if (session.type === "UPCOMING") {
-    return "Upcoming";
-  }
-
-  return session.status || session.type || "—";
-}
-
-function isFutureDate(dateString) {
-  if (!dateString) {
-    return false;
-  }
-
-  const today = new Date();
-
-  const currentDate = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-
-  const [year, month, day] = dateString.split("-").map(Number);
-
-  const targetDate = new Date(year, month - 1, day);
-
-  return targetDate > currentDate;
-}
-
-function normalizeSession(session, date) {
-  if (!session) {
-    return null;
-  }
-
-  if (
-    session.type === "ATTENDANCE" &&
-    session.status === "Absent" &&
-    isFutureDate(date)
-  ) {
-    return {
-      ...session,
-      type: "UPCOMING",
-      status: "Upcoming",
-      isPaid: false,
-    };
-  }
-
-  return session;
-}
-
-function getOverallTone(status) {
-  switch (status) {
-    case "Present":
-      return "success";
-
-    case "Half Day":
-      return "warning";
-
-    case "Absent":
-      return "danger";
-
-    case "Paid Leave":
-      return "success";
-
-    case "Unpaid Leave":
-      return "warning";
-
-    case "Leave":
-      return "warning";
-
-    case "Holiday":
-      return "info";
-
-    case "Weekend":
-      return "neutral";
-
-    case "Upcoming":
-      return "neutral";
-
-    default:
-      return "neutral";
-  }
-}
-
-function getSessionColor(session) {
-  if (!session) {
-    return "border-cm-border bg-cm-bg text-cm-text-muted";
-  }
-
-  if (session.type === "UPCOMING") {
-    return "border-slate-200 bg-slate-50 text-slate-500";
-  }
-
-  if (session.type === "WEEKEND") {
-    return "border-slate-200 bg-slate-50 text-slate-500";
-  }
-
-  if (session.type === "HOLIDAY") {
-    return "border-blue-200 bg-blue-50 text-blue-700";
-  }
-
-  if (session.type === "LEAVE") {
-    if (session.isPaid) {
-      return "border-green-200 bg-green-50 text-green-700";
-    }
-
-    return "border-orange-200 bg-orange-50 text-orange-700";
-  }
-
-  if (session.status === "Present") {
-    return "border-green-200 bg-green-50 text-green-700";
-  }
-
-  if (session.status === "Absent") {
-    return "border-red-200 bg-red-50 text-red-700";
-  }
-
-  return "border-cm-border bg-cm-card text-cm-text";
-}
-
-function getOverallStatus(day) {
-  if (!day) {
-    return "—";
-  }
-
-  if (day.overallStatus) {
-    return day.overallStatus;
-  }
-
-  const firstHalf = day.sessions?.firstHalf;
-  const secondHalf = day.sessions?.secondHalf;
-
-  if (firstHalf?.type === "WEEKEND") {
-    return "Weekend";
-  }
-
-  if (firstHalf?.type === "HOLIDAY") {
-    return "Holiday";
-  }
-
-  const firstStatus = firstHalf?.status;
-  const secondStatus = secondHalf?.status;
-
-  if (firstStatus === "Present" && secondStatus === "Present") {
-    return "Present";
-  }
-
-  if (firstStatus === "Absent" && secondStatus === "Absent") {
-    return "Absent";
-  }
-
-  if (
-    (firstStatus === "Present" && secondStatus === "Absent") ||
-    (firstStatus === "Absent" && secondStatus === "Present")
-  ) {
-    return "Half Day";
-  }
-
-  if (firstHalf?.type === "LEAVE" || secondHalf?.type === "LEAVE") {
-    if (firstHalf?.isPaid || secondHalf?.isPaid) {
-      return "Paid Leave";
-    }
-
-    return "Unpaid Leave";
-  }
-
-  if (firstHalf?.type === "UPCOMING" || secondHalf?.type === "UPCOMING") {
-    return "Upcoming";
-  }
-
-  return firstStatus || secondStatus || "—";
-}
-
-function getDayCardClass(day, isToday) {
-  const status = getOverallStatus(day);
-
-  let statusClass = "border-cm-border bg-cm-card";
-
-  switch (status) {
-    case "Present":
-      statusClass = "border-green-200 bg-green-50/50";
-      break;
-
-    case "Absent":
-      statusClass = "border-red-200 bg-red-50/40";
-      break;
-
-    case "Half Day":
-      statusClass = "border-yellow-200 bg-yellow-50/40";
-      break;
-
-    case "Paid Leave":
-      statusClass = "border-green-200 bg-green-50/40";
-      break;
-
-    case "Unpaid Leave":
-      statusClass = "border-orange-200 bg-orange-50/40";
-      break;
-
-    case "Holiday":
-      statusClass = "border-blue-200 bg-blue-50/40";
-      break;
-
-    case "Weekend":
-      statusClass = "border-slate-200 bg-slate-50";
-      break;
-
-    case "Upcoming":
-      statusClass = "border-slate-200 bg-white";
-      break;
-
-    default:
-      break;
-  }
-
-  if (isToday) {
-    statusClass += " ring-2 ring-[#000052]/20";
-  }
-
-  return statusClass;
-}
-
-function getSessionShortLabel(session) {
-  if (!session) {
-    return "—";
-  }
-
-  if (session.type === "ATTENDANCE") {
-    if (session.status === "Present") {
-      return "Present";
-    }
-
-    if (session.status === "Absent") {
-      return "Absent";
-    }
-  }
-
-  if (session.type === "LEAVE") {
-    return session.isPaid ? "Paid Leave" : "Unpaid Leave";
-  }
-
-  if (session.type === "HOLIDAY") {
-    return "Holiday";
-  }
-
-  if (session.type === "WEEKEND") {
-    return "Weekend";
-  }
-
-  if (session.type === "UPCOMING") {
-    return "Upcoming";
-  }
-
-  return getStatusLabel(session);
-}
+import AttendanceCalendar from "./AttendanceCalendar";
+
+import {
+  MONTHS,
+  getCurrentMonthYear,
+  getOverallStatus,
+  isFutureDate,
+} from "./attendanceUtils";
 
 function AttendanceByUser() {
   const initial = getCurrentMonthYear();
@@ -409,39 +76,31 @@ function AttendanceByUser() {
     getMonthlyAttendance();
   }, [getMonthlyAttendance]);
 
+  /*
+   * Keep the API data unchanged.
+   *
+   * Future dates are filtered at the UI/calendar level.
+   * This prevents future Absent records from being displayed.
+   */
   const daysByDate = useMemo(() => {
     const map = new Map();
 
     for (const day of data?.days || []) {
-      map.set(day.date, {
-        ...day,
-        sessions: {
-          firstHalf: normalizeSession(day.sessions?.firstHalf, day.date),
-          secondHalf: normalizeSession(day.sessions?.secondHalf, day.date),
-        },
-      });
+      map.set(day.date, day);
     }
 
     return map;
   }, [data]);
 
-  const calendarCells = useMemo(() => {
-    const offset = getCalendarStartOffset(year, month);
-    const days = getMonthDays(year, month);
-
-    return [...Array(offset).fill(null), ...days];
-  }, [month, year]);
-
-  const todayString = useMemo(() => {
-    const now = new Date();
-
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
-
+  /*
+   * Summary only counts dates up to today.
+   *
+   * For previous months:
+   *   all dates are counted.
+   *
+   * For current/future months:
+   *   future dates are ignored.
+   */
   const summary = useMemo(() => {
     const days = data?.days || [];
 
@@ -452,16 +111,13 @@ function AttendanceByUser() {
     let unpaidLeave = 0;
     let holidays = 0;
     let weekends = 0;
-    let upcoming = 0;
 
     for (const day of days) {
-      const status = getOverallStatus({
-        ...day,
-        sessions: {
-          firstHalf: normalizeSession(day.sessions?.firstHalf, day.date),
-          secondHalf: normalizeSession(day.sessions?.secondHalf, day.date),
-        },
-      });
+      if (isFutureDate(day.date)) {
+        continue;
+      }
+
+      const status = getOverallStatus(day);
 
       switch (status) {
         case "Present":
@@ -492,10 +148,6 @@ function AttendanceByUser() {
           weekends += 1;
           break;
 
-        case "Upcoming":
-          upcoming += 1;
-          break;
-
         default:
           break;
       }
@@ -509,7 +161,6 @@ function AttendanceByUser() {
       unpaidLeave,
       holidays,
       weekends,
-      upcoming,
     };
   }, [data]);
 
@@ -710,7 +361,7 @@ function AttendanceByUser() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <div className="rounded-cm-lg border border-green-200 bg-green-50 p-4">
           <p className="text-xs text-green-700">Present</p>
 
@@ -758,14 +409,6 @@ function AttendanceByUser() {
             {summary.holidays}
           </p>
         </div>
-
-        <div className="rounded-cm-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs text-slate-600">Upcoming</p>
-
-          <p className="mt-2 text-2xl font-bold text-slate-700">
-            {summary.upcoming}
-          </p>
-        </div>
       </div>
 
       {/* Legend */}
@@ -800,181 +443,16 @@ function AttendanceByUser() {
             <span className="h-3 w-3 rounded-full bg-slate-400" />
             Weekend
           </div>
-
-          <div className="flex items-center gap-2 text-xs text-cm-text-muted">
-            <span className="h-3 w-3 rounded-full bg-slate-200" />
-            Upcoming
-          </div>
         </div>
       </section>
 
       {/* Calendar */}
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-cm-text">
-              {MONTHS[month - 1]} {year}
-            </h2>
-
-            <p className="mt-1 text-xs text-cm-text-muted">
-              Daily attendance by first and second half.
-            </p>
-          </div>
-
-          <Badge tone="neutral">{data?.summary?.totalDays || 0} Days</Badge>
-        </div>
-
-        {/* Week headers */}
-        <div className="grid grid-cols-7 border-b border-cm-border">
-          {WEEK_DAYS.map((day) => (
-            <div
-              key={day}
-              className="px-1 py-3 text-center text-xs font-semibold text-cm-text-muted sm:px-2"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7">
-          {calendarCells.map((dayNumber, index) => {
-            if (!dayNumber) {
-              return (
-                <div
-                  key={`empty-${index}`}
-                  className="min-h-[150px] border-b border-r border-cm-border bg-cm-bg/30"
-                />
-              );
-            }
-
-            const dateString = `${year}-${String(month).padStart(
-              2,
-              "0",
-            )}-${String(dayNumber).padStart(2, "0")}`;
-
-            const day = daysByDate.get(dateString);
-
-            const firstHalf = day?.sessions?.firstHalf;
-            const secondHalf = day?.sessions?.secondHalf;
-
-            const isToday = dateString === todayString;
-
-            return (
-              <div
-                key={dateString}
-                className={`min-h-[150px] border-b border-r border-cm-border p-1.5 sm:p-2 ${getDayCardClass(
-                  day,
-                  isToday,
-                )}`}
-              >
-                {/* Day header */}
-                <div className="flex items-center justify-between gap-1">
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                      isToday ? "bg-[#000052] text-white" : "text-cm-text"
-                    }`}
-                  >
-                    {dayNumber}
-                  </span>
-
-                  {day?.isSaturday && (
-                    <span className="hidden text-[10px] font-medium text-slate-500 sm:block">
-                      1 Half
-                    </span>
-                  )}
-
-                  {day?.isSunday && (
-                    <span className="hidden text-[10px] font-medium text-slate-500 sm:block">
-                      Weekend
-                    </span>
-                  )}
-                </div>
-
-                {/* Holiday */}
-                {day?.holiday && (
-                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5">
-                    <p className="truncate text-[10px] font-semibold text-blue-700 sm:text-xs">
-                      {day.holiday.name}
-                    </p>
-
-                    <p className="mt-0.5 text-[9px] text-blue-600">
-                      {day.holiday.isPaid ? "Paid Holiday" : "Unpaid Holiday"}
-                    </p>
-                  </div>
-                )}
-
-                {/* First half */}
-                {firstHalf && (
-                  <div
-                    className={`mt-2 rounded-md border px-2 py-1.5 ${getSessionColor(
-                      firstHalf,
-                    )}`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-70">
-                        1st
-                      </span>
-
-                      <span className="text-[9px] font-medium opacity-70">
-                        {formatCheckIn(firstHalf.checkIn) || ""}
-                      </span>
-                    </div>
-
-                    <p className="mt-0.5 truncate text-[10px] font-semibold sm:text-xs">
-                      {getSessionShortLabel(firstHalf)}
-                    </p>
-
-                    {firstHalf.leave?.type && (
-                      <p className="mt-0.5 truncate text-[9px] opacity-80">
-                        {firstHalf.leave.type}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Second half */}
-                {secondHalf && (
-                  <div
-                    className={`mt-1 rounded-md border px-2 py-1.5 ${getSessionColor(
-                      secondHalf,
-                    )}`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-70">
-                        2nd
-                      </span>
-
-                      <span className="text-[9px] font-medium opacity-70">
-                        {formatCheckIn(secondHalf.checkIn) || ""}
-                      </span>
-                    </div>
-
-                    <p className="mt-0.5 truncate text-[10px] font-semibold sm:text-xs">
-                      {getSessionShortLabel(secondHalf)}
-                    </p>
-
-                    {secondHalf.leave?.type && (
-                      <p className="mt-0.5 truncate text-[9px] opacity-80">
-                        {secondHalf.leave.type}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Overall status */}
-                {day && (
-                  <div className="mt-2 flex justify-end">
-                    <Badge tone={getOverallTone(getOverallStatus(day))}>
-                      {getOverallStatus(day)}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <AttendanceCalendar
+        month={month}
+        year={year}
+        data={data}
+        daysByDate={daysByDate}
+      />
 
       {/* Monthly details */}
       {data?.summary && (
