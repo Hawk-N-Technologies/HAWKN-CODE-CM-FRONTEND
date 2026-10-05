@@ -17,6 +17,7 @@ import {
   getBonuses,
   getIncrements,
   revertIncrement,
+  updateIncrement,
 } from "../../services/bonusIncrementService";
 
 // ---------------------------------------------------------------------------
@@ -400,40 +401,98 @@ function BonusesTab() {
 // Increments tab
 // ---------------------------------------------------------------------------
 
-function IncrementForm({ onSaved, onCancel }) {
+// Percent ↔ salary, in whole paise — same rounding as the backend,
+// so 10% of ₹52,000.50 is always exactly ₹57,200.55
+const salaryFromPercent = (base, percent) => Math.round(base * 100 * (1 + percent / 100)) / 100;
+const percentFromSalary = (base, salary) => Math.round(((salary - base) / base) * 10000) / 100;
+
+/**
+ * editing = null → give a new increment.
+ * editing = latest increment row → edit it. Employee + previous salary are
+ * fixed; HR changes the new salary (by amount OR by %), date and reason.
+ * The parent re-mounts this form (key) when switching, so defaults are always right.
+ */
+function IncrementForm({ editing, onSaved, onCancel }) {
+  const isEdit = Boolean(editing);
   const [employee, setEmployee] = useState(null);
   const [employeeError, setEmployeeError] = useState("");
   const {
     register,
     handleSubmit,
     control,
+    setValue,
+    getValues,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: { newSalary: "", effectiveDate: today(), reason: "" } });
+  } = useForm({
+    defaultValues: isEdit
+      ? {
+          newSalary: editing.newSalary,
+          increasePercent: editing.increasePercent,
+          effectiveDate: String(editing.effectiveDate).slice(0, 10),
+          reason: editing.reason ?? "",
+        }
+      : { newSalary: "", increasePercent: "", effectiveDate: today(), reason: "" },
+  });
+
+  // The salary the increase is measured from
+  const base = isEdit ? editing.previousSalary : (employee?.salary ?? null);
 
   const newSalary = Number(useWatch({ control, name: "newSalary" })) || 0;
-  const current = employee?.salary ?? null;
-  const increase = current !== null && newSalary > 0 ? newSalary - current : null;
+  const increase = base !== null && newSalary > 0 ? newSalary - base : null;
+
+  // Typing a salary → fill the %; typing a % → fill the salary
+  const syncFromSalary = (value) => {
+    if (base === null || value === "" || Number(value) <= 0) {
+      setValue("increasePercent", "");
+      return;
+    }
+    setValue("increasePercent", percentFromSalary(base, Number(value)), { shouldValidate: true });
+  };
+
+  const syncFromPercent = (value) => {
+    if (base === null || value === "") {
+      setValue("newSalary", "");
+      return;
+    }
+    setValue("newSalary", salaryFromPercent(base, Number(value)), { shouldValidate: true });
+  };
+
+  const handlePick = (picked) => {
+    setEmployee(picked);
+    if (picked) setEmployeeError("");
+    // New base salary → re-calculate the % for whatever salary is typed
+    const typed = getValues("newSalary");
+    if (picked?.salary != null && typed !== "" && Number(typed) > 0) {
+      setValue("increasePercent", percentFromSalary(picked.salary, Number(typed)), { shouldValidate: true });
+    }
+  };
 
   const onSubmit = async (values) => {
-    if (!employee) {
+    if (!isEdit && !employee) {
       setEmployeeError("Select an employee from the suggestions");
       return;
     }
+
+    // Only the salary is sent — the % is just a calculator for HR
+    const payload = {
+      newSalary: Number(values.newSalary),
+      effectiveDate: values.effectiveDate,
+      reason: values.reason,
+    };
+
     try {
-      const record = await createIncrement({
-        userUuid: employee.uuid,
-        newSalary: Number(values.newSalary),
-        effectiveDate: values.effectiveDate,
-        reason: values.reason,
-      });
+      const record = isEdit
+        ? await updateIncrement(editing.uuid, payload)
+        : await createIncrement({ userUuid: employee.uuid, ...payload });
+
       showToast.success(
-        `${record.employee.fullName}: ${formatMoney(record.previousSalary)} → ${formatMoney(record.newSalary)} (+${record.increasePercent}%).`,
+        `${isEdit ? "Increment updated — " : ""}${record.employee.fullName}: ${formatMoney(record.previousSalary)} → ${formatMoney(record.newSalary)} (+${record.increasePercent}%).`,
       );
       onSaved();
     } catch (error) {
       applyServerErrors(error, setError, setEmployeeError);
-      showToast.error(getErrorMessage(error, "Couldn't apply increment."));
+      showToast.error(getErrorMessage(error, `Couldn't ${isEdit ? "update" : "apply"} increment.`));
     }
   };
 
@@ -443,29 +502,39 @@ function IncrementForm({ onSaved, onCancel }) {
       onSubmit={handleSubmit(onSubmit)}
       className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
     >
-      <h2 className="text-sm font-semibold text-cm-text md:col-span-3">New Increment</h2>
+      <h2 className="text-sm font-semibold text-cm-text md:col-span-3">
+        {isEdit ? "Edit Increment" : "New Increment"}
+      </h2>
 
-      <div className="flex flex-col gap-1">
-        <EmployeeAutocomplete
+      {isEdit ? (
+        // Locked in edit mode
+        <Input
           label="Employee"
-          required
-          selected={employee}
-          onSelect={(picked) => {
-            setEmployee(picked);
-            if (picked) setEmployeeError("");
-          }}
-          searchFn={searchSalaryEmployees}
-          error={employeeError}
-          placeholder="Start typing a name…"
+          value={editing.employee.fullName}
+          readOnly
+          disabled
+          helperText={`Previous salary: ${formatMoney(editing.previousSalary)}`}
         />
-        {employee && (
-          <p className={`text-xs ${current === null ? "text-cm-danger-600" : "text-cm-text-muted"}`}>
-            {current === null
-              ? "No salary set — set it in Payroll → Salary Structure first."
-              : `Current salary: ${formatMoney(current)}`}
-          </p>
-        )}
-      </div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <EmployeeAutocomplete
+            label="Employee"
+            required
+            selected={employee}
+            onSelect={handlePick}
+            searchFn={searchSalaryEmployees}
+            error={employeeError}
+            placeholder="Start typing a name…"
+          />
+          {employee && (
+            <p className={`text-xs ${base === null ? "text-cm-danger-600" : "text-cm-text-muted"}`}>
+              {base === null
+                ? "No salary set — set it in Payroll → Salary Structure first."
+                : `Current salary: ${formatMoney(base)}`}
+            </p>
+          )}
+        </div>
+      )}
 
       <Input
         label="New Monthly Salary (₹)"
@@ -473,16 +542,38 @@ function IncrementForm({ onSaved, onCancel }) {
         min="0"
         step="0.01"
         required
+        disabled={base === null}
         error={errors.newSalary?.message}
         {...register("newSalary", {
           required: "New salary is required",
           validate: (value) => {
             if (Number(value) <= 0) return "New salary must be more than 0";
-            if (current !== null && Number(value) <= current) {
-              return `Must be higher than the current salary (${formatMoney(current)})`;
+            if (base !== null && Number(value) <= base) {
+              return `Must be higher than ${isEdit ? "the previous" : "the current"} salary (${formatMoney(base)})`;
             }
             return true;
           },
+          onChange: (event) => syncFromSalary(event.target.value),
+        })}
+      />
+
+      <Input
+        label="Increase (%)"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="e.g. 10"
+        disabled={base === null}
+        helperText="Fill either this or the salary — the other one updates."
+        error={errors.increasePercent?.message}
+        {...register("increasePercent", {
+          validate: (value) => {
+            if (value === "" || value === null) return true;
+            if (Number(value) <= 0) return "Must be more than 0%";
+            if (Number(value) > 1000) return "That's more than 1000% — check the number";
+            return true;
+          },
+          onChange: (event) => syncFromPercent(event.target.value),
         })}
       />
 
@@ -501,18 +592,18 @@ function IncrementForm({ onSaved, onCancel }) {
       <Input
         label="Reason (optional)"
         placeholder="e.g. Annual appraisal"
-        containerClassName="md:col-span-3"
+        containerClassName="md:col-span-2"
         error={errors.reason?.message}
         {...register("reason", { maxLength: { value: 500, message: "Max 500 characters" } })}
       />
 
       {increase !== null && (
         <div className="rounded-lg border border-cm-border p-4 text-sm text-cm-text md:col-span-3">
-          {formatMoney(current)} → <strong>{formatMoney(newSalary)}</strong>
+          {formatMoney(base)} → <strong>{formatMoney(newSalary)}</strong>
           <span className={`ml-2 ${increase > 0 ? "text-green-700" : "text-cm-danger-600"}`}>
             ({increase > 0 ? "+" : ""}
             {formatMoney(increase)}, {increase > 0 ? "+" : ""}
-            {((increase / current) * 100).toFixed(2)}%)
+            {percentFromSalary(base, newSalary)}%)
           </span>
         </div>
       )}
@@ -521,8 +612,8 @@ function IncrementForm({ onSaved, onCancel }) {
         <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" loading={isSubmitting} disabled={employee !== null && current === null}>
-          Apply Increment
+        <Button type="submit" loading={isSubmitting} disabled={base === null}>
+          {isEdit ? "Update Increment" : "Apply Increment"}
         </Button>
       </div>
     </form>
@@ -531,9 +622,18 @@ function IncrementForm({ onSaved, onCancel }) {
 
 function IncrementsTab() {
   const list = useEmployeeList(getIncrements);
-  const [formKey, setFormKey] = useState(null); // null = closed
+  // Form: closed (null), new ({ mode: "create" }) or edit ({ mode: "edit", record })
+  const [form, setForm] = useState(null);
+  const [formKey, setFormKey] = useState(0);
   const [confirmUuid, setConfirmUuid] = useState(null);
   const [revertingUuid, setRevertingUuid] = useState(null);
+
+  const openForm = (next) => {
+    setForm(next);
+    setFormKey((key) => key + 1); // fresh form with the right defaults
+    setConfirmUuid(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleRevert = async (row) => {
     if (confirmUuid !== row.uuid) {
@@ -544,6 +644,7 @@ function IncrementsTab() {
     try {
       await revertIncrement(row.uuid);
       showToast.success(`Increment reverted — ${row.employee.fullName} back to ${formatMoney(row.previousSalary)}.`);
+      if (form?.record?.uuid === row.uuid) setForm(null); // was being edited
       list.reload(); // the previous increment (if any) becomes the latest
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't revert increment."));
@@ -585,11 +686,19 @@ function IncrementsTab() {
       key: "actions",
       header: "",
       render: (row) => {
-        // Only the latest increment of each employee can be reverted
+        // Only the latest increment of each employee can be edited / reverted
         if (!row.isLatest) return null;
         const isConfirming = confirmUuid === row.uuid;
         return (
           <div className="flex justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={revertingUuid !== null}
+              onClick={() => openForm({ mode: "edit", record: row })}
+            >
+              Edit
+            </Button>
             {isConfirming && revertingUuid !== row.uuid && (
               <Button size="sm" variant="ghost" onClick={() => setConfirmUuid(null)}>
                 Keep
@@ -616,19 +725,20 @@ function IncrementsTab() {
         <p className="text-sm text-cm-text-muted">
           Salary raises. Applying one updates Salary Structure immediately.
         </p>
-        <Button onClick={() => setFormKey((key) => (key === null ? Date.now() : null))}>
-          {formKey === null ? "Give Increment" : "Close"}
+        <Button onClick={() => (form ? setForm(null) : openForm({ mode: "create" }))}>
+          {form ? "Close" : "Give Increment"}
         </Button>
       </div>
 
-      {formKey !== null && (
+      {form && (
         <IncrementForm
           key={formKey}
+          editing={form.mode === "edit" ? form.record : null}
           onSaved={() => {
-            setFormKey(null);
+            setForm(null);
             list.reload();
           }}
-          onCancel={() => setFormKey(null)}
+          onCancel={() => setForm(null)}
         />
       )}
 
