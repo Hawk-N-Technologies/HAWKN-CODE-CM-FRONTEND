@@ -165,6 +165,12 @@ const HR_NAV_SECTIONS = [
         path: "/hr/notifications",
         icon: ICONS.notifications,
       },
+
+      {
+        label: "My Attendance",
+        path: "/hr/my-attendance",
+        icon: ICONS.attendance,
+      },
     ],
   },
 ];
@@ -175,6 +181,11 @@ const BD_NAV_SECTIONS = [
   },
   {
     items: [{ label: "Clients", path: "/bd/clients", icon: ICONS.clients }],
+  },
+  {
+    label: "My Attendance",
+    path: "/bd/my-attendance",
+    icon: ICONS.attendance,
   },
 ];
 

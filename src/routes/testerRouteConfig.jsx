@@ -8,11 +8,13 @@ import {
   UsersRound,
   Hammer,
   GraduationCap,
+  CalendarCheck,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
   projects: <FolderKanban aria-hidden="true" />,
   queue: <ListChecks aria-hidden="true" />,
+  attendance: <CalendarCheck aria-hidden="true" />,
   phase: <ClipboardCheck aria-hidden="true" />,
   bugs: <Bug aria-hidden="true" />,
   retesting: <RotateCcw aria-hidden="true" />,
@@ -46,6 +48,11 @@ export const TESTER_NAV_SECTIONS = [
         label: "Field Training",
         path: "/tester/field-training",
         icon: I.training,
+      },
+      {
+        label: "My Attendance",
+        path: "/attendance",
+        icon: I.attendance,
       },
     ],
   },

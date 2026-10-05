@@ -7,11 +7,13 @@ import {
   TestTube2,
   Bug,
   Bell,
+  CalendarCheck,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
   projects: <FolderKanban aria-hidden="true" />,
   tasks: <ListTodo aria-hidden="true" />,
+  attendance: <CalendarCheck aria-hidden="true" />,
   kanban: <KanbanSquare aria-hidden="true" />,
   progress: <Gauge aria-hidden="true" />,
   testing: <TestTube2 aria-hidden="true" />,
@@ -45,6 +47,12 @@ export const DEVELOPER_NAV_SECTIONS = [
         label: "Notifications",
         path: "/developer/notifications",
         icon: I.notifications,
+      },
+
+      {
+        label: "My Attendance",
+        path: "/developer/my-attendance",
+        icon: I.attendance,
       },
     ],
   },
