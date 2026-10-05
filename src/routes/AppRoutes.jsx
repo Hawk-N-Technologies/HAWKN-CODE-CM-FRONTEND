@@ -83,6 +83,7 @@ import {
 import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
 import AdminEmployeeHierarchy from "../pages/admin/EmployeeHierarchy";
+import AttendanceMonthly from "../components/common/AttendanceMonthly";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -155,6 +156,8 @@ function AppRoutes() {
           <Route element={<DashboardLayout sections={HR_NAV_SECTIONS} />}>
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/employees" element={<HREmployees />} />
+            <Route path="/hr/my-attendance" element={<AttendanceMonthly />} />
+
             <Route path="/hr/onboarding" element={<HREmployeeOnboarding />} />
             <Route path="/hr/attendance" element={<HRAttendance />} />
             <Route path="/hr/leave-lop" element={<HRLeaveLOP />} />
@@ -177,9 +180,36 @@ function AppRoutes() {
         <Route element={<RoleRoute allowedRoles={[ROLES.BD]} />}>
           <Route element={<DashboardLayout sections={BD_NAV_SECTIONS} />}>
             <Route path="/bd/dashboard" element={<BDDashboard />} />
-            <Route path="/bd/clients" element={<BDClient />} />
+            <Route path="/bd/clients" element={<BDClient />} />{" "}
+            <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />
             <Route path="/bd/clients/new" element={<BDCreateClient />} />
             <Route path="/bd/clients/:clientId" element={<BDClientDetails />} />
+          </Route>
+        </Route>
+
+        <Route
+          element={
+            <RoleRoute allowedRoles={[ROLES.DEVELOPER ?? "developer"]} />
+          }
+        >
+          <Route
+            element={<DashboardLayout sections={DEVELOPER_NAV_SECTIONS} />}
+          >
+            <Route path="/developer/dashboard" element={<Dashboard />} />
+            <Route path="/developer/projects" element={<MyProjects />} />{" "}
+            <Route path="/developer/my-attendance" element={<AttendanceMonthly />} />
+            <Route path="/developer/tasks" element={<MyTasks />} />
+            <Route path="/developer/kanban" element={<DEVKanbanBoard />} />
+            <Route
+              path="/developer/progress"
+              element={<DevelopmentProgress />}
+            />
+            <Route path="/developer/testing" element={<DeveloperTesting />} />
+            <Route path="/developer/bugs" element={<BugFixing />} />
+            <Route
+              path="/developer/notifications"
+              element={<Notifications />}
+            />
           </Route>
         </Route>
       </Route>
@@ -208,21 +238,6 @@ function AppRoutes() {
           <Route path="/project-lead/tasks" element={<Tasks />} />
           <Route path="/project-lead/kanban" element={<KanbanBoard />} />
           <Route path="/project-lead/progress" element={<ProjectProgress />} />
-        </Route>
-      </Route>
-
-      <Route
-        element={<RoleRoute allowedRoles={[ROLES.DEVELOPER ?? "developer"]} />}
-      >
-        <Route element={<DashboardLayout sections={DEVELOPER_NAV_SECTIONS} />}>
-          <Route path="/developer/dashboard" element={<Dashboard />} />
-          <Route path="/developer/projects" element={<MyProjects />} />
-          <Route path="/developer/tasks" element={<MyTasks />} />
-          <Route path="/developer/kanban" element={<DEVKanbanBoard />} />
-          <Route path="/developer/progress" element={<DevelopmentProgress />} />
-          <Route path="/developer/testing" element={<DeveloperTesting />} />
-          <Route path="/developer/bugs" element={<BugFixing />} />
-          <Route path="/developer/notifications" element={<Notifications />} />
         </Route>
       </Route>
 
