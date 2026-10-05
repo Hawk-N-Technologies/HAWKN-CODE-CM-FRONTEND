@@ -9,16 +9,13 @@ import ErrorState from "../../components/common/ErrorState";
 import DataTable from "../../components/tables/DataTable";
 import EmployeeAutocomplete from "../../components/payroll/EmployeeAutocomplete";
 import SalaryStructure from "../../components/payroll/SalaryStructure";
-import { getBonusTotal } from "../../services/bonusIncrementService";
 import { showToast } from "../../components/common/Toast";
 import {
   createPayroll,
-  deletePayroll,
   getErrorMessage,
   getFieldErrors,
   getPayroll,
   processPayroll,
-  updatePayroll,
 } from "../../services/payrollService";
 import axios from "axios";
 
@@ -83,17 +80,10 @@ const FORM_DEFAULTS = () => ({
 });
 
 // ---------------------------------------------------------------------------
-// Create / Edit Payroll form
+// Create Payroll form
 // ---------------------------------------------------------------------------
 
-/**
- * editing = null → create a new payroll.
- * editing = a payroll row → edit it. Only amounts + payment method can change;
- * employee and month are shown read-only (to change those, delete + re-create).
- * The parent re-mounts this form (key) when switching, so defaults are always right.
- */
-function PayrollForm({ editing, onSaved, onCancel }) {
-  const isEdit = Boolean(editing);
+function CreatePayrollForm({ onCreated, onCancel }) {
   const [employee, setEmployee] = useState(null);
   const [employeeError, setEmployeeError] = useState("");
   const [isCalculating, setIsCalculating] = useState(false);
@@ -241,7 +231,7 @@ function PayrollForm({ editing, onSaved, onCancel }) {
   // -------------------------------------------------------------------------
 
   const onSubmit = async (values) => {
-    if (!isEdit && !employee) {
+    if (!employee) {
       setEmployeeError("Select an employee from the suggestions");
       return;
     }
@@ -375,7 +365,6 @@ function PayrollForm({ editing, onSaved, onCancel }) {
         type="number"
         min="0"
         step="0.01"
-        helperText={bonusHint}
         error={errors.bonus?.message}
         {...register("bonus", {
           validate: (value) => toNumber(value) >= 0 || "Can't be negative",
@@ -579,27 +568,7 @@ function PayrollRuns() {
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't process payroll."));
     } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleDelete = async (row) => {
-    // First click asks, second click deletes
-    if (confirmDeleteUuid !== row.uuid) {
-      setConfirmDeleteUuid(row.uuid);
-      return;
-    }
-    setBusy({ uuid: row.uuid, type: "delete" });
-    try {
-      await deletePayroll(row.uuid);
-      setRecords((prev) => prev.filter((record) => record.uuid !== row.uuid));
-      if (form?.record?.uuid === row.uuid) setForm(null); // was being edited
-      showToast.success(`Payroll deleted for ${row.employee?.fullName ?? "employee"}.`);
-    } catch (error) {
-      showToast.error(getErrorMessage(error, "Couldn't delete payroll."));
-    } finally {
-      setBusy(null);
-      setConfirmDeleteUuid(null);
+      setProcessingUuid(null);
     }
   };
 
@@ -653,48 +622,17 @@ function PayrollRuns() {
     {
       key: "actions",
       header: "",
-      render: (row) => {
-        // Processed payroll is locked — no actions
-        if (row.status !== "Pending") return null;
-
-        const isRowBusy = busy?.uuid === row.uuid;
-        const isConfirming = confirmDeleteUuid === row.uuid;
-
-        return (
-          <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() => openForm({ mode: "edit", record: row })}
-            >
-              Edit
-            </Button>
-            {isConfirming && !isRowBusy && (
-              <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteUuid(null)}>
-                Keep
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="danger"
-              loading={isRowBusy && busy.type === "delete"}
-              disabled={busy !== null && !isRowBusy}
-              onClick={() => handleDelete(row)}
-            >
-              {isConfirming ? "Confirm delete?" : "Delete"}
-            </Button>
-            <Button
-              size="sm"
-              loading={isRowBusy && busy.type === "process"}
-              disabled={busy !== null && !isRowBusy}
-              onClick={() => handleProcess(row)}
-            >
-              Process
-            </Button>
-          </div>
-        );
-      },
+      render: (row) =>
+        row.status === "Pending" ? (
+          <Button
+            size="sm"
+            loading={processingUuid === row.uuid}
+            disabled={processingUuid !== null && processingUuid !== row.uuid}
+            onClick={() => handleProcess(row)}
+          >
+            Process
+          </Button>
+        ) : null,
     },
   ];
 
