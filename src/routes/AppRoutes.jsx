@@ -84,6 +84,7 @@ import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
 import AdminEmployeeHierarchy from "../pages/admin/EmployeeHierarchy";
 import AttendanceMonthly from "../components/common/AttendanceMonthly";
+import LeaveRequest from "../pages/hr/LeaveRequest";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -157,6 +158,7 @@ function AppRoutes() {
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/employees" element={<HREmployees />} />
             <Route path="/hr/my-attendance" element={<AttendanceMonthly />} />
+            <Route path="/hr/leave" element={<LeaveRequest />} />
 
             <Route path="/hr/onboarding" element={<HREmployeeOnboarding />} />
             <Route path="/hr/attendance" element={<HRAttendance />} />
@@ -181,7 +183,8 @@ function AppRoutes() {
           <Route element={<DashboardLayout sections={BD_NAV_SECTIONS} />}>
             <Route path="/bd/dashboard" element={<BDDashboard />} />
             <Route path="/bd/clients" element={<BDClient />} />{" "}
-            <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />
+            <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />{" "}
+            <Route path="/bd/leave" element={<LeaveRequest />} />
             <Route path="/bd/clients/new" element={<BDCreateClient />} />
             <Route path="/bd/clients/:clientId" element={<BDClientDetails />} />
           </Route>
@@ -197,9 +200,13 @@ function AppRoutes() {
           >
             <Route path="/developer/dashboard" element={<Dashboard />} />
             <Route path="/developer/projects" element={<MyProjects />} />{" "}
-            <Route path="/developer/my-attendance" element={<AttendanceMonthly />} />
+            <Route
+              path="/developer/my-attendance"
+              element={<AttendanceMonthly />}
+            />
             <Route path="/developer/tasks" element={<MyTasks />} />
             <Route path="/developer/kanban" element={<DEVKanbanBoard />} />
+            <Route path="/developer/leave" element={<LeaveRequest />} />
             <Route
               path="/developer/progress"
               element={<DevelopmentProgress />}
@@ -247,6 +254,8 @@ function AppRoutes() {
           <Route path="/tester/projects" element={<TESTAssignedProjects />} />
           <Route path="/tester/testing-queue" element={<TestingQueue />} />
           <Route path="/tester/phase-testing" element={<PhaseTesting />} />
+          <Route path="/tester/leave" element={<LeaveRequest />} />
+
           <Route path="/tester/bugs" element={<Bugs />} />
           <Route path="/tester/retesting" element={<Retesting />} />
           <Route path="/tester/client-testing" element={<ClientTesting />} />

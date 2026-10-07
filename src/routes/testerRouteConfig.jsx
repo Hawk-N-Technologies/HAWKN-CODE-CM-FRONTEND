@@ -9,6 +9,7 @@ import {
   Hammer,
   GraduationCap,
   CalendarCheck,
+  CalendarArrowDownIcon,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -21,6 +22,7 @@ const I = {
   client: <UsersRound aria-hidden="true" />,
   build: <Hammer aria-hidden="true" />,
   training: <GraduationCap aria-hidden="true" />,
+  leave: <CalendarArrowDownIcon aria-hidden="true" />,
 };
 export const TESTER_NAV_SECTIONS = [
   {
@@ -51,8 +53,13 @@ export const TESTER_NAV_SECTIONS = [
       },
       {
         label: "My Attendance",
-        path: "/attendance",
+        path: "/tester/attendance",
         icon: I.attendance,
+      },
+      {
+        label: "My Leave",
+        path: "/tester/leave",
+        icon: I.leave,
       },
     ],
   },

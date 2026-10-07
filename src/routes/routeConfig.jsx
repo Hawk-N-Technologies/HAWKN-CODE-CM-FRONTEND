@@ -22,6 +22,7 @@ import {
   Handshake,
   UsersRound,
   CalendarHeart,
+  CalendarArrowDownIcon,
 } from "lucide-react";
 
 import { ROLES } from "../constants/roles";
@@ -51,6 +52,7 @@ const ICONS = {
   deployment: <Rocket aria-hidden="true" />,
   development: <Code2 aria-hidden="true" />,
   delivery: <Handshake aria-hidden="true" />,
+  leave: <CalendarArrowDownIcon aria-hidden="true" />,
 };
 
 const ADMIN_NAV_SECTIONS = [
@@ -171,6 +173,11 @@ const HR_NAV_SECTIONS = [
         path: "/hr/my-attendance",
         icon: ICONS.attendance,
       },
+      {
+        label: "My Leaves",
+        path: "/hr/leave",
+        icon: ICONS.leave,
+      },
     ],
   },
 ];
@@ -186,6 +193,11 @@ const BD_NAV_SECTIONS = [
     label: "My Attendance",
     path: "/bd/my-attendance",
     icon: ICONS.attendance,
+  },
+  {
+    label: "My Leaves",
+    path: "/bd/leave",
+    icon: ICONS.leave,
   },
 ];
 

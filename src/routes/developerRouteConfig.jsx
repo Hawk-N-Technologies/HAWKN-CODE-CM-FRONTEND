@@ -8,6 +8,7 @@ import {
   Bug,
   Bell,
   CalendarCheck,
+  CalendarArrowDownIcon,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -19,6 +20,7 @@ const I = {
   testing: <TestTube2 aria-hidden="true" />,
   bugs: <Bug aria-hidden="true" />,
   notifications: <Bell aria-hidden="true" />,
+  leave: <CalendarArrowDownIcon aria-hidden="true" />,
 };
 export const DEVELOPER_NAV_SECTIONS = [
   {
@@ -53,6 +55,11 @@ export const DEVELOPER_NAV_SECTIONS = [
         label: "My Attendance",
         path: "/developer/my-attendance",
         icon: I.attendance,
+      },
+      {
+        label: "My Leave",
+        path: "/developer/leave",
+        icon: I.leave,
       },
     ],
   },
