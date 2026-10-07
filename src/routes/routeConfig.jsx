@@ -23,10 +23,12 @@ import {
   UsersRound,
   CalendarHeart,
   CalendarArrowDownIcon,
+  NotebookIcon,
+  TestTube2,
+  Bug,
 } from "lucide-react";
 
 import { ROLES } from "../constants/roles";
-
 const ICONS = {
   overview: <LayoutDashboard aria-hidden="true" />,
   company: <Building2 aria-hidden="true" />,
@@ -53,6 +55,12 @@ const ICONS = {
   development: <Code2 aria-hidden="true" />,
   delivery: <Handshake aria-hidden="true" />,
   leave: <CalendarArrowDownIcon aria-hidden="true" />,
+  brd: <NotebookIcon aria-hidden="true" />,
+
+  // Client
+  approval: <CircleCheck aria-hidden="true" />,
+  testing: <TestTube2 aria-hidden="true" />,
+  bugs: <Bug aria-hidden="true" />,
 };
 
 const ADMIN_NAV_SECTIONS = [
@@ -187,17 +195,78 @@ const BD_NAV_SECTIONS = [
     items: [{ label: "Overview", path: "/bd/dashboard", icon: ICONS.overview }],
   },
   {
-    items: [{ label: "Clients", path: "/bd/clients", icon: ICONS.clients }],
+    title: "BDE Management",
+    items: [
+      { label: "Clients", path: "/bd/clients", icon: ICONS.clients },
+      { label: "BRD", path: "/bd/brd", icon: ICONS.brd },
+      {
+        label: "My Attendance",
+        path: "/bd/my-attendance",
+        icon: ICONS.attendance,
+      },
+      {
+        label: "My Leaves",
+        path: "/bd/leave",
+        icon: ICONS.leave,
+      },
+    ],
+  },
+];
+
+const CLIENT_NAV_SECTIONS = [
+  {
+    items: [
+      {
+        label: "Overview",
+        path: "/client/dashboard",
+        icon: ICONS.overview,
+      },
+    ],
   },
   {
-    label: "My Attendance",
-    path: "/bd/my-attendance",
-    icon: ICONS.attendance,
+    title: "Project",
+    items: [
+      {
+        label: "Project Details",
+        path: "/client/project-details",
+        icon: ICONS.projects,
+      },
+      {
+        label: "Phases",
+        path: "/client/phases",
+        icon: ICONS.checklist,
+      },
+      {
+        label: "Phase Testing",
+        path: "/client/phase-testing",
+        icon: ICONS.testing,
+      },
+      {
+        label: "Bugs",
+        path: "/client/bugs",
+        icon: ICONS.bugs,
+      },
+      {
+        label: "Delivery",
+        path: "/client/delivery",
+        icon: ICONS.delivery,
+      },
+    ],
   },
   {
-    label: "My Leaves",
-    path: "/bd/leave",
-    icon: ICONS.leave,
+    title: "Requirements",
+    items: [
+      {
+        label: "BRD",
+        path: "/client/brd",
+        icon: ICONS.brd,
+      },
+      {
+        label: "BRD Approval",
+        path: "/client/brd-approval",
+        icon: ICONS.approval,
+      },
+    ],
   },
 ];
 
@@ -205,6 +274,12 @@ export const NAV_SECTIONS_BY_ROLE = {
   [ROLES.ADMIN]: ADMIN_NAV_SECTIONS,
   [ROLES.HR ?? "hr"]: HR_NAV_SECTIONS,
   [ROLES.BD]: BD_NAV_SECTIONS,
+  [ROLES.CLIENT]: CLIENT_NAV_SECTIONS,
 };
 
-export { ADMIN_NAV_SECTIONS, HR_NAV_SECTIONS, BD_NAV_SECTIONS };
+export {
+  ADMIN_NAV_SECTIONS,
+  HR_NAV_SECTIONS,
+  BD_NAV_SECTIONS,
+  CLIENT_NAV_SECTIONS,
+};

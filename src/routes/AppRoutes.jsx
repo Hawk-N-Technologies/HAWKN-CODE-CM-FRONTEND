@@ -13,7 +13,7 @@ import AdminPeopleManagement from "../pages/admin/PeopleManagement";
 import AdminSOPManagement from "../pages/admin/SOPManagement";
 
 import AdminHRMS from "../pages/admin/HRMS";
-import AdminClientManagement from "../pages/admin/ClientManagement";
+import AdminClientManagement from "../pages/admin/ClilentManagement";
 import AdminProjectManagement from "../pages/admin/ProjectManagement";
 import AdminOperations from "../pages/admin/Operations";
 import AdminDeploymentPlanning from "../pages/admin/DeploymentPlanning";
@@ -35,9 +35,7 @@ import HRSOPs from "../pages/hr/SOPs";
 import HRNotifications from "../pages/hr/Notifications";
 
 import BDDashboard from "../pages/bd/Dashboard";
-import BDClient from "../pages/bd/Client";
-import BDCreateClient from "../pages/bd/CreateClient";
-import BDClientDetails from "../pages/bd/ClientDetails";
+import BDClient from "../pages/bd/ClilentManagement";
 
 import { PROJECT_LEAD_NAV_SECTIONS } from "./projectLeadRouteConfig";
 
@@ -75,16 +73,26 @@ import ClientTesting from "../pages/tester/ClientTesting";
 import BuildTesting from "../pages/tester/BuildTesting";
 import FieldTraining from "../pages/tester/FieldTraining";
 
+import ClientDashboard from "../pages/client/Dashboard";
+import ClientBRD from "../pages/client/BRD";
+import ClientBRDApproval from "../pages/client/BRDApproval";
+import ClientBugs from "../pages/client/Bugs";
+import ClientDelivery from "../pages/client/Delivery";
+import ClientPhases from "../pages/client/Phases";
+import ClientPhaseTesting from "../pages/client/PhaseTesting";
+import ClientProjectDetails from "../pages/client/ProjectDetails";
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
   BD_NAV_SECTIONS,
+  CLIENT_NAV_SECTIONS,
 } from "./routeConfig";
 import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
 import AdminEmployeeHierarchy from "../pages/admin/EmployeeHierarchy";
 import AttendanceMonthly from "../components/common/AttendanceMonthly";
 import LeaveRequest from "../pages/hr/LeaveRequest";
+import BRDUpload from "../pages/bd/BRDUpload";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -185,8 +193,30 @@ function AppRoutes() {
             <Route path="/bd/clients" element={<BDClient />} />{" "}
             <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />{" "}
             <Route path="/bd/leave" element={<LeaveRequest />} />
-            <Route path="/bd/clients/new" element={<BDCreateClient />} />
-            <Route path="/bd/clients/:clientId" element={<BDClientDetails />} />
+            <Route path="/bd/brd" element={<BRDUpload />} />
+          </Route>
+        </Route>
+
+        {/* CLIENT ROUTES */}
+        <Route element={<RoleRoute allowedRoles={[ROLES.CLIENT]} />}>
+          <Route element={<DashboardLayout sections={CLIENT_NAV_SECTIONS} />}>
+            <Route path="/client/dashboard" element={<ClientDashboard />} />
+            <Route
+              path="/client/project-details"
+              element={<ClientProjectDetails />}
+            />
+            <Route path="/client/phases" element={<ClientPhases />} />
+            <Route
+              path="/client/phase-testing"
+              element={<ClientPhaseTesting />}
+            />
+            <Route path="/client/bugs" element={<ClientBugs />} />
+            <Route path="/client/delivery" element={<ClientDelivery />} />
+            <Route path="/client/brd" element={<ClientBRD />} />
+            <Route
+              path="/client/brd-approval"
+              element={<ClientBRDApproval />}
+            />
           </Route>
         </Route>
 
