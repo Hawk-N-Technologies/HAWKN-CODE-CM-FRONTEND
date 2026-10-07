@@ -93,6 +93,7 @@ import AdminEmployeeHierarchy from "../pages/admin/EmployeeHierarchy";
 import AttendanceMonthly from "../components/common/AttendanceMonthly";
 import LeaveRequest from "../pages/hr/LeaveRequest";
 import BRDUpload from "../pages/bd/BRDUpload";
+import BDProjectManagement from "../pages/bd/ProjectManagement";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -190,8 +191,12 @@ function AppRoutes() {
         <Route element={<RoleRoute allowedRoles={[ROLES.BD]} />}>
           <Route element={<DashboardLayout sections={BD_NAV_SECTIONS} />}>
             <Route path="/bd/dashboard" element={<BDDashboard />} />
-            <Route path="/bd/clients" element={<BDClient />} />{" "}
-            <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />{" "}
+            <Route path="/bd/clients" element={<BDClient />} />
+            <Route path="/bd/projects" element={<BDProjectManagement />} />
+            <Route
+              path="/bd/my-attendance"
+              element={<AttendanceMonthly />}
+            />{" "}
             <Route path="/bd/leave" element={<LeaveRequest />} />
             <Route path="/bd/brd" element={<BRDUpload />} />
           </Route>
