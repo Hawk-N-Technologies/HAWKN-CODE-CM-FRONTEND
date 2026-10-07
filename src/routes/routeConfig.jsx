@@ -198,6 +198,7 @@ const BD_NAV_SECTIONS = [
     title: "BDE Management",
     items: [
       { label: "Clients", path: "/bd/clients", icon: ICONS.clients },
+      { label: "Projects", path: "/bd/projects", icon: ICONS.projects },
       { label: "BRD", path: "/bd/brd", icon: ICONS.brd },
       {
         label: "My Attendance",
