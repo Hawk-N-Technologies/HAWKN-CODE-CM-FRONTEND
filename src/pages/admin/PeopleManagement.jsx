@@ -399,12 +399,12 @@ function PeopleManagement() {
     if (isSubmitting) {
       return;
     }
-
+    console.log(person);
     setForm({
       ...EMPTY_FORM,
 
       id: person.id,
-      uuid: person.uuid,
+      uuid: person.userUuid,
 
       firstName: person.firstName || "",
       lastName: person.lastName || "",
@@ -516,9 +516,9 @@ function PeopleManagement() {
 
     try {
       let res;
-
-      if (form.id) {
-        res = await axios.put(`/api/people/${form.id}`, payload, {
+      console.log(form.uuid);
+      if (form.uuid && form.id) {
+        res = await axios.put(`/api/employees/people/${form.uuid}`, payload, {
           withCredentials: true,
         });
 
@@ -580,7 +580,7 @@ function PeopleManagement() {
       key: "employee",
       header: "Employee",
       render: (row) =>
-        row.employee ? (
+        row.employeeId ? (
           <Badge tone="success">Employee</Badge>
         ) : (
           <Badge tone="neutral">User Only</Badge>
