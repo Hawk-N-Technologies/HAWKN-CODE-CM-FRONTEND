@@ -1,78 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
 
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
-import Input from "../../components/common/Input";
+import Loader from "../../components/common/Loader";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
-
-const DUMMY_BRD_DATA = [
-  {
-    id: 1,
-    project: "E-Commerce Website",
-    client: "Acme Corporation",
-    fileName: "acme-ecommerce-brd.pdf",
-    version: "v1.0",
-    uploadedBy: "Rahul Sharma",
-    uploadedAt: "2026-10-01",
-    reviewedBy: "Admin",
-    reviewedAt: "2026-10-02",
-    status: "Approved",
-    remarks: "BRD approved for development.",
-  },
-  {
-    id: 2,
-    project: "Mobile Banking App",
-    client: "FinTech Solutions",
-    fileName: "fintech-mobile-brd.pdf",
-    version: "v2.0",
-    uploadedBy: "Priya Patel",
-    uploadedAt: "2026-10-03",
-    reviewedBy: "Admin",
-    reviewedAt: "2026-10-04",
-    status: "Rejected",
-    remarks: "Please update payment workflow and approval process.",
-  },
-  {
-    id: 3,
-    project: "HR Management System",
-    client: "Global HR Pvt Ltd",
-    fileName: "hr-management-brd.pdf",
-    version: "v1.0",
-    uploadedBy: "Amit Shah",
-    uploadedAt: "2026-10-05",
-    reviewedBy: null,
-    reviewedAt: null,
-    status: "Pending",
-    remarks: null,
-  },
-  {
-    id: 4,
-    project: "Inventory Management",
-    client: "ABC Industries",
-    fileName: "inventory-brd-v3.pdf",
-    version: "v3.0",
-    uploadedBy: "Neha Joshi",
-    uploadedAt: "2026-09-25",
-    reviewedBy: "Admin",
-    reviewedAt: "2026-09-27",
-    status: "Approved",
-    remarks: "Approved after requested changes.",
-  },
-  {
-    id: 5,
-    project: "CRM Platform",
-    client: "TechNova",
-    fileName: "technova-crm-brd.pdf",
-    version: "v1.0",
-    uploadedBy: "Jay Mehta",
-    uploadedAt: "2026-09-28",
-    reviewedBy: "Admin",
-    reviewedAt: "2026-09-29",
-    status: "Rejected",
-    remarks: "Missing user role and permission requirements.",
-  },
-];
 
 const STATUS_TONE = {
   Approved: "success",
@@ -82,79 +15,215 @@ const STATUS_TONE = {
 
 const HISTORY_FILTERS = ["All", "Approved", "Rejected", "Pending"];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+function formatDate(value) {
+  if (!value) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function BRDUpload() {
   const [activeTab, setActiveTab] = useState("upload");
 
-  const [brdData, setBrdData] = useState(DUMMY_BRD_DATA);
+  const [projects, setProjects] = useState([]);
+  const [brdData, setBrdData] = useState([]);
 
-  const [search, setSearch] = useState("");
+  const [summary, setSummary] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    currentStatus: "All BRDs Reviewed",
+  });
 
-  const [historyFilter, setHistoryFilter] = useState("All");
-
-  const [project, setProject] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
   const [file, setFile] = useState(null);
 
+  const [search, setSearch] = useState("");
+  const [historyFilter, setHistoryFilter] = useState("All");
+
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  /**
-   * -------------------------------------------------------
-   * UPLOAD BRD
-   * -------------------------------------------------------
-   */
-  const handleUpload = async (event) => {
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const fileInputRef = useRef(null);
+
+  async function fetchProjects() {
+    try {
+      setLoadingProjects(true);
+
+      const response = await axios.get("/api/brds/projects", {
+        withCredentials: true,
+      });
+
+      setProjects(response.data.data || []);
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load projects",
+      );
+    } finally {
+      setLoadingProjects(false);
+    }
+  }
+
+  async function fetchBRDSummary() {
+    try {
+      setLoadingSummary(true);
+
+      const response = await axios.get("/api/brds/summary", {
+        withCredentials: true,
+      });
+
+      setSummary(
+        response.data.data || {
+          total: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          currentStatus: "All BRDs Reviewed",
+        },
+      );
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load BRD summary",
+      );
+    } finally {
+      setLoadingSummary(false);
+    }
+  }
+
+  async function fetchBRDHistory() {
+    try {
+      setLoadingHistory(true);
+
+      const response = await axios.get("/api/brds/history", {
+        withCredentials: true,
+      });
+
+      setBrdData(response.data.data || []);
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load BRD history",
+      );
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  async function loadBRDData() {
+    setError("");
+
+    await Promise.all([fetchProjects(), fetchBRDSummary(), fetchBRDHistory()]);
+  }
+
+  useEffect(() => {
+    loadBRDData();
+  }, []);
+
+  function handleFileChange(event) {
+    const selectedFile = event.target.files?.[0];
+
+    setError("");
+    setSuccessMessage("");
+
+    if (!selectedFile) {
+      setFile(null);
+      return;
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
+      setFile(null);
+      event.target.value = "";
+      setError("Only PDF, DOC, and DOCX files are allowed.");
+      return;
+    }
+
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setFile(null);
+      event.target.value = "";
+      setError("File size must not exceed 10 MB.");
+      return;
+    }
+
+    setFile(selectedFile);
+  }
+
+  async function handleUpload(event) {
     event.preventDefault();
 
-    if (!project.trim()) {
-      alert("Project name is required.");
+    setError("");
+    setSuccessMessage("");
+
+    if (!selectedProject) {
+      setError("Please select a project.");
       return;
     }
 
     if (!file) {
-      alert("Please select a BRD file.");
+      setError("Please select a BRD file.");
       return;
     }
 
     setUploading(true);
 
-    setTimeout(() => {
-      const newBRD = {
-        id: Date.now(),
-        project: project.trim(),
-        client: "Dummy Client",
-        fileName: file.name,
-        version: "v1.0",
-        uploadedBy: "Current User",
-        uploadedAt: new Date().toISOString().split("T")[0],
-        reviewedBy: null,
-        reviewedAt: null,
-        status: "Pending",
-        remarks: null,
-      };
+    try {
+      const formData = new FormData();
 
-      setBrdData((previous) => [newBRD, ...previous]);
+      formData.append("projectUuid", selectedProject);
+      formData.append("brdFile", file);
 
-      setProject("");
+      await axios.post("/api/brds", formData, {
+        withCredentials: true,
+      });
+
+      setSuccessMessage("BRD uploaded and submitted for admin approval.");
+
+      setSelectedProject("");
       setFile(null);
 
-      const fileInput = document.getElementById("brd-file");
-
-      if (fileInput) {
-        fileInput.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
 
-      setUploading(false);
+      await Promise.all([fetchBRDSummary(), fetchBRDHistory()]);
 
       setActiveTab("history");
       setHistoryFilter("All");
       setSearch("");
-    }, 800);
-  };
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to upload BRD",
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
 
-  /**
-   * -------------------------------------------------------
-   * FILTER HISTORY
-   * -------------------------------------------------------
-   */
   const filteredHistory = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -164,38 +233,15 @@ function BRDUpload() {
 
       const matchesSearch =
         !query ||
-        item.project.toLowerCase().includes(query) ||
-        item.client.toLowerCase().includes(query) ||
-        item.fileName.toLowerCase().includes(query) ||
-        item.uploadedBy.toLowerCase().includes(query);
+        item.project?.toLowerCase().includes(query) ||
+        item.client?.toLowerCase().includes(query) ||
+        item.fileName?.toLowerCase().includes(query) ||
+        item.uploadedBy?.toLowerCase().includes(query);
 
       return matchesStatus && matchesSearch;
     });
   }, [brdData, historyFilter, search]);
 
-  /**
-   * -------------------------------------------------------
-   * COUNTS
-   * -------------------------------------------------------
-   */
-  const counts = useMemo(
-    () => ({
-      all: brdData.length,
-
-      approved: brdData.filter((item) => item.status === "Approved").length,
-
-      rejected: brdData.filter((item) => item.status === "Rejected").length,
-
-      pending: brdData.filter((item) => item.status === "Pending").length,
-    }),
-    [brdData],
-  );
-
-  /**
-   * -------------------------------------------------------
-   * TABLE COLUMNS
-   * -------------------------------------------------------
-   */
   const columns = [
     {
       key: "project",
@@ -228,7 +274,9 @@ function BRDUpload() {
         <div>
           <p className="text-sm text-cm-text">{row.uploadedBy}</p>
 
-          <p className="text-xs text-cm-text-muted">{row.uploadedAt}</p>
+          <p className="text-xs text-cm-text-muted">
+            {formatDate(row.uploadedAt)}
+          </p>
         </div>
       ),
     },
@@ -248,7 +296,9 @@ function BRDUpload() {
         <div>
           <p className="text-sm text-cm-text">{row.reviewedBy || "—"}</p>
 
-          <p className="text-xs text-cm-text-muted">{row.reviewedAt || "—"}</p>
+          <p className="text-xs text-cm-text-muted">
+            {formatDate(row.reviewedAt)}
+          </p>
         </div>
       ),
     },
@@ -268,7 +318,13 @@ function BRDUpload() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => alert(`Opening ${row.fileName}`)}
+          onClick={() => {
+            window.open(
+              `/api/brds/versions/${row.id}/file`,
+              "_blank",
+              "noopener,noreferrer",
+            );
+          }}
         >
           View
         </Button>
@@ -278,7 +334,6 @@ function BRDUpload() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* HEADER */}
       <div>
         <h1 className="text-xl font-bold text-cm-text">BRD Management</h1>
 
@@ -287,7 +342,6 @@ function BRDUpload() {
         </p>
       </div>
 
-      {/* TABS */}
       <div className="border-b border-cm-border">
         <div className="flex gap-6">
           <button
@@ -304,7 +358,10 @@ function BRDUpload() {
 
           <button
             type="button"
-            onClick={() => setActiveTab("history")}
+            onClick={() => {
+              setActiveTab("history");
+              fetchBRDHistory();
+            }}
             className={`border-b-2 px-1 pb-3 text-sm font-medium transition ${
               activeTab === "history"
                 ? "border-cm-primary text-cm-primary"
@@ -316,10 +373,20 @@ function BRDUpload() {
         </div>
       </div>
 
-      {/* UPLOAD TAB */}
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-600">
+          {successMessage}
+        </div>
+      )}
+
       {activeTab === "upload" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* UPLOAD FORM */}
           <form
             onSubmit={handleUpload}
             className="flex flex-col gap-5 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm lg:col-span-2"
@@ -330,17 +397,36 @@ function BRDUpload() {
               </h2>
 
               <p className="mt-1 text-xs text-cm-text-muted">
-                Upload the latest BRD document for a project.
+                Select a project and upload the latest BRD document.
               </p>
             </div>
 
-            <Input
-              label="Project"
-              required
-              placeholder="Enter project name"
-              value={project}
-              onChange={(event) => setProject(event.target.value)}
-            />
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="project"
+                className="text-sm font-medium text-cm-text"
+              >
+                Project <span className="text-red-500">*</span>
+              </label>
+
+              <select
+                id="project"
+                value={selectedProject}
+                onChange={(event) => setSelectedProject(event.target.value)}
+                disabled={loadingProjects || uploading}
+                className="w-full rounded-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text outline-none focus:border-cm-primary focus:ring-1 focus:ring-cm-primary"
+              >
+                <option value="">Select a project</option>
+
+                {projects.map((project) => (
+                  <option key={project.uuid} value={project.uuid}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+
+              {loadingProjects && <Loader context="inline" />}
+            </div>
 
             <div className="flex flex-col gap-2">
               <label
@@ -351,15 +437,17 @@ function BRDUpload() {
               </label>
 
               <input
+                ref={fileInputRef}
                 id="brd-file"
                 type="file"
                 accept=".pdf,.doc,.docx"
-                onChange={(event) => setFile(event.target.files?.[0] || null)}
+                disabled={uploading}
+                onChange={handleFileChange}
                 className="block w-full rounded-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text file:mr-4 file:rounded-md file:border-0 file:bg-cm-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
               />
 
               <p className="text-xs text-cm-text-muted">
-                Supported formats: PDF, DOC, DOCX
+                Supported formats: PDF, DOC, DOCX. Maximum size: 10 MB.
               </p>
             </div>
 
@@ -378,69 +466,70 @@ function BRDUpload() {
             )}
 
             <div className="flex justify-end border-t border-cm-border pt-4">
-              <Button type="submit" disabled={uploading}>
-                {uploading ? "Uploading..." : "Upload BRD"}
+              <Button type="submit" disabled={loadingProjects}>
+                {uploading ? <Loader context="inline" /> : "Upload BRD"}
               </Button>
             </div>
           </form>
 
-          {/* STATUS SUMMARY */}
           <div className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-cm-text">BRD Status</h2>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
-                <p className="text-xs text-cm-text-muted">Total</p>
+            {loadingSummary ? (
+              <Loader context="section" label="Loading BRD status..." />
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
+                    <p className="text-xs text-cm-text-muted">Total</p>
 
-                <p className="mt-1 text-2xl font-bold text-cm-text">
-                  {counts.all}
-                </p>
-              </div>
+                    <p className="mt-1 text-2xl font-bold text-cm-text">
+                      {summary.total}
+                    </p>
+                  </div>
 
-              <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
-                <p className="text-xs text-cm-text-muted">Pending</p>
+                  <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
+                    <p className="text-xs text-cm-text-muted">Pending</p>
 
-                <p className="mt-1 text-2xl font-bold text-cm-warning-600">
-                  {counts.pending}
-                </p>
-              </div>
+                    <p className="mt-1 text-2xl font-bold text-cm-warning-600">
+                      {summary.pending}
+                    </p>
+                  </div>
 
-              <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
-                <p className="text-xs text-cm-text-muted">Approved</p>
+                  <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
+                    <p className="text-xs text-cm-text-muted">Approved</p>
 
-                <p className="mt-1 text-2xl font-bold text-cm-success-600">
-                  {counts.approved}
-                </p>
-              </div>
+                    <p className="mt-1 text-2xl font-bold text-cm-success-600">
+                      {summary.approved}
+                    </p>
+                  </div>
 
-              <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
-                <p className="text-xs text-cm-text-muted">Rejected</p>
+                  <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
+                    <p className="text-xs text-cm-text-muted">Rejected</p>
 
-                <p className="mt-1 text-2xl font-bold text-cm-danger-600">
-                  {counts.rejected}
-                </p>
-              </div>
-            </div>
+                    <p className="mt-1 text-2xl font-bold text-cm-danger-600">
+                      {summary.rejected}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5">
-              <p className="text-xs text-cm-text-muted">Current Status</p>
+                <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5">
+                  <p className="text-xs text-cm-text-muted">Current Status</p>
 
-              <div className="mt-3">
-                <Badge tone={counts.pending > 0 ? "warning" : "success"}>
-                  {counts.pending > 0
-                    ? `${counts.pending} Pending Review`
-                    : "All BRDs Reviewed"}
-                </Badge>
-              </div>
-            </div>
+                  <div className="mt-3">
+                    <Badge tone={summary.pending > 0 ? "warning" : "success"}>
+                      {summary.currentStatus}
+                    </Badge>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* HISTORY TAB */}
       {activeTab === "history" && (
         <div className="flex flex-col gap-5">
-          {/* HISTORY HEADER */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-sm font-semibold text-cm-text">
@@ -461,24 +550,22 @@ function BRDUpload() {
             </Button>
           </div>
 
-          {/* SEARCH */}
           <TableSearch
             value={search}
             onChange={setSearch}
             placeholder="Search project, client, file..."
           />
 
-          {/* STATUS FILTERS */}
           <div className="flex flex-wrap gap-2">
             {HISTORY_FILTERS.map((filter) => {
               const count =
                 filter === "All"
-                  ? counts.all
+                  ? summary.total
                   : filter === "Approved"
-                    ? counts.approved
+                    ? summary.approved
                     : filter === "Rejected"
-                      ? counts.rejected
-                      : counts.pending;
+                      ? summary.rejected
+                      : summary.pending;
 
               return (
                 <button
@@ -499,16 +586,19 @@ function BRDUpload() {
             })}
           </div>
 
-          {/* HISTORY TABLE */}
-          <DataTable
-            columns={columns}
-            rows={filteredHistory}
-            emptyMessage={
-              search || historyFilter !== "All"
-                ? "No BRD history matches your filters."
-                : "No BRD history found."
-            }
-          />
+          {loadingHistory ? (
+            <Loader context="section" label="Loading BRD history..." />
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={filteredHistory}
+              emptyMessage={
+                search || historyFilter !== "All"
+                  ? "No BRD history matches your filters."
+                  : "No BRD history found."
+              }
+            />
+          )}
         </div>
       )}
     </div>
