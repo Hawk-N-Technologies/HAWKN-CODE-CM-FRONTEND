@@ -16,9 +16,15 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/api": {
-          target: backendUrl,
+          target: "http://localhost:3000",
           changeOrigin: true,
-          secure: false,
+          credentials: true,
+        },
+
+        "/uploads": {
+          target: "http://localhost:3000",
+          changeOrigin: true,
+          credentials: true,
         },
       },
     },
