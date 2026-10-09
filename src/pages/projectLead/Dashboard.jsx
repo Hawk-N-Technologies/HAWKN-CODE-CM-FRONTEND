@@ -1,5 +1,9 @@
+import { useNavigate } from "react-router-dom";
+import { ArrowRightLeft } from "lucide-react";
+
 import StatCard from "../../components/cards/StatCard";
 import Badge from "../../components/common/Badge";
+import Button from "../../components/common/Button";
 
 const KPIS = [
   { label: "Assigned Projects", value: "3" },
@@ -37,16 +41,33 @@ const projects = [
 ];
 
 function Dashboard() {
+  const navigate = useNavigate();
+
+  const switchToDeveloper = () => {
+    navigate("/developer/dashboard");
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">
-          Welcome back, Project Lead
-        </h1>
-        <p className="mt-1 text-sm text-cm-text-muted">
-          Track assigned projects, planning, phases, tasks and overall delivery
-          progress.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-cm-text">
+            Welcome back, Project Lead
+          </h1>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            Track assigned projects, planning, phases, tasks and overall
+            delivery progress.
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          leftIcon={<ArrowRightLeft size={16} />}
+          onClick={switchToDeveloper}
+        >
+          Switch to Developer
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -67,7 +88,7 @@ function Dashboard() {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="rounded-lg border border-cm-border p-4"
+              className="rounded-cm-md border border-cm-border p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -78,19 +99,22 @@ function Dashboard() {
                     {project.name}
                   </h3>
                 </div>
+
                 <Badge
                   tone={project.status === "In Progress" ? "info" : "warning"}
                 >
                   {project.status}
                 </Badge>
               </div>
+
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-cm-border">
                 <div
                   className="h-full rounded-full bg-blue-600"
                   style={{ width: `${project.progress}%` }}
                 />
               </div>
-              <div className="mt-2 flex justify-between text-xs text-cm-text-muted">
+
+              <div className="mt-2 flex justify-between gap-3 text-xs text-cm-text-muted">
                 <span>{project.progress}% complete</span>
                 <span>Deadline: {project.deadline}</span>
               </div>

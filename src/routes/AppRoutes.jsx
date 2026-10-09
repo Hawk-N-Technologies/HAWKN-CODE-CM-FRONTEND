@@ -95,6 +95,7 @@ import LeaveRequest from "../pages/hr/LeaveRequest";
 import BRDUpload from "../pages/bd/BRDUpload";
 import BDProjectManagement from "../pages/bd/ProjectManagement";
 import AdminBRDApproval from "../pages/admin/AdminBRDApproval";
+import ProjectLeadRoute from "./ProjectLeadRoute";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -257,7 +258,7 @@ function AppRoutes() {
           </Route>
         </Route>
       </Route>
-      <Route element={<RoleRoute allowedRoles={[ROLES.PROJECT_LEAD]} />}>
+      <Route element={<ProjectLeadRoute />}>
         <Route
           element={<DashboardLayout sections={PROJECT_LEAD_NAV_SECTIONS} />}
         >
