@@ -94,6 +94,7 @@ import AttendanceMonthly from "../components/common/AttendanceMonthly";
 import LeaveRequest from "../pages/hr/LeaveRequest";
 import BRDUpload from "../pages/bd/BRDUpload";
 import BDProjectManagement from "../pages/bd/ProjectManagement";
+import AdminBRDApproval from "../pages/admin/AdminBRDApproval";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -139,6 +140,7 @@ function AppRoutes() {
               path="/admin/people-management"
               element={<AdminPeopleManagement />}
             />
+            <Route path="/admin/brd" element={<AdminBRDApproval />} />
             <Route path="/admin/hrms" element={<AdminHRMS />} />
             <Route path="/admin/clients" element={<AdminClientManagement />} />
             <Route
