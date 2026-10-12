@@ -294,7 +294,7 @@ function Operations() {
   };
 
   const viewPlanningFile = (project, kind) => {
-    const projectUuid = project?.brd?.uuid;
+    const projectUuid = project?.uuid;
     console.log(kind);
     if (!projectUuid) {
       showToast.error("Project UUID not found.");
