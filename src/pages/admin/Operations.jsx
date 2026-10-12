@@ -292,6 +292,20 @@ function Operations() {
         : [...current[field], id],
     }));
   };
+
+  const viewPlanningFile = (project, kind) => {
+    const projectUuid = project?.brd?.uuid;
+    console.log(kind);
+    if (!projectUuid) {
+      showToast.error("Project UUID not found.");
+      return;
+    }
+
+    const url = `/api/project-lead/planning/projects/${projectUuid}/files/${kind}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const savePlan = async () => {
     console.log(selectedProject.brd.uuid);
     // console.log(selectedProject);
@@ -674,81 +688,64 @@ function Operations() {
               </section>
                             {/* Diagram status */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
-                               
                 <SectionHeading
                   icon={FileText}
                   title="Project Documents"
-                  description="Documents and diagrams uploaded by the Admin."
+                  description="View uploaded diagrams for this project."
                 />
-                               
-                {(
-                  selectedProject.operationsPlan?.documents ||
-                  selectedProject.documents ||
-                  []
-                ).length ? (
-                  <div className="space-y-3">
-                                       
-                    {(
-                      selectedProject.operationsPlan?.documents ||
-                      selectedProject.documents ||
-                      []
-                    ).map((document) => (
-                      <div
-                        key={document.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-cm-md border border-cm-border p-4"
-                      >
-                                               
-                        <div className="flex min-w-0 items-center gap-3">
-                                                   
-                          <FileText
-                            size={20}
-                            className="shrink-0 text-cm-text-muted"
-                          />
-                                                   
-                          <div className="min-w-0">
-                                                       
-                            <p className="break-words text-sm font-medium text-cm-text">
-                                                           
-                              {document.fileName ||
-                                document.file_name ||
-                                document.name}
-                                                         
-                            </p>
-                                                       
-                            <p className="text-xs text-cm-text-muted">
-                                                           
-                              {document.documentType ||
-                                document.document_type ||
-                                document.type ||
-                                "Project document"}
-                                                         
-                            </p>
-                                                     
-                          </div>
-                                                 
+
+                {[
+                  {
+                    label: "ER Diagram",
+                    kind: "erDiagram",
+                    path: selectedProject.operationsPlan?.er_diagram_path,
+                    status: selectedProject.operationsPlan?.er_diagram_status,
+                  },
+                  {
+                    label: "Flowchart",
+                    kind: "flowchart",
+                    path: selectedProject.operationsPlan?.flowchart_path,
+                    status: selectedProject.operationsPlan?.flowchart_status,
+                  },
+                ].map((document) => {
+                  console.log(document);
+                  const uploaded =
+                    Boolean(document.path) &&
+                    document.status !== "NOT_UPLOADED";
+
+                  return (
+                    <div
+                      key={document.kind}
+                      className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-cm-md border border-cm-border p-4 last:mb-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText size={20} className="text-cm-text-muted" />
+
+                        <div>
+                          <p className="text-sm font-medium text-cm-text">
+                            {document.label}
+                          </p>
+                          <p className="text-xs text-cm-text-muted">
+                            {uploaded ? "Uploaded" : "Not uploaded"}
+                          </p>
                         </div>
-                                               
-                        <a
-                          href={document.downloadUrl || document.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm font-medium text-cm-blue-700 hover:underline"
-                        >
-                                                    View / Download            
-                                     
-                        </a>
-                                             
                       </div>
-                    ))}
-                                     
-                  </div>
-                ) : (
-                  <p className="rounded-cm-md border border-dashed border-cm-border p-5 text-sm text-cm-text-muted">
-                                        No documents have been uploaded for this
-                    project yet.                  
-                  </p>
-                )}
-                             
+
+                      {uploaded && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            viewPlanningFile(selectedProject, document.kind)
+                          }
+                        >
+                          View
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </section>
                             {/* Summary + save */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
