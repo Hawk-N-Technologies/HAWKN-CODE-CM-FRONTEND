@@ -14,35 +14,24 @@ import {
   Users,
   UserRound,
 } from "lucide-react";
-
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Select from "../../components/common/Select";
 import Loader from "../../components/common/Loader";
+import MultiSelect from "../../components/common/MultiSelect";
 import { showToast } from "../../components/common/Toast";
-
 const API_URL = "/api/operations";
-
 const EMPTY_ASSIGNMENTS = {
   lead: "",
-  tester: "",
+  testers: [],
   developers: [],
   technology: "",
-  erDiagram: "NOT_UPLOADED",
-  flowchart: "NOT_UPLOADED",
 };
-
 const TECHNOLOGY_OPTIONS = [
   { value: "MERN", label: "MERN Stack" },
   { value: ".NET + React", label: ".NET + React" },
   { value: "Java + React", label: "Java + React" },
 ];
-
-const DIAGRAM_OPTIONS = [
-  { value: "NOT_UPLOADED", label: "Not uploaded" },
-  { value: "UPLOADED", label: "Uploaded" },
-];
-
 function getErrorMessage(error) {
   return (
     error?.response?.data?.message ||
@@ -50,7 +39,6 @@ function getErrorMessage(error) {
     "Something went wrong. Please try again."
   );
 }
-
 function getEmployeeName(employee) {
   const user = employee?.user || {};
   return (
@@ -62,13 +50,11 @@ function getEmployeeName(employee) {
     `Employee ${employee?.id ?? ""}`
   );
 }
-
 function getEmployeeEmail(employee) {
   return (
     employee?.user?.email || employee?.email || employee?.companyEmail || ""
   );
 }
-
 function getClientName(project) {
   const user = project?.client?.user || {};
   return (
@@ -78,11 +64,9 @@ function getClientName(project) {
     "Client"
   );
 }
-
 function getProjectName(project) {
   return project?.name || project?.projectName || "Untitled project";
 }
-
 function getProjectCode(project) {
   return (
     project?.projectCode ||
@@ -91,19 +75,27 @@ function getProjectCode(project) {
     `PRJ-${project?.id}`
   );
 }
-
 function getPlanAssignments(project) {
   const plan = project?.operationsPlan;
+  const getEmployeeId = (item) =>
+    item?.employeeId ?? item?.employee_id ?? item?.employee?.id ?? item?.id;
   return {
-    lead: plan?.projectLeadId ? String(plan.projectLeadId) : "",
-    tester: plan?.testerId ? String(plan.testerId) : "",
-    developers: (plan?.developers || []).map((employee) => String(employee.id)),
-    technology: plan?.technologyStack || "",
-    erDiagram: plan?.erDiagramStatus || "NOT_UPLOADED",
-    flowchart: plan?.flowchartStatus || "NOT_UPLOADED",
+    lead: plan?.projectLeadId
+      ? String(plan.projectLeadId)
+      : plan?.project_lead_id
+        ? String(plan.project_lead_id)
+        : "",
+    testers: (plan?.testers || [])
+      .map(getEmployeeId)
+      .filter(Boolean)
+      .map(String),
+    developers: (plan?.developers || [])
+      .map(getEmployeeId)
+      .filter(Boolean)
+      .map(String),
+    technology: plan?.technologyStack || plan?.technology_stack || "",
   };
 }
-
 function getPlanningStatus(project) {
   const status = project?.operationsPlan?.planningStatus;
   if (status === "COMPLETED") return { label: "Completed", tone: "success" };
@@ -113,38 +105,42 @@ function getPlanningStatus(project) {
     ? { label: "Not started", tone: "neutral" }
     : { label: "Not planned", tone: "neutral" };
 }
-
 function SectionHeading({ icon: Icon, title, description }) {
   return (
     <div className="mb-5 flex items-start gap-3">
+           
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-cm-md bg-cm-bg text-cm-text">
-        <Icon size={18} />
+                <Icon size={18} />     
       </span>
+           
       <div>
-        <h2 className="text-sm font-semibold text-cm-text">{title}</h2>
+                <h2 className="text-sm font-semibold text-cm-text">{title}</h2> 
+             
         {description && (
           <p className="mt-1 text-sm text-cm-text-muted">{description}</p>
         )}
+             
       </div>
+         
     </div>
   );
 }
-
 function StatCard({ label, value, icon: Icon, detail }) {
   return (
     <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
+           
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-cm-text-muted">{label}</p>
+                <p className="text-sm text-cm-text-muted">{label}</p>       
         <span className="flex h-9 w-9 items-center justify-center rounded-cm-md bg-cm-bg text-cm-text">
-          <Icon size={18} />
+                    <Icon size={18} />       
         </span>
+             
       </div>
-      <p className="mt-3 text-2xl font-bold text-cm-text">{value}</p>
-      {detail && <p className="mt-1 text-xs text-cm-text-muted">{detail}</p>}
+            <p className="mt-3 text-2xl font-bold text-cm-text">{value}</p>     
+      {detail && <p className="mt-1 text-xs text-cm-text-muted">{detail}</p>}   
     </div>
   );
 }
-
 function Operations() {
   const [projects, setProjects] = useState([]);
   const [options, setOptions] = useState({
@@ -159,17 +155,14 @@ function Operations() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setError("");
-
     try {
       const [projectsResponse, optionsResponse] = await Promise.all([
         axios.get(`${API_URL}/projects`, { withCredentials: true }),
         axios.get(`${API_URL}/options`, { withCredentials: true }),
       ]);
-
       if (projectsResponse.data?.success === false) {
         throw new Error(
           projectsResponse.data?.message || "Could not load projects.",
@@ -180,12 +173,10 @@ function Operations() {
           optionsResponse.data?.message || "Could not load assignment options.",
         );
       }
-
       const projectRecords = Array.isArray(projectsResponse.data?.data)
         ? projectsResponse.data.data
         : [];
       const employeeOptions = optionsResponse.data?.data || {};
-
       setProjects(projectRecords);
       setOptions({
         projectLeads: Array.isArray(employeeOptions.projectLeads)
@@ -198,7 +189,6 @@ function Operations() {
           ? employeeOptions.testers
           : [],
       });
-
       const selectedProject =
         projectRecords.find(
           (project) => String(project.id) === selectedIdRef.current,
@@ -206,7 +196,6 @@ function Operations() {
         projectRecords[0] ||
         null;
       const nextId = selectedProject ? String(selectedProject.id) : "";
-
       selectedIdRef.current = nextId;
       setSelectedId(nextId);
       setAssignments(
@@ -222,20 +211,16 @@ function Operations() {
       setIsLoading(false);
     }
   }, []);
-
   useEffect(() => {
     loadData();
   }, [loadData]);
-
   const selectedProject = useMemo(
     () => projects.find((project) => String(project.id) === selectedId) || null,
     [projects, selectedId],
   );
-
   const filteredProjects = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return projects;
-
     return projects.filter((project) =>
       [
         getProjectName(project),
@@ -249,7 +234,6 @@ function Operations() {
         .includes(query),
     );
   }, [projects, search]);
-
   const stats = useMemo(() => {
     const planned = projects.filter((project) =>
       Boolean(project.operationsPlan),
@@ -264,7 +248,6 @@ function Operations() {
       completed,
     };
   }, [projects]);
-
   const leadOptions = useMemo(
     () =>
       options.projectLeads.map((employee) => ({
@@ -283,55 +266,58 @@ function Operations() {
     [options.testers],
   );
 
+  const developerOptions = useMemo(
+    () =>
+      options.developers.map((employee) => ({
+        value: String(employee.id),
+        label: getEmployeeName(employee),
+      })),
+    [options.developers],
+  );
+
   const selectProject = (project) => {
     selectedIdRef.current = String(project.id);
     setSelectedId(String(project.id));
     setAssignments(getPlanAssignments(project));
   };
-
   const updateAssignment = (field, value) => {
     setAssignments((current) => ({ ...current, [field]: value }));
   };
-
-  const toggleDeveloper = (employeeId) => {
+  const toggleAssignment = (field, employeeId) => {
     const id = String(employeeId);
     setAssignments((current) => ({
       ...current,
-      developers: current.developers.includes(id)
-        ? current.developers.filter((selected) => selected !== id)
-        : [...current.developers, id],
+      [field]: current[field].includes(id)
+        ? current[field].filter((selected) => selected !== id)
+        : [...current[field], id],
     }));
   };
-
   const savePlan = async () => {
+    console.log(selectedProject.brd.uuid);
+    // console.log(selectedProject);
+    console.log(assignments);
     if (!selectedProject) {
       showToast.warning("Select a project first.");
       return;
     }
-    console.log(selectedProject.brd.uuid);
     if (isSaving) return;
-
     setIsSaving(true);
     try {
       const response = await axios.put(
-        `${API_URL}/projects/${selectedProject.brd.uuid}`,
+        `${API_URL}/projects/${selectedProject.brd.uuid || selectedProject.id}`,
         {
-          leadId: assignments.lead || null,
-          testerId: assignments.tester || null,
+          projectLeadId: assignments.lead ? Number(assignments.lead) : null,
+          testerIds: assignments.testers.map(Number),
           developerIds: assignments.developers.map(Number),
           technologyStack: assignments.technology || null,
-          erDiagramStatus: assignments.erDiagram,
-          flowchartStatus: assignments.flowchart,
         },
         { withCredentials: true },
       );
-
       if (response.data?.success === false) {
         throw new Error(
           response.data?.message || "Could not save operations plan.",
         );
       }
-
       showToast.success("Operations plan saved successfully.");
       await loadData();
     } catch (saveError) {
@@ -340,22 +326,26 @@ function Operations() {
       setIsSaving(false);
     }
   };
-
   if (isLoading && projects.length === 0) {
     return <Loader context="page" label="Loading approved projects..." />;
   }
-
   return (
     <div className="flex flex-col gap-6">
-      {/* Page heading follows the existing cm-* dashboard theme. */}
+            {/* Page heading follows the existing cm-\* dashboard theme. */}   
+       
       <div className="flex flex-wrap items-start justify-between gap-4">
+               
         <div>
+                   
           <h1 className="text-xl font-bold text-cm-text">Project Operations</h1>
+                   
           <p className="mt-1 text-sm text-cm-text-muted">
-            Assign project teams and track delivery planning for client-approved
-            BRDs.
+                        Assign project teams and track delivery planning for
+            client-approved             BRDs.          
           </p>
+                 
         </div>
+               
         <Button
           type="button"
           variant="outline"
@@ -364,63 +354,81 @@ function Operations() {
           disabled={isLoading || isSaving}
           leftIcon={<RefreshCw size={15} />}
         >
-          Refresh
+                    Refresh        
         </Button>
+             
       </div>
-
-      {/* Summary */}
+            {/* Summary */}     
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+               
         <StatCard
           label="Client-approved projects"
           value={stats.total}
           icon={BriefcaseBusiness}
         />
+               
         <StatCard label="Plans created" value={stats.planned} icon={FileText} />
+               
         <StatCard
           label="Awaiting planning"
           value={stats.pending}
           icon={CircleDashed}
         />
+               
         <StatCard
           label="Planning completed"
           value={stats.completed}
           icon={CheckCircle2}
         />
+             
       </div>
-
+           
       {error && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-cm-lg border border-cm-danger-200 bg-cm-danger-50 p-4">
-          <p className="text-sm text-cm-danger-700">{error}</p>
+                    <p className="text-sm text-cm-danger-700">{error}</p>       
+           
           <Button type="button" variant="outline" size="sm" onClick={loadData}>
-            Try again
+                        Try again          
           </Button>
+                 
         </div>
       )}
-
+           
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        {/* Project list */}
+                {/* Project list */}       
         <aside className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
+                   
           <div className="border-b border-cm-border p-5">
+                       
             <div className="flex items-center justify-between gap-3">
+                           
               <div>
+                               
                 <h2 className="text-sm font-semibold text-cm-text">
-                  Approved Projects
+                                    Approved Projects                
                 </h2>
+                               
                 <p className="mt-1 text-xs text-cm-text-muted">
-                  {projects.length} project{projects.length === 1 ? "" : "s"}{" "}
-                  available
+                                    {projects.length} project
+                  {projects.length === 1 ? "" : "s"}                   available
+                                 
                 </p>
+                             
               </div>
+                           
               <span className="flex h-9 w-9 items-center justify-center rounded-cm-md bg-cm-bg text-cm-text">
-                <BriefcaseBusiness size={18} />
+                                <BriefcaseBusiness size={18} />             
               </span>
+                         
             </div>
-
+                       
             <div className="relative mt-4">
+                           
               <Search
                 size={16}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-cm-text-muted"
               />
+                           
               <input
                 type="search"
                 value={search}
@@ -429,26 +437,37 @@ function Operations() {
                 aria-label="Search approved projects"
                 className="h-10 w-full rounded-cm-md border border-cm-border bg-cm-bg pl-9 pr-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
               />
+                         
             </div>
+                     
           </div>
-
+                   
           <div className="max-h-[640px] space-y-2 overflow-y-auto p-3">
+                       
             {filteredProjects.length === 0 ? (
               <div className="px-3 py-10 text-center">
+                               
                 <BriefcaseBusiness
                   size={26}
                   className="mx-auto text-cm-text-muted"
                 />
+                               
                 <p className="mt-3 text-sm font-medium text-cm-text">
+                                   
                   {projects.length
                     ? "No matching projects"
                     : "No approved projects"}
+                                 
                 </p>
+                               
                 <p className="mt-1 text-xs leading-5 text-cm-text-muted">
+                                   
                   {projects.length
                     ? "Try a different search term."
                     : "Projects appear here after the client approves their BRD."}
+                                 
                 </p>
+                             
               </div>
             ) : (
               filteredProjects.map((project) => {
@@ -466,78 +485,112 @@ function Operations() {
                         : "border-transparent hover:border-cm-border hover:bg-cm-bg",
                     ].join(" ")}
                   >
+                                       
                     <div className="flex items-start justify-between gap-2">
+                                           
                       <div className="min-w-0">
+                                               
                         <p className="truncate text-xs font-medium text-cm-text-muted">
-                          {getProjectCode(project)}
+                                                    {getProjectCode(project)}   
+                                             
                         </p>
+                                               
                         <p className="mt-1 truncate text-sm font-semibold text-cm-text">
-                          {getProjectName(project)}
+                                                    {getProjectName(project)}   
+                                             
                         </p>
+                                             
                       </div>
+                                           
                       {active && (
                         <CheckCircle2
                           size={17}
                           className="shrink-0 text-cm-blue-700"
                         />
                       )}
+                                         
                     </div>
+                                       
                     <p className="mt-2 truncate text-xs text-cm-text-muted">
-                      Client: {getClientName(project)}
+                                            Client: {getClientName(project)}   
+                                     
                     </p>
+                                       
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge tone="success">BRD approved</Badge>
-                      <Badge tone={status.tone}>{status.label}</Badge>
+                                           
+                      <Badge tone="success">BRD approved</Badge>               
+                            <Badge tone={status.tone}>{status.label}</Badge>   
+                                     
                     </div>
+                                     
                   </button>
                 );
               })
             )}
+                     
           </div>
+                 
         </aside>
-
-        {/* Operations plan */}
+                {/* Operations plan */}       
         <main className="min-w-0">
+                   
           {!selectedProject ? (
             <section className="flex min-h-80 flex-col items-center justify-center rounded-cm-lg border border-cm-border bg-cm-card p-8 text-center shadow-sm">
-              <BriefcaseBusiness size={34} className="text-cm-text-muted" />
+                           
+              <BriefcaseBusiness size={34} className="text-cm-text-muted" />   
+                       
               <h2 className="mt-4 text-sm font-semibold text-cm-text">
-                Select an approved project
+                                Select an approved project              
               </h2>
+                           
               <p className="mt-2 max-w-sm text-sm leading-6 text-cm-text-muted">
-                Choose a project from the list to assign its team and configure
-                the operations plan.
+                                Choose a project from the list to assign its
+                team and configure                 the operations plan.        
+                     
               </p>
+                         
             </section>
           ) : (
             <div className="flex flex-col gap-6">
-              {/* Selected project overview */}
+                            {/* Selected project overview */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
+                               
                 <div className="flex flex-wrap items-start justify-between gap-4">
+                                   
                   <div className="min-w-0">
+                                       
                     <p className="text-xs font-medium text-cm-text-muted">
-                      {getProjectCode(selectedProject)}
+                                            {getProjectCode(selectedProject)}   
+                                     
                     </p>
+                                       
                     <h2 className="mt-1 break-words text-lg font-bold text-cm-text">
-                      {getProjectName(selectedProject)}
+                                            {getProjectName(selectedProject)}   
+                                     
                     </h2>
+                                       
                     <p className="mt-2 text-sm text-cm-text-muted">
-                      Client: {getClientName(selectedProject)}
+                                            Client:
+                      {getClientName(selectedProject)}                   
                     </p>
+                                     
                   </div>
-                  <Badge tone="success">Client approved</Badge>
+                                   <Badge tone="success">Client approved</Badge>
+                                 
                 </div>
+                             
               </section>
-
-              {/* Team assignments */}
+                            {/* Team assignments */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
+                               
                 <SectionHeading
                   icon={Users}
                   title="Team Assignments"
                   description="Select the project lead, tester, and developers responsible for delivery."
                 />
-
+                               
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                   
                   <Select
                     label="Project Lead"
                     value={assignments.lead}
@@ -547,90 +600,65 @@ function Operations() {
                       updateAssignment("lead", event.target.value)
                     }
                   />
-                  <Select
-                    label="Tester / QA"
-                    value={assignments.tester}
-                    placeholder="Select tester"
-                    options={testerOptions}
-                    onChange={(event) =>
-                      updateAssignment("tester", event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="mt-6">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-semibold text-cm-text">
-                        Developers
-                      </h3>
-                      <p className="mt-1 text-xs text-cm-text-muted">
-                        Select one or more active developers.
-                      </p>
-                    </div>
-                    <Badge tone="info">
-                      {assignments.developers.length} selected
-                    </Badge>
+                                   
+                  <div>
+                                                                       
+                    <MultiSelect
+                      label="Testers"
+                      value={assignments.testers}
+                      options={testerOptions}
+                      placeholder="Search testers..."
+                      onChange={(selectedIds) =>
+                        updateAssignment("testers", selectedIds)
+                      }
+                    />
+                                               
                   </div>
-
-                  {options.developers.length === 0 ? (
-                    <p className="rounded-cm-md border border-dashed border-cm-border p-4 text-sm text-cm-text-muted">
-                      No eligible developers were returned by the server.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {options.developers.map((employee) => {
-                        const id = String(employee.id);
-                        const checked = assignments.developers.includes(id);
-                        return (
-                          <label
-                            key={employee.id}
-                            className={[
-                              "flex cursor-pointer items-center gap-3 rounded-cm-md border p-3 transition-colors",
-                              checked
-                                ? "border-cm-blue-500 bg-cm-blue-50"
-                                : "border-cm-border hover:bg-cm-bg",
-                            ].join(" ")}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleDeveloper(employee.id)}
-                              className="h-4 w-4 rounded border-cm-border accent-[#000052]"
-                            />
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cm-bg text-cm-text">
-                              <UserRound size={17} />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-medium text-cm-text">
-                                {getEmployeeName(employee)}
-                              </span>
-                              <span className="block truncate text-xs text-cm-text-muted">
-                                {getEmployeeEmail(employee) || "Developer"}
-                              </span>
-                            </span>
-                            {checked && (
-                              <Check
-                                size={16}
-                                className="shrink-0 text-cm-blue-700"
-                              />
-                            )}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
+                                 
                 </div>
+                               
+                <div className="mt-6">
+                                   
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                       
+                    <div>
+                                           
+                      <h3 className="text-sm font-semibold text-cm-text">
+                                                Developers                      
+                      </h3>
+                                                               
+                    </div>
+                                             
+                  </div>
+                                   
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                       
+                    <MultiSelect
+                      label="Developers"
+                      value={assignments.developers}
+                      options={developerOptions}
+                      placeholder="Search developers..."
+                      onChange={(selectedIds) =>
+                        updateAssignment("developers", selectedIds)
+                      }
+                    />
+                                                         
+                  </div>
+                                 
+                </div>
+                             
               </section>
-
-              {/* Technology stack */}
+                            {/* Technology stack */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
+                               
                 <SectionHeading
                   icon={Layers3}
                   title="Technology Stack"
                   description="Choose the primary technology stack for the project."
                 />
+                               
                 <div className="max-w-xl">
+                                   
                   <Select
                     label="Technology"
                     value={assignments.technology}
@@ -640,57 +668,107 @@ function Operations() {
                       updateAssignment("technology", event.target.value)
                     }
                   />
+                                 
                 </div>
+                             
               </section>
-
-              {/* Diagram status */}
+                            {/* Diagram status */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
+                               
                 <SectionHeading
                   icon={FileText}
-                  title="Project Documentation"
-                  description="Record the current status of required project diagrams."
+                  title="Project Documents"
+                  description="Documents and diagrams uploaded by the Admin."
                 />
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Select
-                    label="ER Diagram"
-                    value={assignments.erDiagram}
-                    options={DIAGRAM_OPTIONS}
-                    onChange={(event) =>
-                      updateAssignment("erDiagram", event.target.value)
-                    }
-                  />
-                  <Select
-                    label="Flowchart"
-                    value={assignments.flowchart}
-                    options={DIAGRAM_OPTIONS}
-                    onChange={(event) =>
-                      updateAssignment("flowchart", event.target.value)
-                    }
-                  />
-                </div>
-                <p className="mt-3 text-xs leading-5 text-cm-text-muted">
-                  These controls save status values only; they do not upload or
-                  verify diagram files.
-                </p>
+                               
+                {(
+                  selectedProject.operationsPlan?.documents ||
+                  selectedProject.documents ||
+                  []
+                ).length ? (
+                  <div className="space-y-3">
+                                       
+                    {(
+                      selectedProject.operationsPlan?.documents ||
+                      selectedProject.documents ||
+                      []
+                    ).map((document) => (
+                      <div
+                        key={document.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-cm-md border border-cm-border p-4"
+                      >
+                                               
+                        <div className="flex min-w-0 items-center gap-3">
+                                                   
+                          <FileText
+                            size={20}
+                            className="shrink-0 text-cm-text-muted"
+                          />
+                                                   
+                          <div className="min-w-0">
+                                                       
+                            <p className="break-words text-sm font-medium text-cm-text">
+                                                           
+                              {document.fileName ||
+                                document.file_name ||
+                                document.name}
+                                                         
+                            </p>
+                                                       
+                            <p className="text-xs text-cm-text-muted">
+                                                           
+                              {document.documentType ||
+                                document.document_type ||
+                                document.type ||
+                                "Project document"}
+                                                         
+                            </p>
+                                                     
+                          </div>
+                                                 
+                        </div>
+                                               
+                        <a
+                          href={document.downloadUrl || document.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-medium text-cm-blue-700 hover:underline"
+                        >
+                                                    View / Download            
+                                     
+                        </a>
+                                             
+                      </div>
+                    ))}
+                                     
+                  </div>
+                ) : (
+                  <p className="rounded-cm-md border border-dashed border-cm-border p-5 text-sm text-cm-text-muted">
+                                        No documents have been uploaded for this
+                    project yet.                  
+                  </p>
+                )}
+                             
               </section>
-
-              {/* Summary + save */}
+                            {/* Summary + save */}             
               <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
+                               
                 <SectionHeading
                   icon={Code2}
                   title="Plan Summary"
                   description="Review the current assignments before saving."
                 />
-
+                               
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                                   
                   {[
                     {
                       label: "Project lead",
                       value: assignments.lead ? "Assigned" : "Not assigned",
                     },
                     {
-                      label: "Tester / QA",
-                      value: assignments.tester ? "Assigned" : "Not assigned",
+                      label: "Testers / QA",
+                      value: String(assignments.testers.length),
                     },
                     {
                       label: "Developers",
@@ -705,18 +783,26 @@ function Operations() {
                       key={item.label}
                       className="rounded-cm-md bg-cm-bg p-3"
                     >
+                                           
                       <p className="text-xs text-cm-text-muted">{item.label}</p>
+                                           
                       <p className="mt-1 break-words text-sm font-semibold text-cm-text">
-                        {item.value}
+                                                {item.value}                   
+                         
                       </p>
+                                         
                     </div>
                   ))}
+                                 
                 </div>
-
+                               
                 <div className="mt-5 flex flex-col-reverse gap-3 border-t border-cm-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                                   
                   <p className="text-xs leading-5 text-cm-text-muted">
-                    Saving creates a plan or updates the existing project plan.
+                                        Saving creates a plan or updates the
+                    existing project plan.                  
                   </p>
+                                   
                   <Button
                     type="button"
                     onClick={savePlan}
@@ -724,16 +810,21 @@ function Operations() {
                     disabled={isSaving || isLoading}
                     leftIcon={<Save size={15} />}
                   >
-                    Save Operations Plan
+                                        Save Operations Plan                  
                   </Button>
+                                 
                 </div>
+                             
               </section>
+                         
             </div>
           )}
+                 
         </main>
+             
       </div>
+         
     </div>
   );
 }
-
 export default Operations;

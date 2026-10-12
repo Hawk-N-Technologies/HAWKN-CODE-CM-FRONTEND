@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { AlertTriangle, CheckCircle2, FolderKanban, PlayCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FolderKanban,
+  PlayCircle,
+} from "lucide-react";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import Input from "../../components/common/Input";
@@ -25,7 +30,14 @@ import {
 
 // Must match the projects table CHECK constraints (database.sql)
 const TIERS = ["Tier I", "Tier II", "Tier III"];
-const STATUSES = ["Planning", "In Development", "Testing", "Completed", "On Hold", "Cancelled"];
+const STATUSES = [
+  "Planning",
+  "In Development",
+  "Testing",
+  "Completed",
+  "On Hold",
+  "Cancelled",
+];
 const OPEN_STATUSES = ["Planning", "In Development", "Testing", "On Hold"];
 
 // Badge only has: success / warning / danger / info / neutral
@@ -57,8 +69,15 @@ const EMPTY_FORM = {
 // "2026-10-15" → "15 Oct 2026" (built from parts so timezone can't shift the day)
 const formatDate = (yyyyMmDd) => {
   if (!yyyyMmDd) return "—";
-  const [year, month, day] = String(yyyyMmDd).slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const [year, month, day] = String(yyyyMmDd)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 // Short, readable ID from the UUID (the real ID stays the UUID)
@@ -97,8 +116,14 @@ function DeadlineCell({ project }) {
   return (
     <div className="flex flex-col gap-1">
       <span>{formatDate(project.deadline)}</span>
-      {project.isOverdue && <Badge tone="danger">Overdue by {Math.abs(project.daysLeft)}d</Badge>}
-      {project.isDueSoon && <Badge tone="warning">{project.daysLeft === 0 ? "Due today" : `${project.daysLeft}d left`}</Badge>}
+      {project.isOverdue && (
+        <Badge tone="danger">Overdue by {Math.abs(project.daysLeft)}d</Badge>
+      )}
+      {project.isDueSoon && (
+        <Badge tone="warning">
+          {project.daysLeft === 0 ? "Due today" : `${project.daysLeft}d left`}
+        </Badge>
+      )}
     </div>
   );
 }
@@ -138,9 +163,18 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
   });
 
   const clientOptions = useMemo(() => {
-    const list = options.clients.map((client) => ({ value: client.uuid, label: client.name }));
-    if (isEdit && !list.some((option) => option.value === editing.client.uuid)) {
-      list.push({ value: editing.client.uuid, label: `${editing.client.name} (inactive)` });
+    const list = options.clients.map((client) => ({
+      value: client.uuid,
+      label: client.name,
+    }));
+    if (
+      isEdit &&
+      !list.some((option) => option.value === editing.client.uuid)
+    ) {
+      list.push({
+        value: editing.client.uuid,
+        label: `${editing.client.name} (inactive)`,
+      });
     }
     return list;
   }, [options.clients, isEdit, editing]);
@@ -148,11 +182,17 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
   const leadOptions = useMemo(() => {
     const list = [
       { value: NO_LEAD, label: "Unassigned" },
-      ...options.projectLeads.map((lead) => ({ value: lead.uuid, label: lead.fullName })),
+      ...options.projectLeads.map((lead) => ({
+        value: lead.uuid,
+        label: lead.fullName,
+      })),
     ];
     const current = editing?.projectLead;
     if (current && !list.some((option) => option.value === current.uuid)) {
-      list.push({ value: current.uuid, label: `${current.fullName} (no longer a lead)` });
+      list.push({
+        value: current.uuid,
+        label: `${current.fullName} (no longer a lead)`,
+      });
     }
     return list;
   }, [options.projectLeads, editing]);
@@ -163,16 +203,24 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
     const payload = {
       ...values,
       progress: Number(values.progress),
-      projectLeadUuid: values.projectLeadUuid === NO_LEAD ? null : values.projectLeadUuid,
+      projectLeadUuid:
+        values.projectLeadUuid === NO_LEAD ? null : values.projectLeadUuid,
     };
 
     try {
-      const res = isEdit ? await updateProject(editing.uuid, payload) : await createProject(payload);
+      const res = isEdit
+        ? await updateProject(editing.uuid, payload)
+        : await createProject(payload);
       showToast.success(`${res.message}.`);
       onSaved();
     } catch (error) {
       applyServerErrors(error, setError);
-      showToast.error(getErrorMessage(error, `Couldn't ${isEdit ? "update" : "create"} project.`));
+      showToast.error(
+        getErrorMessage(
+          error,
+          `Couldn't ${isEdit ? "update" : "create"} project.`,
+        ),
+      );
     }
   };
 
@@ -182,11 +230,16 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm"
     >
-      <h2 className="text-sm font-semibold text-cm-text">{isEdit ? `Edit Project — ${editing.name}` : "Create Project"}</h2>
+      <h2 className="text-sm font-semibold text-cm-text">
+        {isEdit ? `Edit Project — ${editing.name}` : "Create Project"}
+      </h2>
 
       {noClients && (
         <div className="flex items-start gap-2 rounded-lg border border-cm-warning-600/30 bg-cm-warning-100 p-3 text-sm text-cm-warning-600">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0"
+            aria-hidden="true"
+          />
           No active clients yet — add a client in Client Management first.
         </div>
       )}
@@ -229,7 +282,8 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
           error={errors.status?.message}
           {...register("status", {
             onChange: (event) => {
-              if (event.target.value === "Completed") setValue("progress", 100, { shouldValidate: true });
+              if (event.target.value === "Completed")
+                setValue("progress", 100, { shouldValidate: true });
             },
           })}
         />
@@ -242,18 +296,28 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
           error={errors.progress?.message}
           {...register("progress", {
             validate: (value) =>
-              (Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 100) ||
+              (Number.isInteger(Number(value)) &&
+                Number(value) >= 0 &&
+                Number(value) <= 100) ||
               "Enter a whole number from 0 to 100",
           })}
         />
-        <Input label="Start Date" type="date" error={errors.startDate?.message} {...register("startDate")} />
+        <Input
+          label="Start Date"
+          type="date"
+          error={errors.startDate?.message}
+          {...register("startDate")}
+        />
         <Input
           label="Client Deadline"
           type="date"
           error={errors.deadline?.message}
           {...register("deadline", {
             validate: (value, all) =>
-              !value || !all.startDate || value >= all.startDate || "Deadline can't be before the start date",
+              !value ||
+              !all.startDate ||
+              value >= all.startDate ||
+              "Deadline can't be before the start date",
           })}
         />
         <Input
@@ -264,8 +328,10 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
           {...register("internalDeadline", {
             validate: (value, all) => {
               if (!value) return true;
-              if (all.startDate && value < all.startDate) return "Can't be before the start date";
-              if (all.deadline && value > all.deadline) return "Should be on or before the client deadline";
+              if (all.startDate && value < all.startDate)
+                return "Can't be before the start date";
+              if (all.deadline && value > all.deadline)
+                return "Should be on or before the client deadline";
               return true;
             },
           })}
@@ -276,11 +342,18 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
         label="Description (optional)"
         placeholder="Scope, goals, notes…"
         error={errors.description?.message}
-        {...register("description", { maxLength: { value: 5000, message: "Max 5000 characters" } })}
+        {...register("description", {
+          maxLength: { value: 5000, message: "Max 5000 characters" },
+        })}
       />
 
       <div className="flex justify-end gap-3 border-t border-cm-border pt-4">
-        <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSubmitting}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
         <Button type="submit" loading={isSubmitting} disabled={noClients}>
@@ -313,7 +386,13 @@ const DETAIL_SECTIONS = [
 function ProjectDetails({ project, onClose }) {
   const filled = {
     Overview: project.description,
-    Client: [project.client.name, project.client.contactPerson, project.client.email].filter(Boolean).join(" · "),
+    Client: [
+      project.client.name,
+      project.client.contactPerson,
+      project.client.email,
+    ]
+      .filter(Boolean)
+      .join(" · "),
     Team: project.projectLead ? `Lead: ${project.projectLead.fullName}` : null,
   };
 
@@ -322,9 +401,12 @@ function ProjectDetails({ project, onClose }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs text-cm-text-muted">{shortId(project.uuid)}</p>
-          <h2 className="mt-1 text-lg font-semibold text-cm-text">{project.name}</h2>
+          <h2 className="mt-1 text-lg font-semibold text-cm-text">
+            {project.name}
+          </h2>
           <p className="mt-1 text-sm text-cm-text-muted">
-            {project.client.name} · {project.projectLead?.fullName || "Unassigned"} · {project.tier}
+            {project.client.name} ·{" "}
+            {project.projectLead?.fullName || "Unassigned"} · {project.tier}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -337,7 +419,10 @@ function ProjectDetails({ project, onClose }) {
 
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          ["Timeline", `${formatDate(project.startDate)} → ${formatDate(project.deadline)}`],
+          [
+            "Timeline",
+            `${formatDate(project.startDate)} → ${formatDate(project.deadline)}`,
+          ],
           ["Internal Deadline", formatDate(project.internalDeadline)],
           ["Technology", "Not configured"],
           ["Progress", `${project.progress}%`],
@@ -353,7 +438,10 @@ function ProjectDetails({ project, onClose }) {
         {DETAIL_SECTIONS.map((item) => (
           <div key={item} className="rounded-lg border border-cm-border p-4">
             <p className="text-sm font-medium text-cm-text">{item}</p>
-            <p className="mt-1 text-xs text-cm-text-muted">{filled[item] || `Project ${item.toLowerCase()} will appear here.`}</p>
+            <p className="mt-1 text-xs text-cm-text-muted">
+              {filled[item] ||
+                `Project ${item.toLowerCase()} will appear here.`}
+            </p>
           </div>
         ))}
       </div>
@@ -391,7 +479,8 @@ function ProjectManagement() {
         setLoadError(null);
       })
       .catch((error) => {
-        if (!ignore) setLoadError(getErrorMessage(error, "Couldn't load projects."));
+        if (!ignore)
+          setLoadError(getErrorMessage(error, "Couldn't load projects."));
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
@@ -453,23 +542,63 @@ function ProjectManagement() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return projects.filter((project) => {
-      if (statusFilter !== "All" && project.status !== statusFilter) return false;
+      if (statusFilter !== "All" && project.status !== statusFilter)
+        return false;
       if (!query) return true;
-      return [project.name, project.client.name, project.projectLead?.fullName, project.status, project.tier]
+      return [
+        project.name,
+        project.client.name,
+        project.projectLead?.fullName,
+        project.status,
+        project.tier,
+      ]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query));
     });
   }, [projects, search, statusFilter]);
 
   const columns = [
-    { key: "id", header: "Project ID", render: (row) => <span className="text-xs text-cm-text-muted">{shortId(row.uuid)}</span> },
-    { key: "name", header: "Project", render: (row) => <span className="font-medium text-cm-text">{row.name}</span> },
+    {
+      key: "id",
+      header: "Project ID",
+      render: (row) => (
+        <span className="text-xs text-cm-text-muted">{shortId(row.uuid)}</span>
+      ),
+    },
+    {
+      key: "name",
+      header: "Project",
+      render: (row) => (
+        <span className="font-medium text-cm-text">{row.name}</span>
+      ),
+    },
     { key: "client", header: "Client", render: (row) => row.client.name },
-    { key: "lead", header: "Project Lead", render: (row) => row.projectLead?.fullName ?? <span className="text-cm-text-muted">Unassigned</span> },
+    {
+      key: "lead",
+      header: "Project Lead",
+      render: (row) =>
+        row.projectLead?.fullName ?? (
+          <span className="text-cm-text-muted">Unassigned</span>
+        ),
+    },
     { key: "tier", header: "Tier", render: (row) => row.tier },
-    { key: "deadline", header: "Deadline", render: (row) => <DeadlineCell project={row} /> },
-    { key: "status", header: "Status", render: (row) => <Badge tone={STATUS_TONE[row.status] ?? "neutral"}>{row.status}</Badge> },
-    { key: "progress", header: "Progress", render: (row) => <ProgressBar value={row.progress} /> },
+    {
+      key: "deadline",
+      header: "Deadline",
+      render: (row) => <DeadlineCell project={row} />,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => (
+        <Badge tone={STATUS_TONE[row.status] ?? "neutral"}>{row.status}</Badge>
+      ),
+    },
+    {
+      key: "progress",
+      header: "Progress",
+      render: (row) => <ProgressBar value={row.progress} />,
+    },
     {
       key: "actions",
       header: "",
@@ -477,16 +606,28 @@ function ProjectManagement() {
         const isConfirming = confirmDeleteUuid === row.uuid;
         return (
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => setSelected(row)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelected(row)}
+            >
               Details
             </Button>
-            <Button size="sm" variant="outline" onClick={() => openForm({ mode: "edit", project: row })}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openForm({ mode: "edit", project: row })}
+            >
               Edit
             </Button>
             {row.canDelete && (
               <>
                 {isConfirming && deletingUuid !== row.uuid && (
-                  <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteUuid(null)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmDeleteUuid(null)}
+                  >
                     Keep
                   </Button>
                 )}
@@ -513,20 +654,46 @@ function ProjectManagement() {
         <div>
           <h1 className="text-xl font-bold text-cm-text">Project Management</h1>
           <p className="mt-1 text-sm text-cm-text-muted">
-            Manage projects, deadlines, planning, phases, tasks, testing and delivery status.
+            Manage projects, deadlines, planning, phases, tasks, testing and
+            delivery status.
           </p>
         </div>
-        <Button onClick={() => (form?.mode === "create" ? setForm(null) : openForm({ mode: "create" }))}>
+        <Button
+          onClick={() =>
+            form?.mode === "create"
+              ? setForm(null)
+              : openForm({ mode: "create" })
+          }
+        >
           {form?.mode === "create" ? "Close" : "Create Project"}
         </Button>
       </div>
 
       {!loadError && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Projects" value={isLoading ? "…" : summary.total} icon={<FolderKanban className="h-5 w-5" />} />
-          <StatCard label="Active" value={isLoading ? "…" : summary.active} icon={<PlayCircle className="h-5 w-5" />} accent="purple" />
-          <StatCard label="Completed" value={isLoading ? "…" : summary.completed} icon={<CheckCircle2 className="h-5 w-5" />} accent="success" />
-          <StatCard label="Overdue" value={isLoading ? "…" : summary.overdue} icon={<AlertTriangle className="h-5 w-5" />} accent="warning" />
+          <StatCard
+            label="Total Projects"
+            value={isLoading ? "…" : summary.total}
+            icon={<FolderKanban className="h-5 w-5" />}
+          />
+          <StatCard
+            label="Active"
+            value={isLoading ? "…" : summary.active}
+            icon={<PlayCircle className="h-5 w-5" />}
+            accent="purple"
+          />
+          <StatCard
+            label="Completed"
+            value={isLoading ? "…" : summary.completed}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            accent="success"
+          />
+          <StatCard
+            label="Overdue"
+            value={isLoading ? "…" : summary.overdue}
+            icon={<AlertTriangle className="h-5 w-5" />}
+            accent="warning"
+          />
         </div>
       )}
 
@@ -540,17 +707,31 @@ function ProjectManagement() {
         />
       )}
 
-      {selected && <ProjectDetails project={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ProjectDetails project={selected} onClose={() => setSelected(null)} />
+      )}
 
       {loadError ? (
         <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState title="Couldn't load projects" description={loadError} onRetry={reload} />
+          <ErrorState
+            title="Couldn't load projects"
+            description={loadError}
+            onRetry={reload}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <TableSearch value={search} onChange={setSearch} placeholder="Search project, client, lead or status…" />
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by status">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search project, client, lead or status…"
+            />
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filter by status"
+            >
               {["All", ...STATUSES].map((status) => (
                 <button
                   key={status}
@@ -573,7 +754,11 @@ function ProjectManagement() {
             columns={columns}
             rows={filtered.map((project) => ({ ...project, id: project.uuid }))}
             isLoading={isLoading}
-            emptyMessage={search || statusFilter !== "All" ? "No projects match your filters." : "No projects yet — create the first one."}
+            emptyMessage={
+              search || statusFilter !== "All"
+                ? "No projects match your filters."
+                : "No projects yet — create the first one."
+            }
           />
         </div>
       )}
