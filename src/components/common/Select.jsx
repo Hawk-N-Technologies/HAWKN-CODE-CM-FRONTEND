@@ -46,7 +46,6 @@ const Select = forwardRef(function Select(
         name={name}
         disabled={disabled}
         required={required}
-        defaultValue=""
         aria-invalid={Boolean(error) || undefined}
         aria-describedby={error ? errorId : helperText ? helperId : undefined}
         className={[
