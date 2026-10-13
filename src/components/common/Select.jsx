@@ -1,9 +1,9 @@
 import { forwardRef, useId } from "react";
 
 /**
- * Reusable Select — same label/error/helper contract as Input, so a
- * form can mix Input and Select fields without inconsistent styling.
+ * Reusable Select
  * options: Array<{ value, label }>
+ * groups: Array<{ label, options: Array<{ value, label }> }>
  */
 const Select = forwardRef(function Select(
   {
@@ -11,6 +11,7 @@ const Select = forwardRef(function Select(
     id,
     name,
     options = [],
+    groups = [],
     placeholder = "Select…",
     error,
     helperText,
@@ -20,7 +21,7 @@ const Select = forwardRef(function Select(
     containerClassName = "",
     ...rest
   },
-  ref
+  ref,
 ) {
   const autoId = useId();
   const selectId = id || name || autoId;
@@ -58,13 +59,22 @@ const Select = forwardRef(function Select(
         ].join(" ")}
         {...rest}
       >
-        <option value="" disabled>
-          {placeholder}
-        </option>
+        <option value="">{placeholder}</option>
+
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
+        ))}
+
+        {groups.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 

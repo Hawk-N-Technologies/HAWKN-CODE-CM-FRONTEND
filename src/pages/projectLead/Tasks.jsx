@@ -10,7 +10,6 @@ import { showToast } from "../../components/common/Toast";
 
 const API = {
   projects: "/api/project-lead/planning/projects",
-  employees: "/api/employees",
   modules: (projectUuid) => `/api/projects/${projectUuid}/modules`,
   phases: (projectUuid, moduleUuid) =>
     `/api/projects/${projectUuid}/modules/${moduleUuid}/phases`,
@@ -155,9 +154,9 @@ function Tasks() {
     const loadInitialData = async () => {
       setLoadingProjects(true);
       setLoadingEmployees(true);
-      const [projectResult, employeeResult] = await Promise.allSettled([
+      await getDevAndTesters();
+      const [projectResult] = await Promise.allSettled([
         axios.get(API.projects, { withCredentials: true }),
-        axios.get(API.employees, { withCredentials: true }),
       ]);
 
       if (!active) return;
@@ -175,22 +174,12 @@ function Tasks() {
         );
       }
 
-      if (employeeResult.status === "fulfilled") {
-        setEmployees(listFrom(employeeResult.value));
-      } else {
-        showToast.error(
-          errorMessage(
-            employeeResult.reason,
-            "Failed to load employees. Check the employee API endpoint.",
-          ),
-        );
-      }
-
       setLoadingProjects(false);
       setLoadingEmployees(false);
     };
 
     loadInitialData();
+
     return () => {
       active = false;
     };
@@ -434,7 +423,7 @@ function Tasks() {
     ) {
       return showToast.error("Hours must be valid non-negative numbers.");
     }
-
+    console.log(form.assignedTo);
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -495,7 +484,24 @@ function Tasks() {
       setBusyTask("");
     }
   };
+  const getDevAndTesters = async () => {
+    try {
+      const res = await axios.get("/api/developers-testers", {
+        withCredentials: true,
+      });
 
+      if (res.status === 200) {
+        console.log(res.data.data);
+        setEmployees(res.data.data);
+      }
+    } catch (error) {
+      console.error(
+        "Failed to fetch developers and testers:",
+        error.response?.status,
+        error.response?.data || error.message,
+      );
+    }
+  };
   const deleteTask = async (task) => {
     if (
       !window.confirm(`Delete "${task.title}"? This action cannot be undone.`)
@@ -768,16 +774,36 @@ function Tasks() {
               disabled={!form.moduleId || loadingPhases}
             />
             <Select
-              label="Assign Developer"
-              value={form.assignedTo}
-              options={[{ value: "", label: "Unassigned" }, ...employeeOptions]}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  assignedTo: event.target.value,
+              label="Assigned to"
+              name="assignedTo"
+              placeholder="Select employee"
+              value={form.assignedTo || ""}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  assignedTo: e.target.value,
                 }))
               }
-              disabled={loadingEmployees}
+              groups={[
+                {
+                  label: "Developers",
+                  options: employees
+                    .filter((employee) => employee.role === "developer")
+                    .map((employee) => ({
+                      value: employee.id,
+                      label: `${employee.firstName} ${employee.lastName}`,
+                    })),
+                },
+                {
+                  label: "Testers",
+                  options: employees
+                    .filter((employee) => employee.role === "tester")
+                    .map((employee) => ({
+                      value: employee.id,
+                      label: `${employee.firstName} ${employee.lastName}`,
+                    })),
+                },
+              ]}
             />
             <Select
               label="Priority"
