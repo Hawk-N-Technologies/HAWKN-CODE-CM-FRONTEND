@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const backendUrl =
     env.VITE_BACKEND_URL ||
     env.BACKEND_URL ||
-    "http://internal-project-codebackendtemp-9tb1ne-6636bb-194-164-148-10.sslip.io";
+    "https://clientportalapi.hawkntechnologies.com";
 
   return {
     plugins: [react(), tailwindcss()],
