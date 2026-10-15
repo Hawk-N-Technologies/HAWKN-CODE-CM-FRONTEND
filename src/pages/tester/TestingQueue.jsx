@@ -1,94 +1,20 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 
 import Badge from "../../components/common/Badge";
 import Select from "../../components/common/Select";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 
-// Static examples follow the project_modules, project_phases, project_tasks,
-// and task_testing schema. Replace these records with API data when integrating.
-const INITIAL_TESTS = [
-  {
-    uuid: "a12b0000-0000-4000-8000-000000000001",
-    id: 1,
-    project: { id: 1, name: "Acme Retail ERP" },
-    task: {
-      id: 1,
-      uuid: "b12b0000-0000-4000-8000-000000000001",
-      title: "Implement authentication API",
-      priority: "High",
-      status: "Testing",
-      module: { id: 1, name: "Authentication" },
-      phase: { id: 1, name: "API Development" },
-    },
-    tester: { id: 4, name: "Meera Joshi" },
-    status: "Pending",
-    testNotes: null,
-    testedAt: null,
-  },
-  {
-    uuid: "a12b0000-0000-4000-8000-000000000002",
-    id: 2,
-    project: { id: 1, name: "Acme Retail ERP" },
-    task: {
-      id: 2,
-      uuid: "b12b0000-0000-4000-8000-000000000002",
-      title: "Build dashboard overview",
-      priority: "Medium",
-      status: "Testing",
-      module: { id: 2, name: "Dashboard" },
-      phase: { id: 2, name: "Frontend Development" },
-    },
-    tester: { id: 4, name: "Meera Joshi" },
-    status: "In Progress",
-    testNotes: "Checking responsive layouts and dashboard metrics.",
-    testedAt: null,
-  },
-  {
-    uuid: "a12b0000-0000-4000-8000-000000000003",
-    id: 3,
-    project: { id: 2, name: "Internal HRMS" },
-    task: {
-      id: 3,
-      uuid: "b12b0000-0000-4000-8000-000000000003",
-      title: "Fix attendance summary query",
-      priority: "High",
-      status: "Testing",
-      module: { id: 3, name: "Attendance" },
-      phase: { id: 3, name: "Reporting" },
-    },
-    tester: { id: 5, name: "Ishaan Mehta" },
-    status: "Passed",
-    testNotes: "Summary values match the attendance records.",
-    testedAt: "2026-10-12T10:30:00Z",
-  },
-  {
-    uuid: "a12b0000-0000-4000-8000-000000000004",
-    id: 4,
-    project: { id: 1, name: "Acme Retail ERP" },
-    task: {
-      id: 4,
-      uuid: "b12b0000-0000-4000-8000-000000000004",
-      title: "Integrate payment gateway",
-      priority: "Critical",
-      status: "Testing",
-      module: { id: 4, name: "Payments" },
-      phase: { id: 4, name: "Gateway Integration" },
-    },
-    tester: { id: 4, name: "Meera Joshi" },
-    status: "Failed",
-    testNotes: "Webhook retry scenario failed; investigate duplicate events.",
-    testedAt: "2026-10-12T14:15:00Z",
-  },
-];
-
 const TEST_STATUSES = ["Pending", "In Progress", "Passed", "Failed"];
+
 const PRIORITY_TONE = {
   Critical: "danger",
   High: "danger",
   Medium: "warning",
   Low: "neutral",
 };
+
 const TEST_STATUS_TONE = {
   Pending: "neutral",
   "In Progress": "info",
@@ -98,10 +24,26 @@ const TEST_STATUS_TONE = {
 
 const getSelectValue = (value) => value?.target?.value ?? value;
 
+const getErrorMessage = (error) =>
+  error.response?.data?.message ||
+  error.message ||
+  "Something went wrong. Please try again.";
+
+const getTesterName = (tester) => {
+  const user = tester?.user;
+
+  if (!user) return "—";
+
+  return [user.firstName, user.lastName].filter(Boolean).join(" ") || "—";
+};
+
 function formatDate(value) {
   if (!value) return "—";
+
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "—";
+
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
@@ -110,9 +52,105 @@ function formatDate(value) {
 }
 
 export default function TestingQueue() {
-  const [data, setData] = useState(INITIAL_TESTS);
+  const [data, setData] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [updatingIds, setUpdatingIds] = useState([]);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const fetchTestingQueue = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await axios.get("/api/task-testing/", {
+        params: {
+          status: statusFilter === "All" ? undefined : statusFilter,
+          search: search.trim() || undefined,
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch testing queue.",
+        );
+      }
+
+      setData(response.data.data || []);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, search]);
+
+  useEffect(() => {
+    fetchTestingQueue();
+  }, [fetchTestingQueue]);
+
+  const updateTestStatus = async (testUuid, value) => {
+    const nextStatus = getSelectValue(value);
+
+    if (!TEST_STATUSES.includes(nextStatus)) return;
+
+    const currentTest = data.find((test) => test.uuid === testUuid);
+
+    if (!currentTest || currentTest.status === nextStatus) return;
+
+    let testNotes = currentTest.testNotes || "";
+
+    if (nextStatus === "Failed") {
+      testNotes = window.prompt(
+        "Describe the issue found during testing:",
+        testNotes,
+      );
+
+      if (testNotes === null) return;
+
+      if (!testNotes.trim()) {
+        setNotice("Please provide test notes when a test fails.");
+        return;
+      }
+    }
+
+    try {
+      setUpdatingIds((current) => [...current, testUuid]);
+      setError("");
+      setNotice("");
+
+      const response = await axios.patch(
+        `/api/task-testing/${testUuid}/status`,
+        {
+          status: nextStatus,
+          testNotes: testNotes.trim() || null,
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to update test result.",
+        );
+      }
+
+      // The backend also updates project_tasks transactionally.
+      // Refresh so the task status and test result stay in sync.
+      await fetchTestingQueue();
+
+      setNotice(
+        nextStatus === "Failed"
+          ? "Test failed. The task has been returned to In Progress."
+          : nextStatus === "Passed"
+            ? "Test passed. The task has been marked Done."
+            : "Testing status updated successfully.",
+      );
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setUpdatingIds((current) => current.filter((id) => id !== testUuid));
+    }
+  };
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -120,13 +158,14 @@ export default function TestingQueue() {
     return data.filter((test) => {
       const matchesStatus =
         statusFilter === "All" || test.status === statusFilter;
+
       const searchableText = [
         `TEST-${String(test.id).padStart(3, "0")}`,
         test.task?.title,
         test.project?.name,
         test.task?.module?.name,
         test.task?.phase?.name,
-        test.tester?.name,
+        getTesterName(test.tester),
         test.task?.priority,
         test.task?.status,
         test.status,
@@ -139,26 +178,6 @@ export default function TestingQueue() {
       return matchesStatus && (!query || searchableText.includes(query));
     });
   }, [data, search, statusFilter]);
-
-  const updateTestStatus = (testUuid, value) => {
-    const nextStatus = getSelectValue(value);
-    if (!TEST_STATUSES.includes(nextStatus)) return;
-
-    setData((current) =>
-      current.map((test) =>
-        test.uuid === testUuid
-          ? {
-              ...test,
-              status: nextStatus,
-              testedAt:
-                nextStatus === "Passed" || nextStatus === "Failed"
-                  ? new Date().toISOString()
-                  : null,
-            }
-          : test,
-      ),
-    );
-  };
 
   const columns = [
     {
@@ -202,7 +221,7 @@ export default function TestingQueue() {
     {
       key: "tester",
       header: "Tester",
-      render: (row) => row.tester?.name || "—",
+      render: (row) => getTesterName(row.tester),
     },
     {
       key: "priority",
@@ -221,14 +240,20 @@ export default function TestingQueue() {
           <Badge tone={TEST_STATUS_TONE[row.status] || "neutral"}>
             {row.status}
           </Badge>
+
           <Select
             value={row.status}
+            disabled={updatingIds.includes(row.uuid)}
             options={TEST_STATUSES.map((status) => ({
               value: status,
               label: status,
             }))}
             onChange={(value) => updateTestStatus(row.uuid, value)}
           />
+
+          {updatingIds.includes(row.uuid) && (
+            <span className="text-xs text-cm-text-muted">Updating...</span>
+          )}
         </div>
       ),
     },
@@ -244,9 +269,34 @@ export default function TestingQueue() {
       <div>
         <h1 className="text-xl font-bold text-cm-text">Testing Queue</h1>
         <p className="mt-1 text-sm text-cm-text-muted">
-          Review task testing assignments and record test results.
+          Review testing assignments and record test results.
         </p>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+          <button
+            type="button"
+            onClick={fetchTestingQueue}
+            className="ml-3 font-semibold underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700"
+        >
+          {notice}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <TableSearch
@@ -254,6 +304,7 @@ export default function TestingQueue() {
           onChange={setSearch}
           placeholder="Search task, project, module, tester..."
         />
+
         <Select
           label="Test status"
           value={statusFilter}
@@ -271,6 +322,7 @@ export default function TestingQueue() {
       <DataTable
         columns={columns}
         rows={rows}
+        loading={loading}
         emptyMessage="No testing assignments match your filters."
       />
     </div>

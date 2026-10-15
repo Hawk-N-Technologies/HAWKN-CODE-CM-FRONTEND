@@ -42,27 +42,44 @@ const getSelectValue = (value) => value?.target?.value ?? value;
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
 
-const normalizeTask = (task) => ({
-  ...task,
+const normalizeTask = (task) => {
+  const testingRecords = [...(task.testingRecords || [])].sort(
+    (a, b) =>
+      new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime() ||
+      String(b.uuid).localeCompare(String(a.uuid)),
+  );
 
-  taskId: task.id ?? task.taskId ?? "—",
-  id: task.uuid ?? task.id,
+  const latestTest = testingRecords[0] || null;
 
-  title: task.title || "Untitled task",
+  return {
+    ...task,
 
-  project: task.project?.name || "—",
-  module: task.module?.name || "—",
-  phase: task.phase?.name || "—",
+    taskId: task.id ?? task.taskId ?? "—",
+    id: task.uuid ?? task.id,
 
-  priority: task.priority || "Low",
-  status: task.status || "Backlog",
+    title: task.title || "Untitled task",
 
-  isBlocked: Boolean(task.isBlocked ?? task.is_blocked ?? false),
+    project: task.project?.name || "—",
+    module: task.module?.name || "—",
+    phase: task.phase?.name || "—",
 
-  dueDate: task.dueDate ?? task.due_date ?? null,
+    priority: task.priority || "Low",
+    status: task.status || "Backlog",
 
-  estimatedHours: task.estimatedHours ?? task.estimated_hours ?? null,
-});
+    isBlocked: Boolean(task.isBlocked ?? task.is_blocked ?? false),
+
+    dueDate: task.dueDate ?? task.due_date ?? null,
+
+    estimatedHours: task.estimatedHours ?? task.estimated_hours ?? null,
+
+    testingRecords,
+    latestTest,
+    testStatus: latestTest?.status || null,
+    testNotes: latestTest?.testNotes || null,
+    testedAt: latestTest?.testedAt || null,
+  };
+};
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -383,6 +400,48 @@ export default function MyTasks() {
         header: "Est. Hours",
         render: (row) =>
           row.estimatedHours != null ? `${row.estimatedHours}h` : "—",
+      },
+
+      {
+        key: "testResult",
+        header: "Test Result",
+        render: (row) => (
+          <div className="flex min-w-40 flex-col gap-2">
+            {row.testStatus ? (
+              <Badge
+                tone={
+                  row.testStatus === "Passed"
+                    ? "success"
+                    : row.testStatus === "Failed"
+                      ? "danger"
+                      : row.testStatus === "In Progress"
+                        ? "info"
+                        : "neutral"
+                }
+              >
+                {row.testStatus}
+              </Badge>
+            ) : (
+              <span className="text-sm text-cm-text-muted">Not tested</span>
+            )}
+
+            {(row.testStatus === "Failed" || row.testStatus === "Passed") &&
+              row.testNotes && (
+                <p
+                  className="max-w-64 whitespace-normal text-xs text-cm-text-muted"
+                  title={row.testNotes}
+                >
+                  {row.testNotes}
+                </p>
+              )}
+
+            {row.testedAt && (
+              <span className="text-xs text-cm-text-muted">
+                {formatDate(row.testedAt)}
+              </span>
+            )}
+          </div>
+        ),
       },
     ],
     [updatingIds, updateStatus],

@@ -257,7 +257,26 @@ function AppRoutes() {
             />
           </Route>
         </Route>
+
+        <Route
+          element={<RoleRoute allowedRoles={[ROLES.TESTER ?? "tester"]} />}
+        >
+          <Route element={<DashboardLayout sections={TESTER_NAV_SECTIONS} />}>
+            <Route path="/tester/dashboard" element={<TESTDashboard />} />
+            <Route path="/tester/projects" element={<TESTAssignedProjects />} />
+            <Route path="/tester/testing-queue" element={<TestingQueue />} />
+            <Route path="/tester/phase-testing" element={<PhaseTesting />} />
+            <Route path="/tester/leave" element={<LeaveRequest />} />
+
+            <Route path="/tester/bugs" element={<Bugs />} />
+            <Route path="/tester/retesting" element={<Retesting />} />
+            <Route path="/tester/client-testing" element={<ClientTesting />} />
+            <Route path="/tester/build-testing" element={<BuildTesting />} />
+            <Route path="/tester/field-training" element={<FieldTraining />} />
+          </Route>
+        </Route>
       </Route>
+
       <Route element={<ProjectLeadRoute />}>
         <Route
           element={<DashboardLayout sections={PROJECT_LEAD_NAV_SECTIONS} />}
@@ -286,21 +305,6 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      <Route element={<RoleRoute allowedRoles={[ROLES.TESTER ?? "tester"]} />}>
-        <Route element={<DashboardLayout sections={TESTER_NAV_SECTIONS} />}>
-          <Route path="/tester/dashboard" element={<TESTDashboard />} />
-          <Route path="/tester/projects" element={<TESTAssignedProjects />} />
-          <Route path="/tester/testing-queue" element={<TestingQueue />} />
-          <Route path="/tester/phase-testing" element={<PhaseTesting />} />
-          <Route path="/tester/leave" element={<LeaveRequest />} />
-
-          <Route path="/tester/bugs" element={<Bugs />} />
-          <Route path="/tester/retesting" element={<Retesting />} />
-          <Route path="/tester/client-testing" element={<ClientTesting />} />
-          <Route path="/tester/build-testing" element={<BuildTesting />} />
-          <Route path="/tester/field-training" element={<FieldTraining />} />
-        </Route>
-      </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -145,7 +145,7 @@ function ClientManagement() {
       }
 
       if (editingClient) {
-        await axios.put(`/api/clients/${editingClient.id}`, payload, {
+        await axios.put(`/api/clients/${editingClient.uuid}`, payload, {
           withCredentials: true,
         });
 

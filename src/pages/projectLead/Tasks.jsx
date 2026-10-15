@@ -80,6 +80,7 @@ const normalizeTask = (task) => ({
   isBlocked: Boolean(task.isBlocked),
   priority: task.priority || "Medium",
   status: task.status || "Backlog",
+  assignedTesters: task.assignedTesters || [],
 });
 
 function Tasks() {
@@ -502,6 +503,19 @@ function Tasks() {
       );
     }
   };
+
+  const testingStatusTone = (status) => {
+    switch (status) {
+      case "Passed":
+        return "success";
+      case "Failed":
+        return "danger";
+      case "In Progress":
+        return "warning";
+      default:
+        return "neutral";
+    }
+  };
   const deleteTask = async (task) => {
     if (
       !window.confirm(`Delete "${task.title}"? This action cannot be undone.`)
@@ -619,6 +633,97 @@ function Tasks() {
           </Button>
         </div>
       ),
+    },
+
+    {
+      key: "testingHistory",
+      header: "Testing History",
+      render: (row) => {
+        const assignments = (row.assignedTesters || [])
+          .map((assignment) => ({
+            ...assignment,
+            visibleAttempts: (assignment.testingAttempts || []).filter(
+              (attempt) => attempt.status !== "Pending",
+            ),
+          }))
+          .filter((assignment) => assignment.visibleAttempts.length > 0);
+        if (!assignments.length) {
+          return (
+            <span className="text-sm text-cm-text-muted">
+              No testers assigned
+            </span>
+          );
+        }
+
+        return (
+          <div className="min-w-64 space-y-3">
+            {assignments.map((assignment) => {
+              const testerName =
+                [
+                  assignment.tester?.user?.firstName,
+                  assignment.tester?.user?.lastName,
+                ]
+                  .filter(Boolean)
+                  .join(" ") || `Tester ${assignment.testerId}`;
+
+              return (
+                <div
+                  key={assignment.uuid}
+                  className="rounded-lg border border-cm-border bg-cm-card p-3"
+                >
+                  <p className="mb-2 text-sm font-semibold text-cm-text">
+                    {testerName}
+                  </p>
+                  <div className="space-y-3">
+                    {assignment.visibleAttempts.map((attempt) => (
+                      <div
+                        key={attempt.uuid}
+                        className="border-t border-cm-border pt-2 first:border-0 first:pt-0"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-cm-text-muted">
+                            Attempt #{attempt.attemptNumber}
+                          </span>
+
+                          <Badge tone={testingStatusTone(attempt.status)}>
+                            {attempt.status}
+                          </Badge>
+                        </div>
+
+                        {attempt.testNotes && (
+                          <p
+                            className={`mt-2 whitespace-pre-wrap break-words text-xs ${
+                              attempt.status === "Failed"
+                                ? "text-red-500"
+                                : "text-cm-text-muted"
+                            }`}
+                          >
+                            <span className="font-medium">Notes: </span>
+                            {attempt.testNotes}
+                          </p>
+                        )}
+
+                        {attempt.testedAt && (
+                          <p className="mt-1 text-xs text-cm-text-muted">
+                            Tested:{" "}
+                            {new Date(attempt.testedAt).toLocaleString(
+                              "en-IN",
+                              {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              },
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      },
     },
   ];
 
