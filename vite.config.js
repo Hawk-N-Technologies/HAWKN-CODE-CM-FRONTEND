@@ -13,20 +13,37 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
 
+    // server: {
+    //   proxy: {
+    //     "/api": {
+    //       target: "http://localhost:3000",
+    //       changeOrigin: true,
+    //       credentials: true,
+    //     },
+
+    //     "/uploads": {
+    //       target: "http://localhost:3000",
+    //       changeOrigin: true,
+    //       credentials: true,
+    //     },
+    //   },
+    // },
     server: {
       proxy: {
         "/api": {
-          target: "http://localhost:3000",
+          target: "https://clientportalapi.hawkntechnologies.com",
           changeOrigin: true,
           credentials: true,
         },
 
         "/uploads": {
-          target: "http://localhost:3000",
+          target: "https://clientportalapi.hawkntechnologies.com",
           changeOrigin: true,
           credentials: true,
         },
       },
     },
+
+  
   };
 });
