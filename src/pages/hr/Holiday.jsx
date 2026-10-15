@@ -4,7 +4,9 @@ import Button from "../../components/common/Button";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 import Input from "../../components/common/Input";
+import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
+import { showAlert } from "../../components/common/Alert";
 import axios from "axios";
 
 function formatDate(value) {
@@ -27,6 +29,7 @@ function Holiday() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingUuid, setDeletingUuid] = useState(null);
 
   const [form, setForm] = useState({
     date: "",
@@ -46,7 +49,7 @@ function Holiday() {
       });
 
       if (res.status === 200) {
-        setHolidays(res.data.data || res.data.holidays || []);
+        setHolidays(res.data.data || []);
       }
     } catch (error) {
       console.error("Failed to fetch holidays:", error);
@@ -59,7 +62,6 @@ function Holiday() {
     }
   };
 
-  // Load holidays when page opens
   useEffect(() => {
     getAllHolidays();
   }, []);
@@ -68,12 +70,10 @@ function Holiday() {
   // FORM CHANGE
   // =========================
   function handleChange(field, value) {
-    setForm(function (previous) {
-      return {
-        ...previous,
-        [field]: value,
-      };
-    });
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
   }
 
   function resetForm() {
@@ -116,7 +116,6 @@ function Holiday() {
         resetForm();
         setShowForm(false);
 
-        // Refresh from backend
         await getAllHolidays();
       }
     } catch (error) {
@@ -133,20 +132,31 @@ function Holiday() {
   // =========================
   // DELETE HOLIDAY
   // =========================
-  async function deleteHoliday(uuid) {
+  async function deleteHoliday(uuid, holidayName) {
+    const result = await showAlert.confirm({
+      title: "Delete holiday?",
+      text: `Are you sure you want to delete "${holidayName}"? This action cannot be undone.`,
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
     try {
+      setDeletingUuid(uuid);
+
       const res = await axios.delete(`/api/company/holidays/${uuid}`, {
         withCredentials: true,
       });
 
       if (res.status === 200) {
-        showToast.success("Holiday removed successfully.");
+        setHolidays((previous) =>
+          previous.filter((holiday) => holiday.uuid !== uuid),
+        );
 
-        setHolidays(function (previous) {
-          return previous.filter(function (holiday) {
-            return holiday.uuid !== uuid;
-          });
-        });
+        showToast.success("Holiday removed successfully.");
       }
     } catch (error) {
       console.error("Failed to delete holiday:", error);
@@ -154,6 +164,8 @@ function Holiday() {
       showToast.error(
         error.response?.data?.message || "Failed to remove holiday.",
       );
+    } finally {
+      setDeletingUuid(null);
     }
   }
 
@@ -167,7 +179,7 @@ function Holiday() {
       return holidays;
     }
 
-    return holidays.filter(function (holiday) {
+    return holidays.filter((holiday) => {
       return (
         holiday.name?.toLowerCase().includes(query) ||
         holiday.holidayDate?.includes(query)
@@ -182,7 +194,7 @@ function Holiday() {
     {
       key: "holidayDate",
       header: "Date",
-      render: function (row) {
+      render: (row) => {
         return (
           <span className="whitespace-nowrap font-medium text-cm-text">
             {formatDate(row.holidayDate)}
@@ -194,7 +206,7 @@ function Holiday() {
     {
       key: "name",
       header: "Holiday",
-      render: function (row) {
+      render: (row) => {
         return <p className="font-medium text-cm-text">{row.name}</p>;
       },
     },
@@ -202,7 +214,7 @@ function Holiday() {
     {
       key: "isPaid",
       header: "Type",
-      render: function (row) {
+      render: (row) => {
         return (
           <Badge tone={row.isPaid ? "success" : "warning"}>
             {row.isPaid ? "Paid Holiday" : "Unpaid Holiday"}
@@ -214,16 +226,17 @@ function Holiday() {
     {
       key: "actions",
       header: "",
-      render: function (row) {
+      render: (row) => {
+        const isDeleting = deletingUuid === row.uuid;
+
         return (
           <Button
             size="sm"
             variant="danger"
-            onClick={function () {
-              deleteHoliday(row.uuid);
-            }}
+            disabled={isDeleting}
+            onClick={() => deleteHoliday(row.uuid, row.name)}
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         );
       },
@@ -243,10 +256,8 @@ function Holiday() {
         </div>
 
         <Button
-          onClick={function () {
-            setShowForm(function (value) {
-              return !value;
-            });
+          onClick={() => {
+            setShowForm((value) => !value);
           }}
         >
           {showForm ? "Close" : "Add Holiday"}
@@ -264,7 +275,7 @@ function Holiday() {
             type="date"
             required
             value={form.date}
-            onChange={function (event) {
+            onChange={(event) => {
               handleChange("date", event.target.value);
             }}
           />
@@ -274,7 +285,7 @@ function Holiday() {
             required
             placeholder="e.g. Diwali"
             value={form.name}
-            onChange={function (event) {
+            onChange={(event) => {
               handleChange("name", event.target.value);
             }}
           />
@@ -283,7 +294,7 @@ function Holiday() {
             <input
               type="checkbox"
               checked={form.paid}
-              onChange={function (event) {
+              onChange={(event) => {
                 handleChange("paid", event.target.checked);
               }}
               className="h-4 w-4 accent-[#000052]"
@@ -295,7 +306,7 @@ function Holiday() {
             <Button
               type="button"
               variant="outline"
-              onClick={function () {
+              onClick={() => {
                 resetForm();
                 setShowForm(false);
               }}
@@ -337,14 +348,17 @@ function Holiday() {
         </div>
 
         <div className="mt-4">
-          <DataTable
-            columns={columns}
-            rows={filteredHolidays}
-            loading={loading}
-            emptyMessage={
-              loading ? "Loading holidays..." : "No holidays found."
-            }
-          />
+          {loading ? (
+            <div className="flex min-h-[200px] items-center justify-center">
+              <Loader />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={filteredHolidays}
+              emptyMessage="No holidays found."
+            />
+          )}
         </div>
       </section>
     </div>

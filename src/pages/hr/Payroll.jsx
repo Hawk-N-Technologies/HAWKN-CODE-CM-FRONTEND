@@ -17,6 +17,7 @@ import {
   getPayroll,
   processPayroll,
 } from "../../services/payrollService";
+import axios from "axios";
 
 // ---------------------------------------------------------------------------
 // Constants + helpers
@@ -30,17 +31,29 @@ const currentMonth = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 };
 
-const formatMoney = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatMoney = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })}`;
 
 // "2026-09" → "September 2026"
 const formatMonth = (yyyyMm) => {
+  if (!yyyyMm) return "—";
+
   const [year, month] = yyyyMm.split("-").map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
 };
 
-// "2026-08-31" → "31 Aug 2026" (built from parts so timezone can't shift the day)
+// "2026-08-31" → "31 Aug 2026"
 const formatDate = (yyyyMmDd) => {
+  if (!yyyyMmDd) return "—";
+
   const [year, month, day] = yyyyMmDd.split("-").map(Number);
+
   return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -48,16 +61,15 @@ const formatDate = (yyyyMmDd) => {
   });
 };
 
-// Same paise-based math as the backend, so the preview always matches
-const calcNet = (base, lop, bonus) => {
-  const paise = (value) => Math.round((Number(value) || 0) * 100);
-  return (paise(base) - paise(lop) + paise(bonus)) / 100;
-};
-
 // Empty number box → 0 instead of NaN
-const toNumber = (value) => (value === "" || value === null ? 0 : Number(value));
+const toNumber = (value) =>
+  value === "" || value === null ? 0 : Number(value);
 
-const EMPTY_FILTERS = { employee: null, startDate: "", endDate: "" };
+const EMPTY_FILTERS = {
+  employee: null,
+  startDate: "",
+  endDate: "",
+};
 
 const FORM_DEFAULTS = () => ({
   payPeriod: currentMonth(),
@@ -74,6 +86,10 @@ const FORM_DEFAULTS = () => ({
 function CreatePayrollForm({ onCreated, onCancel }) {
   const [employee, setEmployee] = useState(null);
   const [employeeError, setEmployeeError] = useState("");
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [calculationError, setCalculationError] = useState("");
+  const [calculation, setCalculation] = useState(null);
+
   const {
     register,
     handleSubmit,
@@ -82,14 +98,137 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     setValue,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: FORM_DEFAULTS() });
-
-  // Live values for the net-salary preview (useWatch = React-19-safe version of watch)
-  const [baseSalary, lopDeduction, bonus] = useWatch({
-    control,
-    name: ["baseSalary", "lopDeduction", "bonus"],
+  } = useForm({
+    defaultValues: FORM_DEFAULTS(),
   });
-  const net = calcNet(baseSalary, lopDeduction, bonus);
+
+  const [baseSalary, lopDeduction, bonus, payPeriod] = useWatch({
+    control,
+    name: ["baseSalary", "lopDeduction", "bonus", "payPeriod"],
+  });
+
+  // -------------------------------------------------------------------------
+  // Calculate payroll directly from API
+  // -------------------------------------------------------------------------
+
+  const calculatePayroll = async (pickedEmployee, selectedPayPeriod) => {
+    if (!pickedEmployee?.uuid) return;
+
+    setIsCalculating(true);
+    setCalculationError("");
+
+    try {
+      const response = await axios.post("/api/payroll/calculate", {
+        userUuid: pickedEmployee.uuid,
+        payPeriod: selectedPayPeriod || currentMonth(),
+      });
+
+      const data = response.data?.data ?? response.data;
+
+      /*
+       * API response structure:
+       *
+       * data.salary.salary
+       * data.calculation.lopDeduction
+       * data.calculation.bonus
+       * data.calculation.netSalary
+       * data.calculation.dailySalary
+       * data.calculation.paidUnits
+       * data.calculation.lopUnits
+       * data.calculation.workingDays
+       * data.calculation.breakdown
+       */
+
+      const salary = data.salary?.salary ?? 0;
+      const calculationData = data.calculation ?? {};
+
+      setCalculation(calculationData);
+
+      // Backend decides the actual pay period.
+      setValue(
+        "payPeriod",
+        data.payPeriod
+          ? data.payPeriod.substring(0, 7)
+          : selectedPayPeriod || currentMonth(),
+        {
+          shouldValidate: true,
+        },
+      );
+
+      // Base salary comes from salary.salary
+      setValue("baseSalary", salary, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+
+      // LOP comes from calculation.lopDeduction
+      setValue("lopDeduction", calculationData.lopDeduction ?? 0, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+
+      // Bonus comes from calculation.bonus
+      setValue("bonus", calculationData.bonus ?? 0, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Couldn't calculate payroll.";
+
+      setCalculationError(message);
+      setCalculation(null);
+
+      showToast.error(message);
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Employee selected
+  // -------------------------------------------------------------------------
+
+  const handleEmployeeSelect = (picked) => {
+    setEmployee(picked);
+    setEmployeeError("");
+    setCalculationError("");
+    setCalculation(null);
+
+    if (!picked) {
+      setValue("baseSalary", "");
+      setValue("lopDeduction", 0);
+      setValue("bonus", 0);
+      return;
+    }
+
+    // Calculate immediately for selected employee
+    calculatePayroll(picked, payPeriod || currentMonth());
+  };
+
+  // -------------------------------------------------------------------------
+  // Pay period changed
+  // -------------------------------------------------------------------------
+
+  const handlePayPeriodChange = (event) => {
+    const selectedMonth = event.target.value;
+
+    setValue("payPeriod", selectedMonth, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+
+    // Recalculate whenever employee + month are available
+    if (employee?.uuid && selectedMonth) {
+      calculatePayroll(employee, selectedMonth);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Submit
+  // -------------------------------------------------------------------------
 
   const onSubmit = async (values) => {
     if (!employee) {
@@ -98,7 +237,8 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     }
 
     try {
-      // netSalary is NOT sent — the server calculates it
+      // netSalary is NOT sent.
+      // Backend calculates it again when payroll is created.
       const record = await createPayroll({
         userUuid: employee.uuid,
         payPeriod: values.payPeriod,
@@ -108,19 +248,34 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         paymentMethod: values.paymentMethod,
       });
 
-      showToast.success(`Payroll created for ${record.employee.fullName} (${formatMonth(record.payPeriod)}).`);
+      showToast.success(
+        `Payroll created for ${record.employee.fullName} (${formatMonth(
+          record.payPeriod,
+        )}).`,
+      );
+
       reset(FORM_DEFAULTS());
       setEmployee(null);
+      setCalculation(null);
+      setCalculationError("");
+
       onCreated(record);
     } catch (error) {
-      // Show backend validation errors under the matching fields
       const fieldErrors = getFieldErrors(error);
+
       if (fieldErrors) {
         Object.entries(fieldErrors).forEach(([field, message]) => {
-          if (field === "userUuid") setEmployeeError(message);
-          else setError(field, { type: "server", message });
+          if (field === "userUuid") {
+            setEmployeeError(message);
+          } else {
+            setError(field, {
+              type: "server",
+              message,
+            });
+          }
         });
       }
+
       showToast.error(getErrorMessage(error, "Couldn't create payroll."));
     }
   };
@@ -131,39 +286,47 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       onSubmit={handleSubmit(onSubmit)}
       className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
     >
+      {/* Employee */}
       <div className="flex flex-col gap-1">
         <EmployeeAutocomplete
           label="Employee"
           required
           selected={employee}
-          onSelect={(picked) => {
-            setEmployee(picked);
-            if (picked) setEmployeeError("");
-            // Auto-fill Base Salary from Salary Structure (HR can still change it)
-            if (picked?.salary != null) {
-              setValue("baseSalary", picked.salary, { shouldValidate: true });
-            }
-          }}
+          onSelect={handleEmployeeSelect}
           error={employeeError}
           placeholder="Start typing a name…"
         />
-        {employee && (
+
+        {isCalculating && (
           <p className="text-xs text-cm-text-muted">
-            {employee.salary != null
-              ? `Base salary auto-filled from Salary Structure (${formatMoney(employee.salary)}).`
-              : "No salary set in Salary Structure — enter base salary manually."}
+            Calculating payroll from salary, attendance and leave records…
+          </p>
+        )}
+
+        {calculationError && (
+          <p className="text-xs text-cm-danger-600">{calculationError}</p>
+        )}
+
+        {employee && !isCalculating && !calculationError && (
+          <p className="text-xs text-cm-text-muted">
+            Salary and LOP calculated from the payroll calculation API.
           </p>
         )}
       </div>
 
+      {/* Pay Period */}
       <Input
         label="Month"
         type="month"
         required
         error={errors.payPeriod?.message}
-        {...register("payPeriod", { required: "Month is required" })}
+        {...register("payPeriod", {
+          required: "Month is required",
+        })}
+        onChange={handlePayPeriodChange}
       />
 
+      {/* Base Salary */}
       <Input
         label="Base Salary (₹)"
         type="number"
@@ -173,10 +336,12 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         error={errors.baseSalary?.message}
         {...register("baseSalary", {
           required: "Base salary is required",
-          validate: (value) => toNumber(value) > 0 || "Base salary must be more than 0",
+          validate: (value) =>
+            toNumber(value) > 0 || "Base salary must be more than 0",
         })}
       />
 
+      {/* LOP */}
       <Input
         label="LOP Deduction (₹)"
         type="number"
@@ -186,12 +351,15 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         {...register("lopDeduction", {
           validate: {
             notNegative: (value) => toNumber(value) >= 0 || "Can't be negative",
+
             withinBase: (value) =>
-              toNumber(value) <= toNumber(baseSalary) || "LOP deduction can't be more than the base salary",
+              toNumber(value) <= toNumber(baseSalary) ||
+              "LOP deduction can't be more than the base salary",
           },
         })}
       />
 
+      {/* Bonus */}
       <Input
         label="Bonus (₹)"
         type="number"
@@ -203,24 +371,92 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         })}
       />
 
+      {/* Payment Method */}
       <Select
         label="Payment Method"
         required
-        options={PAYMENT_METHODS.map((method) => ({ value: method, label: method }))}
+        options={PAYMENT_METHODS.map((method) => ({
+          value: method,
+          label: method,
+        }))}
         error={errors.paymentMethod?.message}
-        {...register("paymentMethod", { required: "Payment method is required" })}
+        {...register("paymentMethod", {
+          required: "Payment method is required",
+        })}
       />
 
+      {/* ------------------------------------------------------------------- */}
+      {/* Calculation summary */}
+      {/* ------------------------------------------------------------------- */}
+
       <div className="rounded-lg border border-cm-border p-4 text-sm text-cm-text md:col-span-3">
-        Calculated Net Salary: <strong>{formatMoney(Math.max(0, net))}</strong>
-        <span className="ml-2 text-cm-text-muted">(Base − LOP + Bonus)</span>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>Calculated Net Salary</span>
+
+            <strong className="text-lg">
+              {formatMoney(
+                calculation?.netSalary ??
+                  Math.max(
+                    0,
+                    toNumber(baseSalary) -
+                      toNumber(lopDeduction) +
+                      toNumber(bonus),
+                  ),
+              )}
+            </strong>
+          </div>
+
+          {calculation && (
+            <div className="grid grid-cols-2 gap-3 border-t border-cm-border pt-3 text-xs text-cm-text-muted sm:grid-cols-4">
+              <div>
+                <div>Daily Salary</div>
+                <strong className="text-cm-text">
+                  {formatMoney(calculation.dailySalary)}
+                </strong>
+              </div>
+
+              <div>
+                <div>Paid Units</div>
+                <strong className="text-cm-text">
+                  {calculation.paidUnits ?? 0}
+                </strong>
+              </div>
+
+              <div>
+                <div>LOP Units</div>
+                <strong className="text-cm-text">
+                  {calculation.lopUnits ?? 0}
+                </strong>
+              </div>
+
+              <div>
+                <div>Working Days</div>
+                <strong className="text-cm-text">
+                  {calculation.workingDays ?? 0}
+                </strong>
+              </div>
+            </div>
+          )}
+
+          <span className="text-xs text-cm-text-muted">
+            Base Salary − LOP Deduction + Bonus
+          </span>
+        </div>
       </div>
 
+      {/* Buttons */}
       <div className="flex justify-end gap-3 md:col-span-3">
-        <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSubmitting || isCalculating}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
-        <Button type="submit" loading={isSubmitting}>
+
+        <Button type="submit" loading={isSubmitting} disabled={isCalculating}>
           Save Payroll
         </Button>
       </div>
@@ -239,17 +475,15 @@ function PayrollRuns() {
   const [showForm, setShowForm] = useState(false);
   const [processingUuid, setProcessingUuid] = useState(null);
 
-  // What's typed in the filter bar right now…
   const [draft, setDraft] = useState(EMPTY_FILTERS);
   const [employeeText, setEmployeeText] = useState("");
   const [filterError, setFilterError] = useState("");
-  // …vs what the table is actually showing (changes only on Search)
+
   const [applied, setApplied] = useState(EMPTY_FILTERS);
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Fetch whenever the applied filters change (or a reload is requested)
   useEffect(() => {
-    let ignore = false; // page closed / newer search started → drop this response
+    let ignore = false;
 
     getPayroll({
       userUuid: applied.employee?.uuid,
@@ -258,11 +492,14 @@ function PayrollRuns() {
     })
       .then((list) => {
         if (ignore) return;
+
         setRecords(list);
         setLoadError(null);
       })
       .catch((error) => {
-        if (!ignore) setLoadError(getErrorMessage(error, "Couldn't load payroll."));
+        if (!ignore) {
+          setLoadError(getErrorMessage(error, "Couldn't load payroll."));
+        }
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
@@ -273,16 +510,18 @@ function PayrollRuns() {
     };
   }, [applied, reloadKey]);
 
-  const hasActiveFilters = Boolean(applied.employee || applied.startDate || applied.endDate);
+  const hasActiveFilters = Boolean(
+    applied.employee || applied.startDate || applied.endDate,
+  );
 
   const runSearch = (event) => {
     event?.preventDefault();
 
-    // Typed a name but never picked one → can't search precisely
     if (employeeText.trim() && !draft.employee) {
       setFilterError("Pick a name from the suggestions list.");
       return;
     }
+
     if (draft.startDate && draft.endDate && draft.endDate < draft.startDate) {
       setFilterError("End date can't be before start date.");
       return;
@@ -297,6 +536,7 @@ function PayrollRuns() {
     setDraft(EMPTY_FILTERS);
     setEmployeeText("");
     setFilterError("");
+
     if (hasActiveFilters) {
       setIsLoading(true);
       setApplied(EMPTY_FILTERS);
@@ -311,15 +551,19 @@ function PayrollRuns() {
 
   const handleCreated = () => {
     setShowForm(false);
-    // Re-run the current search so the list stays correct for the active filters
     retry();
   };
 
   const handleProcess = async (row) => {
     setProcessingUuid(row.uuid);
+
     try {
       const updated = await processPayroll(row.uuid);
-      setRecords((prev) => prev.map((record) => (record.uuid === updated.uuid ? updated : record)));
+
+      setRecords((prev) =>
+        prev.map((record) => (record.uuid === updated.uuid ? updated : record)),
+      );
+
       showToast.success(`Payroll processed for ${updated.employee.fullName}.`);
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't process payroll."));
@@ -329,21 +573,51 @@ function PayrollRuns() {
   };
 
   const columns = [
-    { key: "employee", header: "Employee", render: (row) => row.employee?.fullName ?? "—" },
-    { key: "month", header: "Month", render: (row) => formatMonth(row.payPeriod) },
-    { key: "base", header: "Base Salary", render: (row) => formatMoney(row.baseSalary) },
-    { key: "lop", header: "LOP", render: (row) => formatMoney(row.lopDeduction) },
-    { key: "bonus", header: "Bonus", render: (row) => formatMoney(row.bonus) },
+    {
+      key: "employee",
+      header: "Employee",
+      render: (row) => row.employee?.fullName ?? "—",
+    },
+    {
+      key: "month",
+      header: "Month",
+      render: (row) => formatMonth(row.payPeriod),
+    },
+    {
+      key: "base",
+      header: "Base Salary",
+      render: (row) => formatMoney(row.baseSalary),
+    },
+    {
+      key: "lop",
+      header: "LOP",
+      render: (row) => formatMoney(row.lopDeduction),
+    },
+    {
+      key: "bonus",
+      header: "Bonus",
+      render: (row) => formatMoney(row.bonus),
+    },
     {
       key: "net",
       header: "Net Salary",
-      render: (row) => <span className="font-semibold">{formatMoney(row.netSalary)}</span>,
+      render: (row) => (
+        <span className="font-semibold">{formatMoney(row.netSalary)}</span>
+      ),
     },
-    { key: "method", header: "Payment Method", render: (row) => row.paymentMethod },
+    {
+      key: "method",
+      header: "Payment Method",
+      render: (row) => row.paymentMethod,
+    },
     {
       key: "status",
       header: "Status",
-      render: (row) => <Badge tone={row.status === "Processed" ? "success" : "warning"}>{row.status}</Badge>,
+      render: (row) => (
+        <Badge tone={row.status === "Processed" ? "success" : "warning"}>
+          {row.status}
+        </Badge>
+      ),
     },
     {
       key: "actions",
@@ -362,27 +636,45 @@ function PayrollRuns() {
     },
   ];
 
-  // DataTable needs a stable `id` on each row
-  const rows = records.map((record) => ({ ...record, id: record.uuid }));
+  const rows = records.map((record) => ({
+    ...record,
+    id: record.uuid,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-cm-text-muted">Monthly payroll records — create, filter and process.</p>
+        <p className="text-sm text-cm-text-muted">
+          Monthly payroll records — create, filter and process.
+        </p>
+
         <Button onClick={() => setShowForm((value) => !value)}>
           {showForm ? "Close" : "Create Payroll"}
         </Button>
       </div>
 
-      {showForm && <CreatePayrollForm onCreated={handleCreated} onCancel={() => setShowForm(false)} />}
+      {showForm && (
+        <CreatePayrollForm
+          onCreated={handleCreated}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
 
-      {/* Filter bar: employee | start date – end date | search */}
-      <form onSubmit={runSearch} className="flex flex-col gap-2" role="search" aria-label="Filter payroll">
+      {/* Filter bar */}
+      <form
+        onSubmit={runSearch}
+        className="flex flex-col gap-2"
+        role="search"
+        aria-label="Filter payroll"
+      >
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-cm-border bg-white px-3 py-2 shadow-sm lg:flex-nowrap lg:rounded-full">
           <EmployeeAutocomplete
             selected={draft.employee}
             onSelect={(employee) => {
-              setDraft((prev) => ({ ...prev, employee }));
+              setDraft((prev) => ({
+                ...prev,
+                employee,
+              }));
               setFilterError("");
             }}
             onTextChange={setEmployeeText}
@@ -391,27 +683,46 @@ function PayrollRuns() {
             inputClassName="border-transparent focus:ring-0"
           />
 
-          <span className="hidden h-6 w-px bg-cm-border lg:block" aria-hidden="true" />
+          <span
+            className="hidden h-6 w-px bg-cm-border lg:block"
+            aria-hidden="true"
+          />
 
           <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 shrink-0 text-cm-text-muted" aria-hidden="true" />
+            <CalendarDays
+              className="h-4 w-4 shrink-0 text-cm-text-muted"
+              aria-hidden="true"
+            />
+
             <input
               type="date"
               aria-label="Start date"
               value={draft.startDate}
               max={draft.endDate || undefined}
-              onChange={(event) => setDraft((prev) => ({ ...prev, startDate: event.target.value }))}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  startDate: event.target.value,
+                }))
+              }
               className="h-10 rounded-cm-md px-2 text-sm text-cm-text focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
             />
+
             <span className="text-cm-text-muted" aria-hidden="true">
               –
             </span>
+
             <input
               type="date"
               aria-label="End date"
               value={draft.endDate}
               min={draft.startDate || undefined}
-              onChange={(event) => setDraft((prev) => ({ ...prev, endDate: event.target.value }))}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  endDate: event.target.value,
+                }))
+              }
               className="h-10 rounded-cm-md px-2 text-sm text-cm-text focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
             />
           </div>
@@ -425,42 +736,75 @@ function PayrollRuns() {
           </button>
         </div>
 
-        {filterError && <p className="px-3 text-sm text-cm-danger-600">{filterError}</p>}
+        {filterError && (
+          <p className="px-3 text-sm text-cm-danger-600">{filterError}</p>
+        )}
       </form>
 
-      {/* What the table is currently filtered by */}
+      {/* Active filters */}
       {hasActiveFilters && !isLoading && !loadError && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-cm-text-muted">
           <span>
-            Showing {records.length} record{records.length === 1 ? "" : "s"}
+            Showing {records.length} record
+            {records.length === 1 ? "" : "s"}
             {applied.employee && (
               <>
-                {" "}for <strong className="text-cm-text">{applied.employee.fullName}</strong>
+                {" "}
+                for{" "}
+                <strong className="text-cm-text">
+                  {applied.employee.fullName}
+                </strong>
               </>
             )}
-            {applied.startDate && <> from <strong className="text-cm-text">{formatDate(applied.startDate)}</strong></>}
-            {applied.endDate && <> to <strong className="text-cm-text">{formatDate(applied.endDate)}</strong></>}
+            {applied.startDate && (
+              <>
+                {" "}
+                from{" "}
+                <strong className="text-cm-text">
+                  {formatDate(applied.startDate)}
+                </strong>
+              </>
+            )}
+            {applied.endDate && (
+              <>
+                {" "}
+                to{" "}
+                <strong className="text-cm-text">
+                  {formatDate(applied.endDate)}
+                </strong>
+              </>
+            )}
           </span>
+
           <button
             type="button"
             onClick={clearFilters}
             className="inline-flex items-center gap-1 rounded-full border border-cm-border px-2 py-0.5 text-xs text-cm-text hover:bg-cm-bg"
           >
-            <X className="h-3 w-3" aria-hidden="true" /> Clear filters
+            <X className="h-3 w-3" aria-hidden="true" />
+            Clear filters
           </button>
         </div>
       )}
 
       {loadError ? (
         <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState title="Couldn't load payroll" description={loadError} onRetry={retry} />
+          <ErrorState
+            title="Couldn't load payroll"
+            description={loadError}
+            onRetry={retry}
+          />
         </div>
       ) : (
         <DataTable
           columns={columns}
           rows={rows}
           isLoading={isLoading}
-          emptyMessage={hasActiveFilters ? "No payroll records for these filters." : "No payroll records yet."}
+          emptyMessage={
+            hasActiveFilters
+              ? "No payroll records for these filters."
+              : "No payroll records yet."
+          }
         />
       )}
     </div>
@@ -472,8 +816,14 @@ function PayrollRuns() {
 // ---------------------------------------------------------------------------
 
 const TABS = [
-  { id: "runs", label: "Payroll Runs" },
-  { id: "salaries", label: "Salary Structure" },
+  {
+    id: "runs",
+    label: "Payroll Runs",
+  },
+  {
+    id: "salaries",
+    label: "Salary Structure",
+  },
 ];
 
 function Payroll() {
@@ -483,12 +833,18 @@ function Payroll() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-bold text-cm-text">Payroll</h1>
+
         <p className="mt-1 text-sm text-cm-text-muted">
-          Payroll based on attendance and LOP, payment methods and people ledger.
+          Payroll based on attendance and LOP, payment methods and people
+          ledger.
         </p>
       </div>
 
-      <div role="tablist" aria-label="Payroll sections" className="flex gap-1 border-b border-cm-border">
+      <div
+        role="tablist"
+        aria-label="Payroll sections"
+        className="flex gap-1 border-b border-cm-border"
+      >
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -509,8 +865,11 @@ function Payroll() {
         ))}
       </div>
 
-      {/* Only the active tab is mounted → it always loads fresh data */}
-      <div role="tabpanel" id={`payroll-panel-${activeTab}`} aria-labelledby={`payroll-tab-${activeTab}`}>
+      <div
+        role="tabpanel"
+        id={`payroll-panel-${activeTab}`}
+        aria-labelledby={`payroll-tab-${activeTab}`}
+      >
         {activeTab === "runs" ? <PayrollRuns /> : <SalaryStructure />}
       </div>
     </div>

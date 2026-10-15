@@ -424,7 +424,7 @@ function Employees() {
       ...form,
       [field]: value,
     };
-
+    console.log(nextForm);
     setForm(nextForm);
 
     const error = validateField(field, value, nextForm);
@@ -527,10 +527,12 @@ function Employees() {
 
       aadhaar: employee.aadhaar || "",
 
-      role: employee.role || "",
+      role: employee.user.role.uuid || "",
       type: employee.type || "Full Time",
       status: employee.status || "Active",
     });
+
+    console.log(form.role);
 
     setErrors({});
     setSelected(null);
@@ -720,7 +722,7 @@ function Employees() {
       key: "role",
       header: "Role",
       render: (row) => (
-        <span>{row.roleName || rolesMap[row.role]?.name || "—"}</span>
+        <span>{row.user.role.name || rolesMap[row.role]?.name || "—"}</span>
       ),
     },
 

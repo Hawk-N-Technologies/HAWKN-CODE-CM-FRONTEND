@@ -6,9 +6,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   const backendUrl =
-    env.VITE_BACKEND_URL ||
-    env.BACKEND_URL ||
-    "https://clientportalapi.hawkntechnologies.com";
+    mode === "development"
+      ? "http://localhost:3000"
+      : "http://internal-project-codebackendtemp-9tb1ne-6636bb-194-164-148-10.sslip.io";
 
   return {
     plugins: [react(), tailwindcss()],
@@ -16,9 +16,15 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/api": {
-          target: backendUrl,
+          target: "http://localhost:3000",
           changeOrigin: true,
-          secure: false,
+          credentials: true,
+        },
+
+        "/uploads": {
+          target: "http://localhost:3000",
+          changeOrigin: true,
+          credentials: true,
         },
       },
     },

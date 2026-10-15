@@ -32,6 +32,17 @@ export async function createPayroll(payload) {
   return res.data.data;
 }
 
+// Edit a Pending payroll — amounts + payment method only
+export async function updatePayroll(uuid, payload) {
+  const res = await axios.put(`${BASE}/${uuid}`, payload, config);
+  return res.data.data;
+}
+
+// Delete a Pending payroll
+export async function deletePayroll(uuid) {
+  await axios.delete(`${BASE}/${uuid}`, config);
+}
+
 export async function processPayroll(uuid) {
   const res = await axios.patch(`${BASE}/${uuid}/process`, {}, config);
   return res.data.data;

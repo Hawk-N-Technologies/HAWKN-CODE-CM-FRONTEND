@@ -13,7 +13,7 @@ import AdminPeopleManagement from "../pages/admin/PeopleManagement";
 import AdminSOPManagement from "../pages/admin/SOPManagement";
 
 import AdminHRMS from "../pages/admin/HRMS";
-import AdminClientManagement from "../pages/admin/ClientManagement";
+import AdminClientManagement from "../pages/admin/ClilentManagement";
 import AdminProjectManagement from "../pages/admin/ProjectManagement";
 import AdminOperations from "../pages/admin/Operations";
 import AdminDeploymentPlanning from "../pages/admin/DeploymentPlanning";
@@ -35,9 +35,7 @@ import HRSOPs from "../pages/hr/SOPs";
 import HRNotifications from "../pages/hr/Notifications";
 
 import BDDashboard from "../pages/bd/Dashboard";
-import BDClient from "../pages/bd/Client";
-import BDCreateClient from "../pages/bd/CreateClient";
-import BDClientDetails from "../pages/bd/ClientDetails";
+import BDClient from "../pages/bd/ClilentManagement";
 
 import { PROJECT_LEAD_NAV_SECTIONS } from "./projectLeadRouteConfig";
 
@@ -75,14 +73,29 @@ import ClientTesting from "../pages/tester/ClientTesting";
 import BuildTesting from "../pages/tester/BuildTesting";
 import FieldTraining from "../pages/tester/FieldTraining";
 
+import ClientDashboard from "../pages/client/Dashboard";
+import ClientBRD from "../pages/client/BRD";
+import ClientBRDApproval from "../pages/client/BRDApproval";
+import ClientBugs from "../pages/client/Bugs";
+import ClientDelivery from "../pages/client/Delivery";
+import ClientPhases from "../pages/client/Phases";
+import ClientPhaseTesting from "../pages/client/PhaseTesting";
+import ClientProjectDetails from "../pages/client/ProjectDetails";
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
   BD_NAV_SECTIONS,
+  CLIENT_NAV_SECTIONS,
 } from "./routeConfig";
 import { ROLES, ROLE_DASHBOARD_PATH } from "../constants/roles";
 import { useAuth } from "../hooks/useAuth";
 import AdminEmployeeHierarchy from "../pages/admin/EmployeeHierarchy";
+import AttendanceMonthly from "../components/common/AttendanceMonthly";
+import LeaveRequest from "../pages/hr/LeaveRequest";
+import BRDUpload from "../pages/bd/BRDUpload";
+import BDProjectManagement from "../pages/bd/ProjectManagement";
+import AdminBRDApproval from "../pages/admin/AdminBRDApproval";
+import ProjectLeadRoute from "./ProjectLeadRoute";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -128,6 +141,7 @@ function AppRoutes() {
               path="/admin/people-management"
               element={<AdminPeopleManagement />}
             />
+            <Route path="/admin/brd" element={<AdminBRDApproval />} />
             <Route path="/admin/hrms" element={<AdminHRMS />} />
             <Route path="/admin/clients" element={<AdminClientManagement />} />
             <Route
@@ -155,6 +169,9 @@ function AppRoutes() {
           <Route element={<DashboardLayout sections={HR_NAV_SECTIONS} />}>
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/employees" element={<HREmployees />} />
+            <Route path="/hr/my-attendance" element={<AttendanceMonthly />} />
+            <Route path="/hr/leave" element={<LeaveRequest />} />
+
             <Route path="/hr/onboarding" element={<HREmployeeOnboarding />} />
             <Route path="/hr/attendance" element={<HRAttendance />} />
             <Route path="/hr/leave-lop" element={<HRLeaveLOP />} />
@@ -178,12 +195,89 @@ function AppRoutes() {
           <Route element={<DashboardLayout sections={BD_NAV_SECTIONS} />}>
             <Route path="/bd/dashboard" element={<BDDashboard />} />
             <Route path="/bd/clients" element={<BDClient />} />
-            <Route path="/bd/clients/new" element={<BDCreateClient />} />
-            <Route path="/bd/clients/:clientId" element={<BDClientDetails />} />
+            <Route path="/bd/projects" element={<BDProjectManagement />} />
+            <Route
+              path="/bd/my-attendance"
+              element={<AttendanceMonthly />}
+            />{" "}
+            <Route path="/bd/leave" element={<LeaveRequest />} />
+            <Route path="/bd/brd" element={<BRDUpload />} />
+          </Route>
+        </Route>
+
+        {/* CLIENT ROUTES */}
+        <Route element={<RoleRoute allowedRoles={[ROLES.CLIENT]} />}>
+          <Route element={<DashboardLayout sections={CLIENT_NAV_SECTIONS} />}>
+            <Route path="/client/dashboard" element={<ClientDashboard />} />
+            <Route
+              path="/client/project-details"
+              element={<ClientProjectDetails />}
+            />
+            <Route path="/client/phases" element={<ClientPhases />} />
+            <Route
+              path="/client/phase-testing"
+              element={<ClientPhaseTesting />}
+            />
+            <Route path="/client/bugs" element={<ClientBugs />} />
+            <Route path="/client/delivery" element={<ClientDelivery />} />
+            <Route path="/client/brd" element={<ClientBRD />} />
+            <Route
+              path="/client/brd-approval"
+              element={<ClientBRDApproval />}
+            />
+          </Route>
+        </Route>
+
+        <Route
+          element={
+            <RoleRoute allowedRoles={[ROLES.DEVELOPER ?? "developer"]} />
+          }
+        >
+          <Route
+            element={<DashboardLayout sections={DEVELOPER_NAV_SECTIONS} />}
+          >
+            <Route path="/developer/dashboard" element={<Dashboard />} />
+            <Route path="/developer/projects" element={<MyProjects />} />{" "}
+            <Route
+              path="/developer/my-attendance"
+              element={<AttendanceMonthly />}
+            />
+            <Route path="/developer/tasks" element={<MyTasks />} />
+            <Route path="/developer/kanban" element={<DEVKanbanBoard />} />
+            <Route path="/developer/leave" element={<LeaveRequest />} />
+            <Route
+              path="/developer/progress"
+              element={<DevelopmentProgress />}
+            />
+            <Route path="/developer/testing" element={<DeveloperTesting />} />
+            <Route path="/developer/bugs" element={<BugFixing />} />
+            <Route
+              path="/developer/notifications"
+              element={<Notifications />}
+            />
+          </Route>
+        </Route>
+
+        <Route
+          element={<RoleRoute allowedRoles={[ROLES.TESTER ?? "tester"]} />}
+        >
+          <Route element={<DashboardLayout sections={TESTER_NAV_SECTIONS} />}>
+            <Route path="/tester/dashboard" element={<TESTDashboard />} />
+            <Route path="/tester/projects" element={<TESTAssignedProjects />} />
+            <Route path="/tester/testing-queue" element={<TestingQueue />} />
+            <Route path="/tester/phase-testing" element={<PhaseTesting />} />
+            <Route path="/tester/leave" element={<LeaveRequest />} />
+
+            <Route path="/tester/bugs" element={<Bugs />} />
+            <Route path="/tester/retesting" element={<Retesting />} />
+            <Route path="/tester/client-testing" element={<ClientTesting />} />
+            <Route path="/tester/build-testing" element={<BuildTesting />} />
+            <Route path="/tester/field-training" element={<FieldTraining />} />
           </Route>
         </Route>
       </Route>
-      <Route element={<RoleRoute allowedRoles={[ROLES.PROJECT_LEAD]} />}>
+
+      <Route element={<ProjectLeadRoute />}>
         <Route
           element={<DashboardLayout sections={PROJECT_LEAD_NAV_SECTIONS} />}
         >
@@ -211,34 +305,6 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      <Route
-        element={<RoleRoute allowedRoles={[ROLES.DEVELOPER ?? "developer"]} />}
-      >
-        <Route element={<DashboardLayout sections={DEVELOPER_NAV_SECTIONS} />}>
-          <Route path="/developer/dashboard" element={<Dashboard />} />
-          <Route path="/developer/projects" element={<MyProjects />} />
-          <Route path="/developer/tasks" element={<MyTasks />} />
-          <Route path="/developer/kanban" element={<DEVKanbanBoard />} />
-          <Route path="/developer/progress" element={<DevelopmentProgress />} />
-          <Route path="/developer/testing" element={<DeveloperTesting />} />
-          <Route path="/developer/bugs" element={<BugFixing />} />
-          <Route path="/developer/notifications" element={<Notifications />} />
-        </Route>
-      </Route>
-
-      <Route element={<RoleRoute allowedRoles={[ROLES.TESTER ?? "tester"]} />}>
-        <Route element={<DashboardLayout sections={TESTER_NAV_SECTIONS} />}>
-          <Route path="/tester/dashboard" element={<TESTDashboard />} />
-          <Route path="/tester/projects" element={<TESTAssignedProjects />} />
-          <Route path="/tester/testing-queue" element={<TestingQueue />} />
-          <Route path="/tester/phase-testing" element={<PhaseTesting />} />
-          <Route path="/tester/bugs" element={<Bugs />} />
-          <Route path="/tester/retesting" element={<Retesting />} />
-          <Route path="/tester/client-testing" element={<ClientTesting />} />
-          <Route path="/tester/build-testing" element={<BuildTesting />} />
-          <Route path="/tester/field-training" element={<FieldTraining />} />
-        </Route>
-      </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
