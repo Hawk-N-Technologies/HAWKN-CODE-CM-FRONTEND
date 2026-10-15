@@ -109,6 +109,11 @@ const ADMIN_NAV_SECTIONS = [
         icon: ICONS.projects,
       },
       {
+        label: "BRD Approval",
+        path: "/admin/brd",
+        icon: ICONS.brd,
+      },
+      {
         label: "Operations",
         path: "/admin/operations",
         icon: ICONS.operations,
