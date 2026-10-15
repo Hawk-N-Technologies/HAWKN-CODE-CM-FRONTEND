@@ -5,13 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
-  const rawBackend =
+  const backendUrl =
     env.VITE_BACKEND_URL ||
     env.VITE_API_BASE_URL ||
     env.BACKEND_URL ||
     "https://clientportalapi.hawkntechnologies.com";
-
-  const backendUrl = rawBackend.replace(/\/api\/?$/, "").replace(/\/+$/, "");
 
   return {
     plugins: [react(), tailwindcss()],
