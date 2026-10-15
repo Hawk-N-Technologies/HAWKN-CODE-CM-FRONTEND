@@ -17,14 +17,14 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/api": {
-          target: backendUrl,
+          target: "https://clientportalapi.hawkntechnologies.com",
           changeOrigin: true,
           credentials: true,
           secure: false,
         },
 
         "/uploads": {
-          target: backendUrl,
+          target: "https://clientportalapi.hawkntechnologies.com",
           changeOrigin: true,
           credentials: true,
           secure: false,
