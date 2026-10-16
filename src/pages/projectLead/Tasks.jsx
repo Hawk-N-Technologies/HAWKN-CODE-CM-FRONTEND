@@ -458,7 +458,13 @@ function Tasks() {
       closeForm();
       await loadTasks();
     } catch (error) {
-      showToast.error(errorMessage(error, "Failed to save task."));
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to save task.";
+
+      showToast.error(message);
     } finally {
       setSaving(false);
     }

@@ -67,7 +67,7 @@ import TESTDashboard from "../pages/tester/Dashboard";
 import TESTAssignedProjects from "../pages/tester/AssignedProjects";
 import TestingQueue from "../pages/tester/TestingQueue";
 import PhaseTesting from "../pages/tester/PhaseTesting";
-import Bugs from "../pages/tester/Bugs";
+import TesterBugs from "../pages/tester/Bugs";
 import Retesting from "../pages/tester/Retesting";
 import ClientTesting from "../pages/tester/ClientTesting";
 import BuildTesting from "../pages/tester/BuildTesting";
@@ -96,6 +96,7 @@ import BRDUpload from "../pages/bd/BRDUpload";
 import BDProjectManagement from "../pages/bd/ProjectManagement";
 import AdminBRDApproval from "../pages/admin/AdminBRDApproval";
 import ProjectLeadRoute from "./ProjectLeadRoute";
+import Bugs from "../pages/projectLead/Bugs";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -196,10 +197,7 @@ function AppRoutes() {
             <Route path="/bd/dashboard" element={<BDDashboard />} />
             <Route path="/bd/clients" element={<BDClient />} />
             <Route path="/bd/projects" element={<BDProjectManagement />} />
-            <Route
-              path="/bd/my-attendance"
-              element={<AttendanceMonthly />}
-            />{" "}
+            <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />
             <Route path="/bd/leave" element={<LeaveRequest />} />
             <Route path="/bd/brd" element={<BRDUpload />} />
           </Route>
@@ -268,7 +266,8 @@ function AppRoutes() {
             <Route path="/tester/phase-testing" element={<PhaseTesting />} />
             <Route path="/tester/leave" element={<LeaveRequest />} />
 
-            <Route path="/tester/bugs" element={<Bugs />} />
+            <Route path="/tester/bugs" element={<TesterBugs />} />
+            <Route path="/tester/attendance" element={<AttendanceMonthly />} />
             <Route path="/tester/retesting" element={<Retesting />} />
             <Route path="/tester/client-testing" element={<ClientTesting />} />
             <Route path="/tester/build-testing" element={<BuildTesting />} />
@@ -295,6 +294,8 @@ function AppRoutes() {
           <Route path="/project-lead/er-diagram" element={<ERDiagram />} />
           <Route path="/project-lead/flowchart" element={<Flowchart />} />
           <Route path="/project-lead/phases" element={<Phases />} />
+          <Route path="/project-lead/bugs" element={<Bugs />} />
+
           <Route
             path="/project-lead/modules-features"
             element={<ModulesFeatures />}
