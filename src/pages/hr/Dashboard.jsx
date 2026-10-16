@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Badge from "../../components/common/Badge";
 import Loader from "../../components/common/Loader";
 import { getHrDashboard } from "../../services/hrDashboardService";
+import AttendanceButton from "../../components/common/AttendanceButton";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -96,7 +97,15 @@ function Dashboard() {
     return <Loader context="page" label="Loading HR dashboard..." />;
   }
 
-  const { cards, attendance, pendingLeaves, internshipProbationAlerts, payroll, upcomingHolidays, onboarding } = data;
+  const {
+    cards,
+    attendance,
+    pendingLeaves,
+    internshipProbationAlerts,
+    payroll,
+    upcomingHolidays,
+    onboarding,
+  } = data;
 
   const kpis = [
     {
@@ -124,11 +133,17 @@ function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">HR Dashboard</h1>
-        <p className="mt-1 text-sm text-cm-text-muted">
-          People overview and HR actions for {formatDate(data.date)}.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-cm-text">HR Dashboard</h1>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            People overview and HR actions for {formatDate(data.date)}.
+          </p>
+        </div>
+
+        <div className="shrink-0">
+          <AttendanceButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -271,7 +286,9 @@ function Dashboard() {
               </p>
             </div>
             <div className="rounded-cm-md bg-cm-bg p-4">
-              <p className="text-xs text-cm-text-muted">Onboarding in progress</p>
+              <p className="text-xs text-cm-text-muted">
+                Onboarding in progress
+              </p>
               <p className="mt-1 text-xl font-bold text-cm-text">
                 {onboarding.inProgress}
               </p>
