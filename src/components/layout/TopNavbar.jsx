@@ -1,18 +1,13 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { ROLE_LABEL } from "../../constants/roles";
+import { ROLE_LABEL, ROLES } from "../../constants/roles";
 import { showToast } from "../common/Toast";
-import { ROLES } from "../../constants/roles";
 
 /**
- * Top navbar shared by every role's DashboardLayout: search, notification
- * bell, and the user profile menu (with Logout). Sidebar visibility on
- * mobile is controlled by the parent layout via `onMenuClick`.
- *
- * `notificationCount` is a prop rather than pulled from context here —
- * NotificationContext/NotificationBell wiring is a later phase; this
- * keeps the navbar usable standalone in the meantime.
+ * Shared top navbar for role dashboards.
+ * Admin and HR can access their own notification inboxes.
  */
 function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
   const { user, logout } = useAuth();
@@ -26,8 +21,11 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
         setIsMenuOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -43,6 +41,15 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const userRole = user?.role?.name;
+
+  const notificationPath =
+    userRole === ROLES.ADMIN
+      ? "/admin/notifications"
+      : userRole === ROLES.HR
+        ? "/hr/notifications"
+        : null;
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4 border-b border-cm-border bg-cm-card px-4 sm:px-6">
@@ -91,6 +98,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
             strokeLinejoin="round"
           />
         </svg>
+
         <input
           type="search"
           placeholder="Search…"
@@ -100,12 +108,17 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {user?.role?.name === ROLES.ADMIN && (
+        {/* Notifications: Admin and HR */}
+        {notificationPath && (
           <button
             type="button"
-            onClick={() => navigate("/admin/notifications")}
+            onClick={() => navigate(notificationPath)}
             className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg"
-            aria-label={`Notifications${notificationCount ? `, ${notificationCount} unread` : ""}`}
+            aria-label={`Notifications${
+              notificationCount > 0
+                ? `, ${notificationCount} unread`
+                : ""
+            }`}
             title="Notifications"
           >
             <svg
@@ -148,15 +161,17 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cm-blue-100 text-xs font-semibold text-cm-blue-700">
               {initials}
             </span>
+
             <span className="hidden text-left sm:block">
               <span className="block text-sm font-medium leading-tight text-cm-text">
                 {user ? `${user.firstName} ${user.lastName}` : "Guest"}
               </span>
 
               <span className="block text-xs leading-tight text-cm-text-muted">
-                {user?.role.name ? ROLE_LABEL[user.role.name] : ""}
+                {user?.role?.name ? ROLE_LABEL[user.role.name] : ""}
               </span>
             </span>
+
             <svg
               className="h-4 w-4 text-cm-text-muted"
               viewBox="0 0 24 24"
@@ -180,12 +195,16 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
             >
               <div className="border-b border-cm-border px-3 py-2 sm:hidden">
                 <p className="text-sm font-medium text-cm-text">
-                  {user?.name ?? "Guest"}
+                  {user ? `${user.firstName} ${user.lastName}` : "Guest"}
                 </p>
+
                 <p className="text-xs text-cm-text-muted">
-                  {user?.role ? ROLE_LABEL[user.role] : ""}
+                  {user?.role?.name
+                    ? ROLE_LABEL[user.role.name]
+                    : ""}
                 </p>
               </div>
+
               <button
                 type="button"
                 role="menuitem"
@@ -211,6 +230,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
                     strokeLinejoin="round"
                   />
                 </svg>
+
                 Logout
               </button>
             </div>
