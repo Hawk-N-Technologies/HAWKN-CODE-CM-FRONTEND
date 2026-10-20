@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLE_LABEL } from "../../constants/roles";
 import { showToast } from "../common/Toast";
+import { ROLES } from "../../constants/roles";
 
 /**
  * Top navbar shared by every role's DashboardLayout: search, notification
@@ -99,37 +100,41 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {/* Notifications */}
-        <button
-          type="button"
-          className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg"
-          aria-label={`Notifications${notificationCount ? `, ${notificationCount} unread` : ""}`}
-        >
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
+        {user?.role?.name === ROLES.ADMIN && (
+          <button
+            type="button"
+            onClick={() => navigate("/admin/notifications")}
+            className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg"
+            aria-label={`Notifications${notificationCount ? `, ${notificationCount} unread` : ""}`}
+            title="Notifications"
           >
-            <path
-              d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M13.73 21a2 2 0 0 1-3.46 0"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {notificationCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-cm-danger-600 px-1 text-[10px] font-semibold text-white">
-              {notificationCount > 9 ? "9+" : notificationCount}
-            </span>
-          )}
-        </button>
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path
+                d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M13.73 21a2 2 0 0 1-3.46 0"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+
+            {notificationCount > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-cm-danger-600 px-1 text-[10px] font-semibold text-white">
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Profile dropdown */}
         <div className="relative" ref={menuRef}>
