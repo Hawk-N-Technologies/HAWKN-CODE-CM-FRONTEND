@@ -38,7 +38,7 @@ function DashboardLayout({ sections = [] }) {
   const { role } = useAuth();
 
   return (
-    <NotificationProvider enabled={role === "admin"}>
+    <NotificationProvider enabled={role === "admin" || role === "hr"}>
       <DashboardLayoutContent sections={sections} />
     </NotificationProvider>
   );

@@ -84,15 +84,20 @@ export function NotificationProvider({ enabled, children }) {
     });
 
     socket.on("notification:new", (notification) => {
+      let wasAdded = false;
+
       setNotifications((current) => {
         if (current.some((item) => item.id === notification.id)) {
           return current;
         }
 
+        wasAdded = true;
         return [notification, ...current].slice(0, 50);
       });
 
-      setUnreadCount((count) => count + 1);
+      if (wasAdded && !notification.readAt) {
+        setUnreadCount((count) => count + 1);
+      }
     });
 
     socket.on("connect", () => {
