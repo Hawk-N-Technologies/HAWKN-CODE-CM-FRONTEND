@@ -4,11 +4,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const backendUrl = env.VITE_BACKEND_URL || env.BACKEND_URL;
 
-  const backendUrl =
-    mode === "development"
-      ? "http://localhost:3000"
-      : "https://clientportalapi.hawkntechnologies.com";
+  if (!backendUrl) {
+    throw new Error("Set VITE_BACKEND_URL or BACKEND_URL in your .env file.");
+  }
 
   return {
     plugins: [react(), tailwindcss()],
@@ -16,32 +16,17 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/api": {
-          target: "http://localhost:3000",
+          target: backendUrl,
           changeOrigin: true,
           credentials: true,
         },
 
         "/uploads": {
-          target: "http://localhost:3000",
+          target: backendUrl,
           changeOrigin: true,
           credentials: true,
         },
       },
     },
-    // server: {
-    //   proxy: {
-    //     "/api": {
-    //       target: "https://clientportalapi.hawkntechnologies.com",
-    //       changeOrigin: true,
-    //       credentials: true,
-    //     },
-
-    //     "/uploads": {
-    //       target: "https://clientportalapi.hawkntechnologies.com",
-    //       changeOrigin: true,
-    //       credentials: true,
-    //     },
-    //   },
-    // },
   };
 });
