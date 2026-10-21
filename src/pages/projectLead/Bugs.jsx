@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import {
   AlertCircle,
@@ -6,7 +6,11 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Edit3,
   Plus,
+  RefreshCw,
+  Save,
+  X,
 } from "lucide-react";
 
 import Select from "../../components/common/Select";
@@ -16,66 +20,17 @@ import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
 
 const SEVERITIES = ["Low", "Medium", "High", "Critical"];
-
-const DISCOVERY_SOURCES = [
-  "Client",
-  "Testing",
-  "Development",
-  "Code Review",
-  "Production",
-  "Retesting",
+const STATUSES = [
+  "Open",
+  "Assigned",
+  "In Progress",
+  "Fixed",
+  "Ready for Retest",
+  "Reopened",
+  "Closed",
+  "Rejected",
 ];
-
-const INITIAL_BUGS = [
-  {
-    id: 1,
-    projectId: "project-1",
-    moduleId: "module-1",
-    title: "Login fails with valid credentials",
-    description: "Users occasionally receive an authentication error.",
-    severity: "High",
-    status: "Open",
-    discoverySource: "Testing",
-    assignedTo: "Rahul Sharma",
-    reportedAt: "2026-10-15",
-  },
-  {
-    id: 2,
-    projectId: "project-1",
-    moduleId: "module-1",
-    title: "Password reset email not received",
-    description: "Reset email is delayed or missing for some users.",
-    severity: "Medium",
-    status: "In Progress",
-    discoverySource: "Client",
-    assignedTo: "Priya Patel",
-    reportedAt: "2026-10-14",
-  },
-  {
-    id: 3,
-    projectId: "project-1",
-    moduleId: "module-2",
-    title: "Dashboard breaks on smaller screens",
-    description: "Cards overflow on mobile devices.",
-    severity: "Low",
-    status: "Fixed",
-    discoverySource: "Code Review",
-    assignedTo: "Amit Shah",
-    reportedAt: "2026-10-12",
-  },
-  {
-    id: 4,
-    projectId: "project-2",
-    moduleId: "module-3",
-    title: "Payment confirmation missing",
-    description: "Payment succeeds but confirmation is not displayed.",
-    severity: "Critical",
-    status: "Open",
-    discoverySource: "Production",
-    assignedTo: "Unassigned",
-    reportedAt: "2026-10-16",
-  },
-];
+const DISCOVERY_SOURCES = ["Client", "developer", "bde"];
 
 const STATUS_STYLES = {
   Open: "bg-red-50 text-red-700 ring-red-200",
@@ -99,50 +54,127 @@ const EMPTY_FORM = {
   title: "",
   description: "",
   severity: "Medium",
+  status: "Open",
   discoverySource: "Testing",
   assignedTo: "",
 };
+
+// Keep these paths aligned with your Express routes.
+const API = {
+  projects: "/api/project-lead/planning/projects",
+  employees: "/api/developers-testers",
+  modules: (projectId) => `/api/projects/${projectId}/modules`,
+  bugs: (projectId) => `/api/bugs/${projectId}/bugs`,
+  bug: (bugId) => `/api/project-bugs/${bugId}`,
+};
+
+const getPayload = (response) => response?.data?.data ?? response?.data;
+
+const getList = (response, key) => {
+  const payload = getPayload(response);
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.[key])) return payload[key];
+  return [];
+};
+
+// Projects are selected by UUID in the existing project API.
+const getId = (item) => String(item?.uuid ?? item?.id ?? "");
+
+// Module foreign keys in project_bugs are integer IDs.
+const getModuleId = (item) => String(item?.id ?? "");
+const getEmployeeName = (employee) =>
+  employee?.full_name ??
+  employee?.fullName ??
+  employee?.name ??
+  "Unnamed employee";
+
+const normalizeBug = (bug) => ({
+  ...bug,
+  // Your Sequelize model uses camelCase fields; these fallbacks also support
+  // APIs that serialize database snake_case columns.
+  projectId: bug.projectId ?? bug.project_id,
+  moduleId: bug.moduleId ?? bug.module_id ?? null,
+  discoverySource: bug.discoverySource ?? bug.discovery_source ?? "Client",
+  assignedTo: bug.assignedTo ?? bug.assigned_to ?? null,
+  reportedBy: bug.reportedBy ?? bug.reported_by ?? null,
+  createdAt: bug.createdAt ?? bug.created_at ?? bug.reportedAt ?? null,
+});
 
 export default function Bugs() {
   const [projects, setProjects] = useState([]);
   const [modules, setModules] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [bugs, setBugs] = useState([]);
 
   const [projectId, setProjectId] = useState("");
   const [moduleId, setModuleId] = useState("");
-
-  const [bugs, setBugs] = useState(INITIAL_BUGS);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingBug, setEditingBug] = useState(null);
 
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingModules, setLoadingModules] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
-  const [showForm, setShowForm] = useState(true);
+  const [loadingBugs, setLoadingBugs] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const getList = (response) => {
-    const data = response.data?.data ?? response.data;
+  const [bugId, setBugId] = useState("");
 
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.projects)) return data.projects;
-    if (Array.isArray(data?.modules)) return data.modules;
-    if (Array.isArray(data?.employees)) return data.employees;
+  const selectedProject = projects.find((item) => getId(item) === projectId);
+  const selectedModule = modules.find(
+    (item) => getModuleId(item) === String(moduleId),
+  );
 
-    return [];
+  const updateForm = (field, value) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
   };
+
+  const fetchBugs = useCallback(async () => {
+    if (!projectId) {
+      setBugs([]);
+      return;
+    }
+
+    setLoadingBugs(true);
+    try {
+      console.log(projectId);
+
+      const url = moduleId
+        ? `/api/bugs/projects/${encodeURIComponent(projectId)}/bugs?module=${encodeURIComponent(moduleId)}`
+        : `/api/bugs/projects/${encodeURIComponent(projectId)}/bugs`;
+
+      const response = await axios.get(url, {
+        withCredentials: true,
+      });
+
+      console.log(response.data.data);
+      const list = getList(response, "bugs").map(normalizeBug);
+      console.log(list);
+      setBugs(list);
+    } catch (error) {
+      setBugs([]);
+      showToast.error(
+        error.response?.data?.message || "Failed to load project bugs.",
+      );
+    } finally {
+      setLoadingBugs(false);
+    }
+  }, [projectId, moduleId]);
 
   useEffect(() => {
     let active = true;
-
     const fetchProjects = async () => {
       setLoadingProjects(true);
-
       try {
-        const response = await axios.get(
-          "/api/project-lead/planning/projects",
-          { withCredentials: true },
-        );
-
-        if (active) setProjects(getList(response));
+        const response = await axios.get(API.projects, {
+          withCredentials: true,
+        });
+        if (active) {
+          const list = getList(response, "projects");
+          setProjects(list);
+          // Select the first project by default when one is available.
+          setProjectId(list[0] ? getId(list[0]) : "");
+        }
       } catch (error) {
         if (active) {
           showToast.error(
@@ -153,9 +185,7 @@ export default function Bugs() {
         if (active) setLoadingProjects(false);
       }
     };
-
     fetchProjects();
-
     return () => {
       active = false;
     };
@@ -163,7 +193,6 @@ export default function Bugs() {
 
   useEffect(() => {
     let active = true;
-
     setModules([]);
     setModuleId("");
 
@@ -176,13 +205,11 @@ export default function Bugs() {
 
     const fetchModules = async () => {
       setLoadingModules(true);
-
       try {
-        const response = await axios.get(`/api/projects/${projectId}/modules`, {
+        const response = await axios.get(API.modules(projectId), {
           withCredentials: true,
         });
-
-        if (active) setModules(getList(response));
+        if (active) setModules(getList(response, "modules"));
       } catch (error) {
         if (active) {
           showToast.error(
@@ -193,9 +220,7 @@ export default function Bugs() {
         if (active) setLoadingModules(false);
       }
     };
-
     fetchModules();
-
     return () => {
       active = false;
     };
@@ -203,161 +228,242 @@ export default function Bugs() {
 
   useEffect(() => {
     let active = true;
-
     const fetchEmployees = async () => {
       setLoadingEmployees(true);
-
       try {
-        const response = await axios.get("/api/developers-testers", {
+        const response = await axios.get("/api/bugs/developers", {
           withCredentials: true,
         });
-
-        if (active) setEmployees(getList(response));
+        console.log(response.data.data);
+        if (active) setEmployees(getList(response, "employees"));
       } catch (error) {
         if (active) {
           showToast.error(
-            error.response?.data?.message || "Failed to load employees.",
+            error.response?.data?.message || "Failed to load developers.",
           );
         }
       } finally {
         if (active) setLoadingEmployees(false);
       }
     };
-
     fetchEmployees();
-
     return () => {
       active = false;
     };
   }, []);
 
-  const selectedProject = projects.find(
-    (item) => String(item.uuid ?? item.id) === projectId,
-  );
-
-  const selectedModule = modules.find(
-    (item) => String(item.uuid ?? item.id) === moduleId,
-  );
+  useEffect(() => {
+    fetchBugs();
+  }, [fetchBugs]);
 
   const visibleBugs = bugs.filter(
     (bug) =>
-      (!projectId || bug.projectId === projectId) &&
-      (!moduleId || bug.moduleId === moduleId),
+      !moduleId ||
+      String(bug.moduleId ?? bug.module_id ?? "") === String(moduleId),
   );
 
-  const updateForm = (field, value) => {
-    setForm((previous) => ({ ...previous, [field]: value }));
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditingBug(null);
   };
 
-  const handleCreateBug = (event) => {
-    event.preventDefault();
+  const startCreate = () => {
+    resetForm();
+    setShowForm(true);
+  };
 
+  const startEdit = (bug) => {
+    setEditingBug(bug);
+    console.log(bug);
+    setBugId(bug.uuid);
+    setForm({
+      title: bug.title ?? "",
+      description: bug.description ?? "",
+      severity: bug.severity ?? "Medium",
+      status: bug.status ?? "Open",
+      discoverySource: bug.discoverySource ?? "Client",
+      assignedTo:
+        bug.assignedTo == null || bug.assignedTo === ""
+          ? ""
+          : String(bug.assignedTo),
+    });
+    setShowForm(true);
+    // If module is editable, retain the bug's module in the existing filter.
+    setModuleId(bug.moduleId == null ? "" : String(bug.moduleId));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSaveBug = async (event) => {
+    event.preventDefault();
     if (!projectId || !form.title.trim()) {
       showToast.error("Select a project and enter a bug title.");
       return;
     }
 
-    const newBug = {
-      id: Date.now(),
-      projectId,
-      moduleId: moduleId || null,
+    const payload = {
       title: form.title.trim(),
-      description: form.description.trim(),
+      description: form.description.trim() || null,
       severity: form.severity,
-      status: "Open",
+      status: form.status,
       discoverySource: form.discoverySource,
-      assignedTo:
-        employees.find(
-          (employee) =>
-            String(employee.uuid ?? employee.id) === form.assignedTo,
-        )?.full_name ||
-        employees.find(
-          (employee) =>
-            String(employee.uuid ?? employee.id) === form.assignedTo,
-        )?.name ||
-        "Unassigned",
-      reportedAt: new Date().toISOString().slice(0, 10),
+      assignedTo: form.assignedTo ? Number(form.assignedTo) : null,
+      // API expects the internal database ID for the module, if selected.
+      moduleId: moduleId ? Number(moduleId) : null,
     };
 
-    setBugs((previous) => [newBug, ...previous]);
-    setForm(EMPTY_FORM);
-    setShowForm(false);
+    console.log(payload);
+    console.log(projectId);
 
-    showToast.success("Bug reported successfully.");
+    setSaving(true);
+    try {
+      if (editingBug) {
+        await axios.patch(
+          `/api/bugs/projects/${projectId}/bugs/${bugId}`,
+          payload,
+          {
+            withCredentials: true,
+          },
+        );
+        showToast.success("Bug updated successfully.");
+      } else {
+        await axios.post(
+          "/api/bugs/createBug",
+          { ...payload, projectId: projectId },
+          { withCredentials: true },
+        );
+        showToast.success("Bug reported successfully.");
+      }
+
+      resetForm();
+      setShowForm(false);
+      await fetchBugs();
+    } catch (error) {
+      showToast.error(
+        error.response?.data?.message ||
+          (editingBug ? "Failed to update bug." : "Failed to report bug."),
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const formatDate = (date) =>
-    new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
+  const formatDate = (date) => {
+    if (!date) return "—";
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return "—";
+    return parsed.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
+  };
+
+  const getAssigneeName = (bug) => {
+    if (!bug.assignedTo) return "Unassigned";
+    const employee = employees.find(
+      (item) => getId(item) === String(bug.assignedTo),
+    );
+    return employee ? getEmployeeName(employee) : `Employee #${bug.assignedTo}`;
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-cm-text">Bug Reporting</h1>
           <p className="mt-1 text-sm text-cm-text-muted">
-            Report, track, and review project bugs.
+            Review project bugs, update their status, and assign developers.
           </p>
         </div>
-
-        <Button type="button" onClick={() => setShowForm(!showForm)}>
-          <span className="flex items-center gap-2">
-            <Plus size={16} />
-            {showForm ? "Hide Form" : "Report Bug"}
-          </span>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={fetchBugs}
+            disabled={!projectId || loadingBugs}
+          >
+            <span className="flex items-center gap-2">
+              <RefreshCw
+                size={16}
+                className={loadingBugs ? "animate-spin" : ""}
+              />
+              Refresh
+            </span>
+          </Button>
+          <Button
+            type="button"
+            onClick={() =>
+              showForm ? (setShowForm(false), resetForm()) : startCreate()
+            }
+          >
+            <span className="flex items-center gap-2">
+              {showForm ? <X size={16} /> : <Plus size={16} />}
+              {showForm ? "Close Form" : "Report Bug"}
+            </span>
+          </Button>
+        </div>
       </div>
 
-      {/* Project and Module filters */}
       <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div
+          onClick={() => {
+            projects.map((e) => {
+              console.log(e);
+            });
+          }}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
           <Select
             label="Project"
             name="projectId"
             required
             value={projectId}
             options={projects.map((item) => ({
-              value: String(item.uuid ?? item.id),
-              label: item.name,
+              value: getId(item),
+              label: item.name ?? item.projectName ?? `Project ${getId(item)}`,
             }))}
             placeholder={
               loadingProjects ? "Loading projects..." : "Select project"
             }
             disabled={loadingProjects}
-            onChange={(event) => setProjectId(event.target.value)}
+            onChange={(event) => {
+              console.log(event.target.value);
+              setProjectId(event.target.value);
+              resetForm();
+              setShowForm(false);
+            }}
           />
-
           <Select
             label="Module (Optional)"
             name="moduleId"
             value={moduleId}
             options={modules.map((item) => ({
-              value: String(item.uuid ?? item.id),
-              label: item.name,
+              value: getModuleId(item),
+              label: item.name ?? item.title ?? `Module ${getModuleId(item)}`,
             }))}
             placeholder={loadingModules ? "Loading modules..." : "All modules"}
             disabled={!projectId || loadingModules}
-            onChange={(event) => setModuleId(event.target.value)}
+            onChange={(event) => {
+              setModuleId(event.target.value);
+              console.log(event.target.value);
+            }}
           />
         </div>
       </section>
 
-      {/* Report bug form */}
       {showForm && (
         <form
-          onSubmit={handleCreateBug}
+          onSubmit={handleSaveBug}
           className="space-y-5 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm"
         >
           <div>
             <h2 className="text-lg font-semibold text-cm-text">
-              Report a New Bug
+              {editingBug
+                ? `Edit Bug — BUG-${editingBug.uuid}`
+                : "Report a New Bug"}
             </h2>
             <p className="mt-1 text-sm text-cm-text-muted">
-              Provide the issue details and assign it to a developer.
+              Update issue details, workflow status, and developer assignment.
             </p>
           </div>
 
@@ -370,49 +476,37 @@ export default function Bugs() {
               onChange={(event) => updateForm("title", event.target.value)}
               placeholder="e.g. Login fails with valid credentials"
             />
-
             <Select
               label="Severity"
               name="severity"
               required
               value={form.severity}
-              options={SEVERITIES.map((value) => ({
-                value,
-                label: value,
-              }))}
+              options={SEVERITIES.map((value) => ({ value, label: value }))}
               onChange={(event) => updateForm("severity", event.target.value)}
             />
-
             <Select
-              label="Discovery Source"
-              name="discoverySource"
+              label="Status"
+              name="status"
               required
-              value={form.discoverySource}
-              options={DISCOVERY_SOURCES.map((value) => ({
-                value,
-                label: value,
-              }))}
-              onChange={(event) =>
-                updateForm("discoverySource", event.target.value)
-              }
+              value={form.status}
+              options={STATUSES.map((value) => ({ value, label: value }))}
+              onChange={(event) => updateForm("status", event.target.value)}
             />
 
             <Select
-              label="Assign To (Optional)"
+              label="Assign Developer (Optional)"
               name="assignedTo"
               value={form.assignedTo}
               options={employees.map((employee) => ({
-                value: String(employee.uuid ?? employee.id),
-                label:
-                  employee.full_name ?? employee.name ?? "Unnamed employee",
+                value: getId(employee),
+                label: getEmployeeName(employee),
               }))}
               placeholder={
-                loadingEmployees ? "Loading employees..." : "Unassigned"
+                loadingEmployees ? "Loading developers..." : "Unassigned"
               }
               disabled={loadingEmployees}
               onChange={(event) => updateForm("assignedTo", event.target.value)}
             />
-
             <div className="md:col-span-2">
               <Textarea
                 label="Description"
@@ -426,27 +520,43 @@ export default function Bugs() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-cm-border pt-4">
+          <div className="flex flex-wrap justify-end gap-3 border-t border-cm-border pt-4">
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setForm(EMPTY_FORM)}
+              onClick={resetForm}
+              disabled={saving}
             >
               Reset
             </Button>
-            <Button type="submit">Submit Bug</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowForm(false);
+                resetForm();
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving || !projectId}>
+              <span className="flex items-center gap-2">
+                <Save size={16} />
+                {saving
+                  ? "Saving..."
+                  : editingBug
+                    ? "Save Changes"
+                    : "Submit Bug"}
+              </span>
+            </Button>
           </div>
         </form>
       )}
 
-      {/* Bug summary */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          {
-            label: "Total Bugs",
-            value: visibleBugs.length,
-            icon: Bug,
-          },
+          { label: "Total Bugs", value: visibleBugs.length, icon: Bug },
           {
             label: "Open",
             value: visibleBugs.filter((bug) => bug.status === "Open").length,
@@ -479,35 +589,49 @@ export default function Bugs() {
         ))}
       </div>
 
-      {/* Previous bugs */}
       <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cm-border p-5">
           <div>
             <h2 className="font-semibold text-cm-text">Reported Bugs</h2>
             <p className="mt-1 text-sm text-cm-text-muted">
-              {selectedProject?.name || "All projects"}
-              {selectedModule ? ` / ${selectedModule.name}` : ""}
+              {selectedProject?.name ??
+                selectedProject?.projectName ??
+                "Select a project"}
+              {selectedModule
+                ? ` / ${selectedModule.name ?? selectedModule.title}`
+                : ""}
             </p>
           </div>
-
           <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700">
             {visibleBugs.length} bugs
           </span>
         </div>
 
-        {visibleBugs.length === 0 ? (
+        {loadingBugs ? (
+          <div className="p-10 text-center text-sm text-cm-text-muted">
+            Loading project bugs...
+          </div>
+        ) : !projectId ? (
+          <div className="p-10 text-center">
+            <Bug size={32} className="mx-auto text-cm-text-muted" />
+            <p className="mt-3 font-medium text-cm-text">Select a project</p>
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Choose a project to fetch its reported bugs.
+            </p>
+          </div>
+        ) : visibleBugs.length === 0 ? (
           <div className="p-10 text-center">
             <Bug size={32} className="mx-auto text-cm-text-muted" />
             <p className="mt-3 font-medium text-cm-text">No bugs found</p>
             <p className="mt-1 text-sm text-cm-text-muted">
-              Try another project or module, or report a new bug.
+              There are no bugs for this project/module yet.
             </p>
           </div>
         ) : (
           <div className="divide-y divide-cm-border">
             {visibleBugs.map((bug) => (
               <article
-                key={bug.id}
+                key={bug.uuid ?? bug.id}
                 className="space-y-3 p-5 transition-colors hover:bg-cm-bg/50"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -515,49 +639,54 @@ export default function Bugs() {
                     <div className="mt-1 rounded-lg bg-red-50 p-2 text-red-600">
                       <Bug size={18} />
                     </div>
-
                     <div className="min-w-0">
                       <h3 className="font-semibold text-cm-text">
                         {bug.title}
                       </h3>
                       <p className="mt-1 text-sm text-cm-text-muted">
-                        BUG-{String(bug.id).slice(-6)}
+                        BUG-{String(bug.uuid).padStart(4, "0")}
                       </p>
                     </div>
                   </div>
-
                   <div className="flex flex-wrap gap-2">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        SEVERITY_STYLES[bug.severity] || SEVERITY_STYLES.Medium
-                      }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${SEVERITY_STYLES[bug.severity] || SEVERITY_STYLES.Medium}`}
                     >
-                      {bug.severity}
+                      {bug.severity || "Medium"}
                     </span>
-
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                        STATUS_STYLES[bug.status] || STATUS_STYLES.Open
-                      }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[bug.status] || STATUS_STYLES.Open}`}
                     >
-                      {bug.status}
+                      {bug.status || "Open"}
                     </span>
                   </div>
                 </div>
 
                 {bug.description && (
-                  <p className="pl-0 text-sm leading-6 text-cm-text-muted md:pl-11">
+                  <p className="text-sm leading-6 text-cm-text-muted md:pl-11">
                     {bug.description}
                   </p>
                 )}
 
                 <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-cm-text-muted md:pl-11">
-                  <span>Source: {bug.discoverySource}</span>
-                  <span>Assigned: {bug.assignedTo || "Unassigned"}</span>
+                  <span>Source: {bug.discoverySource || "Client"}</span>
+                  <span>Assigned: {getAssigneeName(bug)}</span>
                   <span className="flex items-center gap-1">
                     <CalendarDays size={13} />
-                    {formatDate(bug.reportedAt)}
+                    {formatDate(bug.createdAt)}
                   </span>
+                </div>
+
+                <div className="flex justify-end md:pl-11">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => startEdit(bug)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Edit3 size={15} /> Edit / Assign
+                    </span>
+                  </Button>
                 </div>
               </article>
             ))}

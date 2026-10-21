@@ -67,6 +67,7 @@ import TESTDashboard from "../pages/tester/Dashboard";
 import TESTAssignedProjects from "../pages/tester/AssignedProjects";
 import TestingQueue from "../pages/tester/TestingQueue";
 import PhaseTesting from "../pages/tester/PhaseTesting";
+import TesterIssues from "../pages/tester/Issues";
 import TesterBugs from "../pages/tester/Bugs";
 import Retesting from "../pages/tester/Retesting";
 import ClientTesting from "../pages/tester/ClientTesting";
@@ -267,6 +268,7 @@ function AppRoutes() {
             <Route path="/tester/leave" element={<LeaveRequest />} />
 
             <Route path="/tester/bugs" element={<TesterBugs />} />
+            <Route path="/tester/issues" element={<TesterIssues />} />
             <Route path="/tester/attendance" element={<AttendanceMonthly />} />
             <Route path="/tester/retesting" element={<Retesting />} />
             <Route path="/tester/client-testing" element={<ClientTesting />} />

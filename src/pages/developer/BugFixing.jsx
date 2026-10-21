@@ -1,60 +1,84 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import { RefreshCw, Save, Bug, CalendarDays, AlertCircle } from "lucide-react";
 import Select from "../../components/common/Select";
-import Input from "../../components/common/Input";
-import Textarea from "../../components/common/TextArea";
 import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
 
+// Keep these values aligned with the statuses accepted by your backend.
+const DEVELOPER_STATUSES = ["Assigned", "In Progress", "Fixed"];
+const STATUS_STYLES = {
+  Assigned: "bg-blue-50 text-blue-700 ring-blue-200",
+  "In Progress": "bg-amber-50 text-amber-700 ring-amber-200",
+  Fixed: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+};
+const SEVERITY_STYLES = {
+  Low: "bg-gray-100 text-gray-700",
+  Medium: "bg-blue-50 text-blue-700",
+  High: "bg-orange-50 text-orange-700",
+  Critical: "bg-red-50 text-red-700",
+};
+
+const getPayload = (response) => response?.data?.data ?? response?.data;
+const getList = (response) => {
+  const payload = getPayload(response);
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.bugs)) return payload.bugs;
+  return [];
+};
+
+const normalizeBug = (bug) => ({
+  ...bug,
+  id: bug.uuid ?? bug.id,
+  title: bug.title ?? "Untitled bug",
+  description: bug.description ?? "",
+  severity: bug.severity ?? "Medium",
+  status: bug.status ?? "Assigned",
+  createdAt: bug.createdAt ?? bug.created_at ?? null,
+});
+
+// The dropdown uses the project's public UUID, like Bugs.jsx. The assigned-bugs
+// controller expects the internal numeric projects.id, so keep both values.
+const getProjectUuid = (project) => String(project?.uuid ?? project?.id ?? "");
+
 export default function BugFixing() {
   const [projects, setProjects] = useState([]);
-  const [modules, setModules] = useState([]);
-  const [phases, setPhases] = useState([]);
-  const [tasks, setTasks] = useState([]);
-
   const [projectId, setProjectId] = useState("");
-  const [moduleId, setModuleId] = useState("");
-  const [phaseId, setPhaseId] = useState("");
-  const [taskId, setTaskId] = useState("");
-
-  const [bugs, setBugs] = useState({});
-  const [form, setForm] = useState({
-    title: "",
-    severity: "Medium",
-    notes: "",
-  });
-
+  const [projectMap, setProjectMap] = useState({});
   const [loadingProjects, setLoadingProjects] = useState(false);
-  const [loadingModules, setLoadingModules] = useState(false);
-  const [loadingPhases, setLoadingPhases] = useState(false);
-  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [bugs, setBugs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [savingBugId, setSavingBugId] = useState(null);
+  const [statusChanges, setStatusChanges] = useState({});
 
-  // Supports APIs returning either { data: [...] } or [...]
-  const getList = (response) => {
-    const payload = response.data?.data ?? response.data;
-
-    if (Array.isArray(payload)) return payload;
-
-    // Also supports { data: { tasks: [...] } }
-    if (Array.isArray(payload?.tasks)) return payload.tasks;
-
-    return [];
-  };
-
-  // Fetch projects
   useEffect(() => {
     let active = true;
 
     const fetchProjects = async () => {
       setLoadingProjects(true);
-
       try {
-        const response = await axios.get(
-          "/api/project-lead/planning/projects",
-          { withCredentials: true },
+        // Use the same project dropdown source and UUID -> numeric ID mapping
+        // as Bugs.jsx. The assigned-bugs controller calls Number(projectId).
+        const response = await axios.get("/api/bugs/projects-dropdown", {
+          withCredentials: true,
+        });
+        const payload = getPayload(response);
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.projects)
+            ? payload.projects
+            : [];
+        const idMap = Object.fromEntries(
+          list.map((project) => [getProjectUuid(project), project.id]),
         );
 
-        if (active) setProjects(getList(response));
+        if (active) {
+          setProjects(list);
+          setProjectMap(idMap);
+          if (list.length) {
+            setProjectId((current) => current || getProjectUuid(list[0]));
+          }
+        }
       } catch (error) {
         if (active) {
           showToast.error(
@@ -67,300 +91,228 @@ export default function BugFixing() {
     };
 
     fetchProjects();
-
     return () => {
       active = false;
     };
   }, []);
 
-  // Fetch modules when project changes
-  useEffect(() => {
-    let active = true;
-
-    setModules([]);
-    setPhases([]);
-    setTasks([]);
-    setModuleId("");
-    setPhaseId("");
-    setTaskId("");
-
-    if (!projectId) return;
-
-    const fetchModules = async () => {
-      setLoadingModules(true);
-
-      try {
-        const response = await axios.get(`/api/projects/${projectId}/modules`, {
-          withCredentials: true,
-        });
-
-        if (active) setModules(getList(response));
-      } catch (error) {
-        if (active) {
-          showToast.error(
-            error.response?.data?.message || "Failed to load modules.",
-          );
-        }
-      } finally {
-        if (active) setLoadingModules(false);
-      }
-    };
-
-    fetchModules();
-
-    return () => {
-      active = false;
-    };
-  }, [projectId]);
-
-  // Fetch phases when module changes
-  useEffect(() => {
-    let active = true;
-
-    setPhases([]);
-    setTasks([]);
-    setPhaseId("");
-    setTaskId("");
-
-    if (!projectId || !moduleId) return;
-
-    const fetchPhases = async () => {
-      setLoadingPhases(true);
-
-      try {
-        const response = await axios.get(
-          `/api/projects/${projectId}/modules/${moduleId}/phases`,
-          { withCredentials: true },
-        );
-
-        if (active) setPhases(getList(response));
-      } catch (error) {
-        if (active) {
-          showToast.error(
-            error.response?.data?.message || "Failed to load phases.",
-          );
-        }
-      } finally {
-        if (active) setLoadingPhases(false);
-      }
-    };
-
-    fetchPhases();
-
-    return () => {
-      active = false;
-    };
-  }, [projectId, moduleId]);
-
-  // Fetch tasks when phase changes
-  useEffect(() => {
-    let active = true;
-
-    setTasks([]);
-    setTaskId("");
-
-    if (!phaseId) return;
-
-    const fetchTasks = async () => {
-      setLoadingTasks(true);
-
-      try {
-        const response = await axios.get(`/api/task-dropdown/${phaseId}`, {
-          withCredentials: true,
-        });
-
-        if (active) setTasks(getList(response));
-      } catch (error) {
-        if (active) {
-          showToast.error(
-            error.response?.data?.message || "Failed to load tasks.",
-          );
-        }
-      } finally {
-        if (active) setLoadingTasks(false);
-      }
-    };
-
-    fetchTasks();
-
-    return () => {
-      active = false;
-    };
-  }, [phaseId]);
-
-  // Add a bug locally
-  const handleCreateBug = (event) => {
-    event.preventDefault();
-
-    if (!taskId || !form.title.trim()) {
-      showToast.error("Select a task and enter a bug title.");
+  const fetchAssignedBugs = useCallback(async () => {
+    if (!projectId) {
+      setBugs([]);
+      setStatusChanges({});
       return;
     }
 
-    const newBug = {
-      id: Date.now(),
-      title: form.title.trim(),
-      severity: form.severity,
-      status: "Open",
-      notes: form.notes.trim(),
-    };
+    setLoading(true);
+    try {
+      const numericProjectId = projectMap[projectId];
+      if (!numericProjectId) {
+        setBugs([]);
+        showToast.error("Could not resolve the selected project ID.");
+        return;
+      }
 
-    setBugs((previous) => ({
-      ...previous,
-      [taskId]: [...(previous[taskId] || []), newBug],
-    }));
+      // This controller expects the internal numeric projects.id, not UUID.
+      const response = await axios.get(
+        `/api/bugs/projects/${encodeURIComponent(numericProjectId)}/assigned-bugs`,
+        { withCredentials: true },
+      );
+      const list = getList(response).map(normalizeBug);
+      setBugs(list);
+      setStatusChanges({});
+    } catch (error) {
+      showToast.error(
+        error.response?.data?.message || "Failed to load assigned bugs.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, projectMap]);
 
-    setForm({
-      title: "",
-      severity: "Medium",
-      notes: "",
-    });
+  useEffect(() => {
+    fetchAssignedBugs();
+  }, [fetchAssignedBugs]);
 
-    showToast.success("Bug added successfully.");
+  const handleStatusSave = async (bug) => {
+    const nextStatus = statusChanges[bug.id] ?? bug.status;
+    if (nextStatus === bug.status) {
+      showToast.error("Choose a different status before saving.");
+      return;
+    }
+
+    setSavingBugId(bug.id);
+
+    try {
+      const res = await axios.put(
+        `/api/bugs/developer/${bug.uuid}/status`,
+        { status: nextStatus },
+        { withCredentials: true },
+      );
+
+      if (res.status == 200) {
+        showToast.success("Bug status updated successfully.");
+        await fetchAssignedBugs();
+      }
+    } catch (error) {
+      showToast.error(
+        error.response?.data?.message || "Failed to update bug status.",
+      );
+    } finally {
+      setSavingBugId(null);
+    }
   };
 
-  const selectedBugs = bugs[taskId] || [];
-
   return (
-    <div className="space-y-6">
-      {/* Project, Module, Phase, Task */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-cm-text">Bug Fixing</h2>
+          <p className="text-sm text-cm-text-muted">
+            Bugs assigned to you in this project.
+          </p>
+        </div>
+        <Button
+          type="button"
+          onClick={fetchAssignedBugs}
+          disabled={loading || !projectId}
+        >
+          <span className="inline-flex items-center gap-2">
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </span>
+        </Button>
+      </div>
+
+      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5">
         <Select
           label="Project"
           name="projectId"
           required
           value={projectId}
-          options={projects.map((item) => ({
-            value: String(item.uuid ?? item.id),
-            label: item.name,
+          options={projects.map((project) => ({
+            value: getProjectUuid(project),
+            label:
+              project.name ??
+              project.projectName ??
+              `Project ${getProjectUuid(project)}`,
           }))}
-          placeholder="Select project"
+          placeholder={
+            loadingProjects ? "Loading projects..." : "Select project"
+          }
           disabled={loadingProjects}
-          onChange={(event) => setProjectId(event.target.value)}
+          onChange={(eventOrValue) => {
+            const value = eventOrValue?.target?.value ?? eventOrValue;
+            setProjectId(value);
+            setBugs([]);
+            setStatusChanges({});
+          }}
         />
+      </section>
 
-        <Select
-          label="Module"
-          name="moduleId"
-          required
-          value={moduleId}
-          options={modules.map((item) => ({
-            value: String(item.uuid ?? item.id),
-            label: item.name,
-          }))}
-          placeholder={loadingModules ? "Loading modules..." : "Select module"}
-          disabled={!projectId || loadingModules}
-          onChange={(event) => setModuleId(event.target.value)}
-        />
+      {!projectId ? (
+        <div className="rounded-cm-lg border border-dashed border-cm-border p-8 text-center text-sm text-cm-text-muted">
+          Select a project to view your assigned bugs.
+        </div>
+      ) : null}
 
-        <Select
-          label="Phase"
-          name="phaseId"
-          required
-          value={phaseId}
-          options={phases.map((item) => ({
-            value: String(item.uuid ?? item.id),
-            label: item.name,
-          }))}
-          placeholder={loadingPhases ? "Loading phases..." : "Select phase"}
-          disabled={!moduleId || loadingPhases}
-          onChange={(event) => setPhaseId(event.target.value)}
-        />
-
-        <Select
-          label="Task"
-          name="taskId"
-          required
-          value={taskId}
-          options={tasks.map((item) => ({
-            value: String(item.uuid ?? item.id),
-            label: item.name ?? item.title ?? item.taskName,
-          }))}
-          placeholder={loadingTasks ? "Loading tasks..." : "Select task"}
-          disabled={!phaseId || loadingTasks}
-          onChange={(event) => setTaskId(event.target.value)}
-        />
+      <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
+        <p className="text-sm text-cm-text-muted">Assigned bugs</p>
+        <p className="mt-1 text-2xl font-semibold text-cm-text">
+          {bugs.length}
+        </p>
       </div>
 
-      {/* Bug form and list */}
-      {taskId && (
-        <>
-          <form
-            onSubmit={handleCreateBug}
-            className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm md:grid-cols-3"
-          >
-            <Input
-              label="Bug Title"
-              name="title"
-              required
-              value={form.title}
-              onChange={(event) =>
-                setForm({ ...form, title: event.target.value })
-              }
-              placeholder="Enter bug title"
-            />
+      {!projectId ? null : loading ? (
+        <p className="py-8 text-center text-sm text-cm-text-muted">
+          Loading assigned bugs...
+        </p>
+      ) : bugs.length === 0 ? (
+        <div className="rounded-cm-lg border border-dashed border-cm-border p-8 text-center">
+          <Bug className="mx-auto mb-2 text-cm-text-muted" size={28} />
+          <p className="font-medium text-cm-text">No assigned bugs found</p>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            Bugs assigned to you for this project will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {bugs.map((bug) => {
+            const selectedStatus = statusChanges[bug.id] ?? bug.status;
+            const isSaving = savingBugId === bug.id;
 
-            <Select
-              label="Severity"
-              name="severity"
-              required
-              value={form.severity}
-              options={["High", "Medium", "Low"].map((value) => ({
-                value,
-                label: value,
-              }))}
-              onChange={(event) =>
-                setForm({ ...form, severity: event.target.value })
-              }
-            />
+            return (
+              <article
+                key={bug.id}
+                className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-cm-text">{bug.title}</h3>
+                    {bug.description && (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-cm-text-muted">
+                        {bug.description}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${SEVERITY_STYLES[bug.severity] ?? SEVERITY_STYLES.Medium}`}
+                  >
+                    <AlertCircle className="mr-1 inline" size={13} />
+                    {bug.severity}
+                  </span>
+                </div>
 
-            <Textarea
-              label="Notes"
-              name="notes"
-              value={form.notes}
-              onChange={(event) =>
-                setForm({ ...form, notes: event.target.value })
-              }
-              placeholder="Describe the bug (optional)"
-            />
-
-            <div className="flex justify-end md:col-span-3">
-              <Button type="submit">Add Bug</Button>
-            </div>
-          </form>
-
-          <div className="space-y-3">
-            <h2 className="font-semibold text-cm-text">
-              Bugs ({selectedBugs.length})
-            </h2>
-
-            {selectedBugs.length === 0 ? (
-              <p className="text-sm text-cm-text-muted">
-                No bugs found for this task.
-              </p>
-            ) : (
-              selectedBugs.map((bug) => (
-                <article
-                  key={bug.id}
-                  className="rounded-cm-lg border border-cm-border bg-cm-card p-4"
-                >
-                  <h3 className="font-medium text-cm-text">{bug.title}</h3>
-
-                  <p className="mt-2 text-sm text-cm-text-muted">
-                    Severity: {bug.severity} · Status: {bug.status}
-                  </p>
-
-                  {bug.notes && (
-                    <p className="mt-2 text-sm text-cm-text-muted">
-                      {bug.notes}
-                    </p>
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-cm-text-muted">
+                  <span
+                    className={`rounded-full px-2.5 py-1 font-medium ring-1 ring-inset ${STATUS_STYLES[bug.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
+                  >
+                    {bug.status}
+                  </span>
+                  {bug.createdAt && (
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarDays size={14} />
+                      {new Date(bug.createdAt).toLocaleDateString()}
+                    </span>
                   )}
-                </article>
-              ))
-            )}
-          </div>
-        </>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-cm-border pt-4 sm:flex-row sm:items-end">
+                  <div className="w-full sm:max-w-xs">
+                    <Select
+                      label="Update status"
+                      name={`status-${bug.id}`}
+                      value={selectedStatus}
+                      options={DEVELOPER_STATUSES.map((status) => ({
+                        value: status,
+                        label: status,
+                      }))}
+                      onChange={(eventOrValue) => {
+                        const value =
+                          eventOrValue?.target?.value ?? eventOrValue;
+                        setStatusChanges((previous) => ({
+                          ...previous,
+                          [bug.id]: value,
+                        }));
+                      }}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => handleStatusSave(bug)}
+                    disabled={isSaving || selectedStatus === bug.status}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Save size={16} />
+                      {isSaving ? "Saving..." : "Save Status"}
+                    </span>
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       )}
-    </div>
+    </section>
   );
 }
