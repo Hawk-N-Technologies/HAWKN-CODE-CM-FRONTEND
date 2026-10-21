@@ -1,0 +1,221 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Badge from "../../components/common/Badge";
+import Button from "../../components/common/Button";
+import TableSearch from "../../components/tables/TableSearch";
+import { useNotifications } from "../../context/NotificationContext";
+
+const FILTERS = [
+  "All",
+  "Unread",
+  "BRD_ADMIN_APPROVED",
+  "BRD_ADMIN_REJECTED",
+  "BRD_CLIENT_APPROVED",
+  "BRD_CLIENT_REJECTED",
+];
+
+function formatTime(value) {
+  if (!value) return "Time unavailable";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "Time unavailable";
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function Notifications() {
+  const navigate = useNavigate();
+
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markRead,
+    markAllRead,
+  } = useNotifications();
+
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [actionError, setActionError] = useState("");
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return notifications.filter((item) => {
+      const matchesFilter =
+        filter === "All" ||
+        (filter === "Unread"
+          ? !item.readAt
+          : item.type === filter);
+
+      const matchesSearch =
+        !query ||
+        item.title.toLowerCase().includes(query) ||
+        item.message.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query);
+
+      return matchesFilter && matchesSearch;
+    });
+  }, [notifications, search, filter]);
+
+  async function handleMarkRead(id) {
+    try {
+      setActionError("");
+      await markRead(id);
+    } catch (err) {
+      setActionError(
+        err.response?.data?.message ||
+          "Could not mark notification as read.",
+      );
+    }
+  }
+
+  async function handleMarkAllRead() {
+    try {
+      setActionError("");
+      await markAllRead();
+    } catch (err) {
+      setActionError(
+        err.response?.data?.message ||
+          "Could not mark notifications as read.",
+      );
+    }
+  }
+
+  async function openNotification(item) {
+    if (!item.readAt) {
+      await handleMarkRead(item.id);
+    }
+
+    if (item.link === "/bd/brd") {
+      navigate("/bd/brd");
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-cm-text">
+            Notifications
+          </h1>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            Updates about your BRDs and their review status.
+          </p>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            {unreadCount} unread notification
+            {unreadCount === 1 ? "" : "s"}
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={handleMarkAllRead}
+          disabled={unreadCount === 0}
+        >
+          Mark All Read
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((value) => (
+          <Button
+            key={value}
+            size="sm"
+            variant={filter === value ? "primary" : "outline"}
+            onClick={() => setFilter(value)}
+          >
+            {{
+              BRD_ADMIN_APPROVED: "Admin Approved",
+              BRD_ADMIN_REJECTED: "Admin Rejected",
+              BRD_CLIENT_APPROVED: "Client Approved",
+              BRD_CLIENT_REJECTED: "Client Rejected",
+            }[value] || value}
+          </Button>
+        ))}
+      </div>
+
+      <TableSearch
+        value={search}
+        onChange={setSearch}
+        placeholder="Search BRD notifications..."
+      />
+
+      {(error || actionError) && (
+        <div
+          role="alert"
+          className="rounded-cm-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {actionError || error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-6 text-sm text-cm-text-muted">
+          Loading notifications...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-6 text-center text-sm text-cm-text-muted">
+          {notifications.length === 0
+            ? "No notifications yet."
+            : "No notifications match your search or filter."}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filtered.map((item) => (
+            <article
+              key={item.id}
+              className={`rounded-cm-lg border bg-cm-card p-5 shadow-sm ${
+                item.readAt
+                  ? "border-cm-border"
+                  : "border-blue-300"
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => openNotification(item)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-semibold text-cm-text">
+                      {item.title}
+                    </h2>
+                    <Badge tone={item.readAt ? "neutral" : "info"}>
+                      {item.readAt ? "Read" : "Unread"}
+                    </Badge>
+                    <Badge tone="neutral">{item.type}</Badge>
+                  </div>
+
+                  <p className="mt-2 text-sm text-cm-text-muted">
+                    {item.message}
+                  </p>
+                  <p className="mt-2 text-xs text-cm-text-muted">
+                    {formatTime(item.createdAt)}
+                  </p>
+                </button>
+
+                {!item.readAt && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleMarkRead(item.id)}
+                  >
+                    Mark Read
+                  </Button>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default Notifications;
