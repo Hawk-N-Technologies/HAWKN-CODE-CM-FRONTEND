@@ -10,6 +10,7 @@ import {
   KanbanSquare,
   Gauge,
   Bug,
+  Bell,
 } from "lucide-react";
 import { ROLES } from "../constants/roles";
 
@@ -27,6 +28,7 @@ const ICONS = {
   kanban: <KanbanSquare aria-hidden="true" />,
   progress: <Gauge aria-hidden="true" />,
   bugs: <Bug aria-hidden="true" />,
+  notifications: <Bell aria-hidden="true" />,
 };
 
 const PROJECT_LEAD_NAV_SECTIONS = [
@@ -86,6 +88,11 @@ const PROJECT_LEAD_NAV_SECTIONS = [
         path: "/project-lead/progress",
         icon: ICONS.progress,
       },
+      {
+        label: "Notifications",
+        path: "/project-lead/notifications",
+        icon: ICONS.notifications,
+      }
     ],
   },
 ];

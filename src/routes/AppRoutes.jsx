@@ -52,6 +52,7 @@ import ModulesFeatures from "../pages/projectLead/ModulesFeatures";
 import Tasks from "../pages/projectLead/Tasks";
 import KanbanBoard from "../pages/projectLead/KanbanBoard";
 import ProjectProgress from "../pages/projectLead/ProjectProgress";
+import ProjectLeadNotifications from "../pages/projectLead/Notifications";
 
 import { DEVELOPER_NAV_SECTIONS } from "./developerRouteConfig";
 import Dashboard from "../pages/developer/Dashboard";
@@ -305,6 +306,10 @@ function AppRoutes() {
           <Route path="/project-lead/tasks" element={<Tasks />} />
           <Route path="/project-lead/kanban" element={<KanbanBoard />} />
           <Route path="/project-lead/progress" element={<ProjectProgress />} />
+          <Route
+  path="/project-lead/notifications"
+  element={<ProjectLeadNotifications />}
+/>
         </Route>
       </Route>
 
