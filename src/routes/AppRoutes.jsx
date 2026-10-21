@@ -36,6 +36,7 @@ import HRNotifications from "../pages/hr/Notifications";
 
 import BDDashboard from "../pages/bd/Dashboard";
 import BDClient from "../pages/bd/ClilentManagement";
+import BDNotifications from "../pages/bd/Notifications";
 
 import { PROJECT_LEAD_NAV_SECTIONS } from "./projectLeadRouteConfig";
 
@@ -197,6 +198,7 @@ function AppRoutes() {
             <Route path="/bd/dashboard" element={<BDDashboard />} />
             <Route path="/bd/clients" element={<BDClient />} />
             <Route path="/bd/projects" element={<BDProjectManagement />} />
+            <Route path="/bd/notifications" element={<BDNotifications />} />
             <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />
             <Route path="/bd/leave" element={<LeaveRequest />} />
             <Route path="/bd/brd" element={<BRDUpload />} />

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { ROLE_LABEL, ROLES } from "../../constants/roles";
+import { ROLE_LABEL } from "../../constants/roles";
 import { showToast } from "../common/Toast";
 
 /**
@@ -42,14 +42,15 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
     .slice(0, 2)
     .toUpperCase();
 
-  const userRole = user?.role?.name;
+  const userRole = String(
+    user?.role?.name ?? user?.role ?? "",
+  ).toLowerCase();
 
-  const notificationPath =
-    userRole === ROLES.ADMIN
-      ? "/admin/notifications"
-      : userRole === ROLES.HR
-        ? "/hr/notifications"
-        : null;
+  const notificationPath = {
+    admin: "/admin/notifications",
+    hr: "/hr/notifications",
+    bde: "/bd/notifications",
+  }[userRole];
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4 border-b border-cm-border bg-cm-card px-4 sm:px-6">
@@ -108,11 +109,13 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {/* Notifications: Admin and HR */}
+        {/* Notifications */}
         {notificationPath && (
           <button
             type="button"
-            onClick={() => navigate(notificationPath)}
+            onClick={() => {
+              if (notificationPath) navigate(notificationPath);
+            }}
             className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg"
             aria-label={`Notifications${
               notificationCount > 0
