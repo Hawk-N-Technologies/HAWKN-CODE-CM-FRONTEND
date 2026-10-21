@@ -21,6 +21,12 @@ export default defineConfig(({ mode }) => {
           credentials: true,
         },
 
+        "/socket.io": {
+          target: "http://localhost:3000",
+          changeOrigin: true,
+          ws: true,
+        },
+
         "/uploads": {
           target: "http://localhost:3000",
           changeOrigin: true,
