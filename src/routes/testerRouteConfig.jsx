@@ -10,6 +10,7 @@ import {
   GraduationCap,
   CalendarCheck,
   CalendarArrowDownIcon,
+  BadgePlus,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -23,6 +24,7 @@ const I = {
   build: <Hammer aria-hidden="true" />,
   training: <GraduationCap aria-hidden="true" />,
   leave: <CalendarArrowDownIcon aria-hidden="true" />,
+  issues: <BadgePlus aria-hidden="true" />,
 };
 export const TESTER_NAV_SECTIONS = [
   {
@@ -38,6 +40,7 @@ export const TESTER_NAV_SECTIONS = [
       },
       { label: "Testing Queue", path: "/tester/testing-queue", icon: I.queue },
       { label: "Phase Testing", path: "/tester/phase-testing", icon: I.phase },
+      { label: "Issues", path: "/tester/issues", icon: I.issues },
       { label: "Bugs", path: "/tester/bugs", icon: I.bugs },
       { label: "Retesting", path: "/tester/retesting", icon: I.retesting },
       {

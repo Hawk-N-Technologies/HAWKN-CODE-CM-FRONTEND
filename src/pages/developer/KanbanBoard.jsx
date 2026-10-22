@@ -293,14 +293,6 @@ export default function KanbanBoard({ projectUuid: projectUuidProp }) {
       if (!COLUMNS.includes(nextStatus)) return;
 
       // The backend requires a tester UUID when a task enters Testing.
-      const testerUuid =
-        task.testing?.testerId ?? task.testerUuid ?? task.tester_uuid ?? null;
-      if (nextStatus === "Testing" && !testerUuid) {
-        showToast.error(
-          "Assign a tester to this task before moving it to Testing.",
-        );
-        return;
-      }
 
       const previousStatus = task.status;
       setUpdatingIds((current) => new Set(current).add(taskId));
@@ -315,7 +307,6 @@ export default function KanbanBoard({ projectUuid: projectUuidProp }) {
           `/api/kanban/tasks/${encodeURIComponent(taskId)}/status`,
           {
             status: nextStatus,
-            ...(nextStatus === "Testing" ? { testerUuid } : {}),
           },
           { withCredentials: true },
         );

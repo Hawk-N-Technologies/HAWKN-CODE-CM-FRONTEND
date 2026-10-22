@@ -9,6 +9,7 @@ import {
   ListChecks,
   KanbanSquare,
   Gauge,
+  Bug,
 } from "lucide-react";
 import { ROLES } from "../constants/roles";
 
@@ -25,6 +26,7 @@ const ICONS = {
   tasks: <ClipboardList aria-hidden="true" />,
   kanban: <KanbanSquare aria-hidden="true" />,
   progress: <Gauge aria-hidden="true" />,
+  bugs: <Bug aria-hidden="true" />,
 };
 
 const PROJECT_LEAD_NAV_SECTIONS = [
@@ -66,13 +68,14 @@ const PROJECT_LEAD_NAV_SECTIONS = [
         path: "/project-lead/flowchart",
         icon: ICONS.flowchart,
       },
-      { label: "Phases", path: "/project-lead/phases", icon: ICONS.phases },
       {
         label: "Modules / Features",
         path: "/project-lead/modules-features",
         icon: ICONS.modules,
       },
+      { label: "Phases", path: "/project-lead/phases", icon: ICONS.phases },
       { label: "Tasks", path: "/project-lead/tasks", icon: ICONS.tasks },
+      { label: "Bugs", path: "/project-lead/bugs", icon: ICONS.bugs },
       {
         label: "Kanban Board",
         path: "/project-lead/kanban",

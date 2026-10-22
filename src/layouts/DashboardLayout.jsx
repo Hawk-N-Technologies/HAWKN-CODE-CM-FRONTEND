@@ -1,26 +1,16 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import Sidebar from "../components/layout/Sidebar";
 import TopNavbar from "../components/layout/TopNavbar";
+import {
+  NotificationProvider,
+  useNotifications,
+} from "../context/NotificationContext";
 
-/**
- * Shared shell for every internal (non-client) dashboard: fixed sidebar +
- * top navbar + scrollable content area rendering the matched child route.
- *
- * Each role wraps its own routes with this layout and passes its own
- * nav `sections` — the layout itself has no role-specific knowledge.
- * Usage (in routeConfig / AppRoutes once those land):
- *
- *   <Route element={<DashboardLayout sections={adminNavSections} />}>
- *     <Route path="/admin/dashboard" element={<AdminDashboard />} />
- *     ...
- *   </Route>
- *
- * `notificationCount` is passed through to TopNavbar until
- * NotificationContext is wired up.
- */
-function DashboardLayout({ sections = [], notificationCount = 0 }) {
+function DashboardLayoutContent({ sections }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   return (
     <div className="flex h-screen overflow-hidden bg-cm-bg">
@@ -33,7 +23,7 @@ function DashboardLayout({ sections = [], notificationCount = 0 }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopNavbar
           onMenuClick={() => setIsSidebarOpen(true)}
-          notificationCount={notificationCount}
+          notificationCount={unreadCount}
         />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -41,6 +31,20 @@ function DashboardLayout({ sections = [], notificationCount = 0 }) {
         </main>
       </div>
     </div>
+  );
+}
+
+function DashboardLayout({ sections = [] }) {
+  const { role } = useAuth();
+
+  return (
+    <NotificationProvider
+  enabled={["admin", "hr", "bde"].includes(
+    String(role || "").toLowerCase(),
+  )}
+>
+      <DashboardLayoutContent sections={sections} />
+    </NotificationProvider>
   );
 }
 
