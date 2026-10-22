@@ -16,10 +16,10 @@ const DEFAULT_VALUES = {
 
   mission:
     "Our mission is to deliver reliable, scalable, and user-focused technology solutions while maintaining quality, transparency, and long-term relationships with our clients.",
-
-  blog: `
-   
-  `,
+  whatPeopleShouldKnow: `Hello`,
+  whyCustomersShouldCare: `Hello`,
+  companyStory: `Hello`,
+  cultureAndValues: `Hello`,
 };
 
 function CompanyProfile() {
@@ -37,7 +37,10 @@ function CompanyProfile() {
           officialEmail: data.officialEmail,
           vision: data.vision,
           mission: data.mission,
-          blog: data.blogContent,
+          whatPeopleShouldKnow: data.whatPeopleShouldKnow,
+          whyCustomersShouldCare: data.whyCustomersShouldCare,
+          cultureAndValues: data.cultureAndValues,
+          companyStory: data.companyStory,
           uuid: data.uuid,
         });
         console.log(res.data.data);
@@ -60,7 +63,10 @@ function CompanyProfile() {
     defaultValues: DEFAULT_VALUES,
   });
 
-  const blog = watch("blog");
+  const whatPeopleShouldKnow = watch("whatPeopleShouldKnow");
+  const whyCustomersShouldCare = watch("whyCustomersShouldCare");
+  const cultureAndValues = watch("cultureAndValues");
+  const companyStory = watch("companyStory");
 
   const onSubmit = async (values) => {
     setIsSaving(true);
@@ -71,7 +77,10 @@ function CompanyProfile() {
         officialEmail: values.officialEmail,
         vision: values.vision,
         mission: values.mission,
-        blogContent: values.blog,
+        whatPeopleShouldKnow: values.whatPeopleShouldKnow,
+        whyCustomersShouldCare: values.whyCustomersShouldCare,
+        cultureAndValues: values.cultureAndValues,
+        companyStory: values.companyStory,
       };
 
       await axios.put(`/api/company/profile/${values.uuid}`, payload, {
@@ -151,15 +160,51 @@ function CompanyProfile() {
 
         {/* Blog - Everything after Mission */}
         <RichTextEditor
-          label="Blog"
-          value={blog}
+          // label="whatPeopleShouldKnow"
+          value={whatPeopleShouldKnow}
           onChange={(content) =>
-            setValue("blog", content, {
+            setValue("whatPeopleShouldKnow", content, {
               shouldDirty: true,
               shouldValidate: true,
             })
           }
-          error={errors.blog?.message}
+          error={errors.whatPeopleShouldKnow?.message}
+        />
+
+        <RichTextEditor
+          // label="whyCustomersShouldCare"
+          value={whyCustomersShouldCare}
+          onChange={(content) =>
+            setValue("whyCustomersShouldCare", content, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+          error={errors.whyCustomersShouldCare?.message}
+        />
+
+        <RichTextEditor
+          // label="cultureAndValues"
+          value={cultureAndValues}
+          onChange={(content) =>
+            setValue("cultureAndValues", content, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+          error={errors.cultureAndValues?.message}
+        />
+
+        <RichTextEditor
+          // label="companyStory"
+          value={companyStory}
+          onChange={(content) =>
+            setValue("companyStory", content, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+          error={errors.companyStory?.message}
         />
 
         {/* Save */}

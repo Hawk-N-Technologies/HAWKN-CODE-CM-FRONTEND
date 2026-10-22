@@ -6,7 +6,7 @@ import { showToast } from "../../components/common/Toast";
 import axios from "axios";
 
 const DEFAULT_VALUES = {
-  policies: `
+  leavePolicy: `
     <h2>Leave Policy</h2>
     <p>
       Employees are required to follow the company's leave request and
@@ -31,6 +31,10 @@ const DEFAULT_VALUES = {
       confidential data must be handled securely and responsibly.
     </p>
   `,
+
+  attendancePolicy: ``,
+  codeOfConduct: ``,
+  dataSecurityPolicy: ``,
 };
 
 function CompanyPolicies() {
@@ -40,7 +44,10 @@ function CompanyPolicies() {
     defaultValues: DEFAULT_VALUES,
   });
 
-  const policies = watch("policies");
+  const leavePolicy = watch("leavePolicy");
+  const attendancePolicy = watch("attendancePolicy");
+  const codeOfConduct = watch("codeOfConduct");
+  const dataSecurityPolicy = watch("dataSecurityPolicy");
 
   const onSubmit = async (values) => {
     setIsSaving(true);
@@ -49,7 +56,10 @@ function CompanyPolicies() {
       await axios.put(
         `/api/company/policies/${values.uuid}`,
         {
-          content: values.policies,
+          leavePolicy: values.leavePolicy,
+          attendancePolicy: values.attendancePolicy,
+          codeOfConduct: values.codeOfConduct,
+          dataSecurityPolicy: values.dataSecurityPolicy,
         },
         {
           withCredentials: true,
@@ -76,7 +86,10 @@ function CompanyPolicies() {
       console.log("Policy response:", data);
 
       setValue("uuid", data.uuid);
-      setValue("policies", data.content || "");
+      setValue("leavePolicy", data.leavePolicy || "");
+      setValue("attendancePolicy", data.attendancePolicy || "");
+      setValue("codeOfConduct", data.codeOfConduct || "");
+      setValue("dataSecurityPolicy", data.dataSecurityPolicy || "");
     } catch (error) {
       console.error("Get policies failed:", error);
       showToast.error("Couldn't load company policies.");
@@ -112,9 +125,41 @@ function CompanyPolicies() {
 
           <RichTextEditor
             label="Policies"
-            value={policies}
+            value={dataSecurityPolicy}
             onChange={(content) =>
-              setValue("policies", content, {
+              setValue("dataSecurityPolicy", content, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Policies"
+            value={leavePolicy}
+            onChange={(content) =>
+              setValue("leavePolicy", content, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Policies"
+            value={attendancePolicy}
+            onChange={(content) =>
+              setValue("attendancePolicy", content, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+
+          
+          <RichTextEditor
+            label="Policies"
+            value={codeOfConduct}
+            onChange={(content) =>
+              setValue("codeOfConduct", content, {
                 shouldDirty: true,
                 shouldValidate: true,
               })
