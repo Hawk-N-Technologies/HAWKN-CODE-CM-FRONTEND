@@ -11,10 +11,12 @@ const TONES = {
   neutral: "bg-cm-bg text-cm-text-muted",
 };
 
-function Badge({ children, tone = "neutral" }) {
+function Badge({ children, tone = "neutral", variant }) {
+  const resolvedTone = variant ? (variant === "secondary" ? "neutral" : variant) : tone;
+
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TONES[tone]}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-none ${TONES[resolvedTone] ?? TONES.neutral}`}
     >
       {children}
     </span>

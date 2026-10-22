@@ -52,7 +52,7 @@ const Select = forwardRef(function Select(
         className={[
           "h-10 w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text",
           "transition-colors duration-150",
-          "focus:outline-none focus:ring-2 focus:ring-cm-blue-500 focus:border-cm-blue-500",
+          "focus:outline-none focus:ring-2 focus:ring-cm-focus/30 focus:border-cm-focus",
           "disabled:cursor-not-allowed disabled:bg-cm-bg disabled:text-cm-text-muted",
           error ? "border-cm-danger-600" : "border-cm-border",
           className,

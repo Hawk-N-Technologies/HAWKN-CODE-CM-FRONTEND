@@ -10,7 +10,7 @@ import EmptyState from "../common/EmptyState";
  * columns: Array<{ key, header, render?: (row) => ReactNode }>
  * rows:    Array<object> — each needs a stable `id`.
  */
-function DataTable({ columns, rows, isLoading = false, emptyMessage = "No records found." }) {
+function DataTable({ columns = [], rows = [], isLoading = false, emptyMessage = "No records found." }) {
   if (isLoading) {
     return (
       <div className="rounded-cm-lg border border-cm-border bg-cm-card">
@@ -35,6 +35,7 @@ function DataTable({ columns, rows, isLoading = false, emptyMessage = "No record
             {columns.map((column) => (
               <th
                 key={column.key}
+                scope="col"
                 className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-cm-text-muted"
               >
                 {column.header}
@@ -44,7 +45,7 @@ function DataTable({ columns, rows, isLoading = false, emptyMessage = "No record
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-cm-border last:border-0 hover:bg-cm-bg">
+            <tr key={row.id} className="border-b border-cm-border last:border-0 hover:bg-cm-bg focus-within:bg-cm-bg">
               {columns.map((column) => (
                 <td key={column.key} className="whitespace-nowrap px-4 py-3 text-cm-text">
                   {column.render ? column.render(row) : row[column.key]}

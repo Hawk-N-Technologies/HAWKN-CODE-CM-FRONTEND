@@ -33,7 +33,10 @@ function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
         </div>
 
         {/* Nav — the ONLY part that scrolls, with its own scrollbar */}
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+        <nav
+          aria-label="Primary navigation"
+          className="flex-1 space-y-6 overflow-y-auto px-3 py-5"
+        >
           {sections.map((section) => (
             <div key={section.title ?? section.items[0]?.path}>
               {section.title && (
@@ -50,9 +53,9 @@ function Sidebar({ sections = [], isOpen = false, onClose = () => {} }) {
                       className={({ isActive }) =>
                         [
                           "flex items-center gap-3 rounded-cm-md px-3 py-2 text-sm font-medium",
-                          "transition-colors duration-150",
+                          "border border-transparent transition-colors duration-150",
                           isActive
-                            ? "bg-[#000052] text-white"
+                            ? "border-cm-navy-700 bg-cm-navy-800 text-white shadow-cm-sm"
                             : "text-cm-text-inverse/70 hover:bg-white/5 hover:text-white",
                         ].join(" ")
                       }
