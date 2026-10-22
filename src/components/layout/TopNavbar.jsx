@@ -109,7 +109,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {/* Notifications */}
+        {/* Notifications: Admin and HR */}
         {notificationPath && (
           <button
             type="button"
