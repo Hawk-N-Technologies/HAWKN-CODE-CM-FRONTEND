@@ -7,7 +7,7 @@ import { useEditor } from "@tiptap/react";
 import axios from "axios";
 
 const DEFAULT_VALUES = {
-  rolesResponsibilities: `
+  admin: `
     <h2>Admin</h2>
     <p>
       Responsible for overall administration, system management,
@@ -86,6 +86,12 @@ const DEFAULT_VALUES = {
       <li>Verify bug fixes.</li>
     </ul>
   `,
+  hr: ``,
+  bde: ``,
+  developer: ``,
+  tester: ``,
+  projectLead: ``,
+  client: ``,
 };
 
 function RolesResponsibilities() {
@@ -95,16 +101,31 @@ function RolesResponsibilities() {
     defaultValues: DEFAULT_VALUES,
   });
 
-  const rolesResponsibilities = watch("rolesResponsibilities");
+  const admin = watch("admin");
+  const hr = watch("hr");
+  const bde = watch("bde");
+  const developer = watch("developer");
+  const tester = watch("tester");
+  const client = watch("client");
+  const projectLead = watch("projectLead");
 
   const onSubmit = async (values) => {
+    console.log(values);
     setIsSaving(true);
+
+    // return;
 
     try {
       await axios.put(
         `/api/company/roles-responsibilities/${values.uuid}`,
         {
-          content: values.rolesResponsibilities,
+          admin: values.admin,
+          hr: values.hr,
+          bde: values.bde,
+          tester: values.tester,
+          developer: values.developer,
+          client: values.client,
+          projectLead: values.projectLead,
         },
         {
           withCredentials: true,
@@ -134,7 +155,13 @@ function RolesResponsibilities() {
       console.log("Roles & responsibilities response:", data);
 
       setValue("uuid", data.uuid);
-      setValue("rolesResponsibilities", data.content || "");
+      setValue("admin", data.admin || "");
+      setValue("hr", data.hr || "");
+      setValue("bde", data.bde || "");
+      setValue("tester", data.tester || "");
+      setValue("developer", data.developer || "");
+      setValue("client", data.client || "");
+      setValue("projectLead", data.projectLead || "");
     } catch (error) {
       console.error("Failed to get roles & responsibilities:", error);
 
@@ -176,9 +203,63 @@ function RolesResponsibilities() {
 
           <RichTextEditor
             label="Roles & Responsibilities"
-            value={rolesResponsibilities}
+            value={admin}
             onChange={(content) =>
-              setValue("rolesResponsibilities", content, {
+              setValue("admin", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={hr}
+            onChange={(content) =>
+              setValue("hr", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={bde}
+            onChange={(content) =>
+              setValue("bde", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={tester}
+            onChange={(content) =>
+              setValue("tester", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={developer}
+            onChange={(content) =>
+              setValue("developer", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={client}
+            onChange={(content) =>
+              setValue("client", content, {
+                shouldDirty: true,
+              })
+            }
+          />
+          <RichTextEditor
+            label="Roles & Responsibilities"
+            value={projectLead}
+            onChange={(content) =>
+              setValue("projectLead", content, {
                 shouldDirty: true,
               })
             }
