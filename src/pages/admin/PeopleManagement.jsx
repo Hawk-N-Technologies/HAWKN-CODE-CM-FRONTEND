@@ -22,7 +22,14 @@ const EMPTY_FORM = {
   confirmPassword: "",
 
   role: "",
-
+  githubUrl: "",
+  linkedinUrl: "",
+  phone1: "",
+  phone2: "",
+  whatsapp: "",
+  joiningDate: "",
+  dateOfBirth: "",
+  aadhaarLast4: "",
   isActive: true,
 };
 
@@ -454,7 +461,7 @@ function PeopleManagement() {
     const validationErrors = validateForm(form);
 
     setErrors(validationErrors);
-
+    console.log(form);
     if (Object.keys(validationErrors).length > 0) {
       showToast.error("Please fix the validation errors.");
       return;
@@ -471,25 +478,18 @@ function PeopleManagement() {
       showToast.error("Invalid role selected.");
       return;
     }
-
-    /**
-     * Admin only sends user-related fields.
-     *
-     * No:
-     * phone
-     * DOB
-     * joining date
-     * Aadhaar
-     * employment type
-     * employment status
-     * LinkedIn
-     * GitHub
-     */
     const payload = {
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
       email: form.email.trim(),
-
+      githubUrl: form.githubUrl,
+      linkedinUrl: form.linkedinUrl,
+      phone1: form.phone1,
+      phone2: form.phone2,
+      whatsapp: form.whatsapp,
+      dateOfBirth: form.dateOfBirth,
+      joiningDate: form.joiningDate,
+      aadhaarLast4: form.aadhaarLast4,
       roleUuid: form.role,
 
       isActive: form.isActive,
@@ -730,6 +730,71 @@ function PeopleManagement() {
                 value={form.confirmPassword}
                 error={errors.confirmPassword}
                 onChange={handleChange("confirmPassword")}
+              />
+              <Input
+                label="Phone 1"
+                value={form.phone1}
+                error={errors.phone1}
+                onChange={handleChange("phone1")}
+              />
+
+              {/* PHONE 2 */}
+              <Input
+                label="Phone 2"
+                value={form.phone2}
+                error={errors.phone2}
+                onChange={handleChange("phone2")}
+              />
+
+              {/* WHATSAPP */}
+              <Input
+                label="WhatsApp"
+                value={form.whatsapp}
+                error={errors.whatsapp}
+                onChange={handleChange("whatsapp")}
+              />
+
+              {/* JOINING DATE */}
+              <Input
+                label="Date of Joining"
+                type="date"
+                value={form.joiningDate}
+                error={errors.joiningDate}
+                onChange={handleChange("joiningDate")}
+              />
+
+              {/* DOB */}
+              <Input
+                label="Date of Birth"
+                type="date"
+                value={form.dateOfBirth}
+                error={errors.dateOfBirth}
+                onChange={handleChange("dateOfBirth")}
+              />
+
+              {/* LINKEDIN */}
+              <Input
+                label="LinkedIn"
+                value={form.linkedinUrl}
+                error={errors.linkedinUrl}
+                onChange={handleChange("linkedinUrl")}
+              />
+
+              {/* GITHUB */}
+              <Input
+                label="GitHub"
+                value={form.githubUrl}
+                error={errors.githubUrl}
+                onChange={handleChange("githubUrl")}
+              />
+
+              {/* AADHAAR */}
+              <Input
+                label="Aadhaar Last 4"
+                value={form.aadhaarLast4}
+                error={errors.aadhaarLast4}
+                maxLength={4}
+                onChange={handleChange("aadhaarLast4")}
               />
 
               {/* ROLE */}
