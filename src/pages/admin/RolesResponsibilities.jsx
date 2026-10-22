@@ -202,7 +202,7 @@ function RolesResponsibilities() {
           </div>
 
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="ADMIN"
             value={admin}
             onChange={(content) =>
               setValue("admin", content, {
@@ -211,7 +211,7 @@ function RolesResponsibilities() {
             }
           />
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="HR"
             value={hr}
             onChange={(content) =>
               setValue("hr", content, {
@@ -220,7 +220,7 @@ function RolesResponsibilities() {
             }
           />
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="BDE"
             value={bde}
             onChange={(content) =>
               setValue("bde", content, {
@@ -229,7 +229,7 @@ function RolesResponsibilities() {
             }
           />
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="TESTER"
             value={tester}
             onChange={(content) =>
               setValue("tester", content, {
@@ -238,7 +238,7 @@ function RolesResponsibilities() {
             }
           />
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="DEVELOPER"
             value={developer}
             onChange={(content) =>
               setValue("developer", content, {
@@ -247,7 +247,7 @@ function RolesResponsibilities() {
             }
           />
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="CLIENT"
             value={client}
             onChange={(content) =>
               setValue("client", content, {
@@ -256,7 +256,7 @@ function RolesResponsibilities() {
             }
           />
           <RichTextEditor
-            label="Roles & Responsibilities"
+            label="PROJECT LEAD"
             value={projectLead}
             onChange={(content) =>
               setValue("projectLead", content, {
