@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
 import Badge from "../../components/common/Badge";
+import Avatar from "../../components/common/Avatar";
 import Button from "../../components/common/Button";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
@@ -31,7 +32,62 @@ const STATUS_TONE = {
   Inactive: "danger",
 };
 
+const ROLE_TABS = [
+  { key: "all", label: "All members", aliases: [] },
+  { key: "admin", label: "Admins", aliases: ["admin"] },
+  {
+    key: "bde",
+    label: "BDEs",
+    aliases: ["bde", "businessdevelopment", "businessdevelopmentexecutive"],
+  },
+  { key: "hr", label: "HR", aliases: ["hr", "humanresources"] },
+  {
+    key: "projectlead",
+    label: "Project Leads",
+    aliases: ["projectlead", "projectmanager"],
+  },
+  { key: "developer", label: "Developers", aliases: ["developer"] },
+  { key: "tester", label: "Testers", aliases: ["tester", "qa"] },
+  { key: "client", label: "Clients", aliases: ["client"] },
+];
+
+function normalizeRole(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function personMatchesRole(person, tab, rolesMap = {}) {
+  if (tab.key === "all") return true;
+
+  const role = normalizeRole(
+    person.roleName || rolesMap[person.role]?.name,
+  );
+
+  return tab.aliases.some(
+    (alias) => role === alias || role.includes(alias),
+  );
+}
+
 function mapUserFromApi(user) {
+  const roleRecord =
+    user.role && typeof user.role === "object"
+      ? user.role
+      : Array.isArray(user.roles)
+        ? user.roles[0]
+        : null;
+
+  const roleUuid =
+    roleRecord?.uuid ||
+    user.roleUuid ||
+    user.roleId ||
+    (typeof user.role === "string" ? user.role : "");
+
+  const roleName =
+    roleRecord?.name ||
+    user.roleName ||
+    (typeof user.role === "string" && !user.roleUuid ? user.role : "");
+
   return {
     ...user,
 
@@ -48,8 +104,8 @@ function mapUserFromApi(user) {
 
     email: user.email || "",
 
-    role: user.role?.uuid || user.roleUuid || "",
-    roleName: user.role?.name || user.roleName || "",
+    role: roleUuid,
+    roleName,
 
     isActive: user.isActive ?? true,
 
@@ -70,6 +126,7 @@ function PeopleManagement() {
   const [rolesMap, setRolesMap] = useState({});
 
   const [search, setSearch] = useState("");
+  const [activeRole, setActiveRole] = useState("all");
 
   const [selected, setSelected] = useState(null);
 
@@ -82,8 +139,25 @@ function PeopleManagement() {
   const [isPeopleLoading, setIsPeopleLoading] = useState(true);
   const [isRolesLoading, setIsRolesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef(null);
+  const profileRef = useRef(null);
 
   const isInitialLoading = isPeopleLoading || isRolesLoading;
+
+  const roleCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        ROLE_TABS.map((tab) => [
+          tab.key,
+          tab.key === "all"
+            ? people.length
+            : people.filter((person) =>
+                personMatchesRole(person, tab, rolesMap),
+              ).length,
+        ]),
+      ),
+    [people, rolesMap],
+  );
 
   /**
    * -------------------------------------------------------
@@ -177,12 +251,17 @@ function PeopleManagement() {
    */
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
+    const activeTab =
+      ROLE_TABS.find((tab) => tab.key === activeRole) ?? ROLE_TABS[0];
+    const roleFiltered = people.filter((person) =>
+      personMatchesRole(person, activeTab, rolesMap),
+    );
 
     if (!query) {
-      return people;
+      return roleFiltered;
     }
 
-    return people.filter((person) => {
+    return roleFiltered.filter((person) => {
       return (
         person.name?.toLowerCase().includes(query) ||
         person.firstName?.toLowerCase().includes(query) ||
@@ -191,7 +270,19 @@ function PeopleManagement() {
         person.roleName?.toLowerCase().includes(query)
       );
     });
-  }, [people, search]);
+  }, [activeRole, people, rolesMap, search]);
+
+  useEffect(() => {
+    const target = isFormOpen
+      ? formRef.current
+      : selected
+        ? profileRef.current
+        : null;
+
+    if (target) {
+      target.scrollIntoView({ block: "start" });
+    }
+  }, [isFormOpen, selected]);
 
   /**
    * -------------------------------------------------------
@@ -560,10 +651,13 @@ function PeopleManagement() {
       key: "name",
       header: "User",
       render: (row) => (
-        <div>
-          <p className="font-medium text-cm-text">{row.name}</p>
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={row.name} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate font-medium text-cm-text">{row.name}</p>
 
-          <p className="text-xs text-cm-text-muted">{row.email}</p>
+            <p className="truncate text-xs text-cm-text-muted">{row.email}</p>
+          </div>
         </div>
       ),
     },
@@ -633,7 +727,7 @@ function PeopleManagement() {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cm-border border-t-cm-primary" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
 
           <p className="text-sm text-cm-text-muted">Loading people...</p>
         </div>
@@ -647,36 +741,97 @@ function PeopleManagement() {
    * -------------------------------------------------------
    */
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
       {/* HEADER */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-col gap-4 border-b border-cm-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-cm-text">People Management</h1>
+          <p className="text-xs font-semibold uppercase tracking-wide text-cm-blue-700">
+            Company administration
+          </p>
 
-          <p className="mt-1 text-sm text-cm-text-muted">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-cm-text">
+            People Management
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
             Manage company users, roles and account access.
           </p>
         </div>
 
-        <Button onClick={openAdd} disabled={isSubmitting || isRolesLoading}>
+        <Button
+          onClick={openAdd}
+          disabled={isSubmitting || isRolesLoading}
+          className="w-full sm:w-auto"
+        >
           {isRolesLoading ? "Loading roles..." : "Add User"}
         </Button>
-      </div>
+      </header>
+
+      <section aria-label="Filter people by role" className="rounded-cm-lg border border-cm-border bg-cm-card p-2 shadow-cm-sm sm:p-3">
+        <div
+          role="tablist"
+          aria-label="People sections"
+          className="flex gap-2 overflow-x-auto pb-1"
+        >
+          {ROLE_TABS.map((tab) => {
+            const isActive = activeRole === tab.key;
+
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls="people-list-panel"
+                onClick={() => setActiveRole(tab.key)}
+                className={[
+                  "flex min-w-max items-center gap-2 rounded-cm-md border px-4 py-3 text-sm font-semibold transition-colors",
+                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus",
+                  isActive
+                    ? "border-cm-navy-950 bg-cm-navy-950 text-white shadow-cm-sm"
+                    : "border-transparent text-cm-text-muted hover:border-cm-border hover:bg-cm-bg hover:text-cm-text",
+                ].join(" ")}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={[
+                    "rounded-full px-2 py-0.5 text-xs",
+                    isActive
+                      ? "bg-white/15 text-white"
+                      : "bg-cm-bg text-cm-text-muted",
+                  ].join(" ")}
+                >
+                  {roleCounts[tab.key]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* FORM */}
       {isFormOpen && (
         <form
+          ref={formRef}
+          id="people-user-form"
           onSubmit={save}
-          className="flex flex-col gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm"
+          className="flex flex-col gap-5 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-cm-md sm:p-6"
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-cm-text">
-              {form.id ? "Edit User" : "Add User"}
-            </h2>
+          <div className="flex flex-col gap-1 border-b border-cm-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-cm-text">
+                {form.id ? "Edit User" : "Add User"}
+              </h2>
+              <p className="mt-1 text-sm text-cm-text-muted">
+                {form.id
+                  ? "Update account details, role and access status."
+                  : "Create a user account and assign its initial role."}
+              </p>
+            </div>
 
             {isSubmitting && (
               <div className="flex items-center gap-2 text-xs text-cm-text-muted">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-cm-border border-t-cm-primary" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
                 Saving...
               </div>
             )}
@@ -794,14 +949,18 @@ function PeopleManagement() {
 
       {/* PROFILE */}
       {selected && (
-        <section className="rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm">
+        <section
+          ref={profileRef}
+          aria-labelledby="selected-person-heading"
+          className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-cm-sm sm:p-6"
+        >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs text-cm-text-muted">
                 User ID: {selected.id}
               </p>
 
-              <h2 className="mt-1 text-lg font-semibold text-cm-text">
+              <h2 id="selected-person-heading" className="mt-1 text-lg font-semibold text-cm-text">
                 {selected.name}
               </h2>
 
@@ -834,7 +993,7 @@ function PeopleManagement() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-lg border border-cm-border p-4"
+                className="rounded-cm-md border border-cm-border bg-cm-bg/40 p-4"
               >
                 <p className="text-xs text-cm-text-muted">{label}</p>
 
@@ -848,17 +1007,35 @@ function PeopleManagement() {
       )}
 
       {/* SEARCH + TABLE */}
-      <div className="flex flex-col gap-4">
-        <TableSearch
-          value={search}
-          onChange={setSearch}
-          placeholder="Search users, email, role..."
-        />
+      <section
+        id="people-list-panel"
+        role="tabpanel"
+        aria-labelledby="people-list-heading"
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="people-list-heading" className="text-base font-semibold text-cm-text">
+              All users
+            </h2>
+            <p className="mt-1 text-sm text-cm-text-muted">
+              {search
+                ? `${filtered.length} matching ${filtered.length === 1 ? "user" : "users"}`
+                : `${people.length} ${people.length === 1 ? "user" : "users"} in this company`}
+            </p>
+          </div>
+
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search users, email, role..."
+          />
+        </div>
 
         {isPeopleLoading ? (
           <div className="flex min-h-[250px] items-center justify-center rounded-cm-lg border border-cm-border bg-cm-card">
             <div className="flex flex-col items-center gap-3">
-              <div className="h-7 w-7 animate-spin rounded-full border-2 border-cm-border border-t-cm-primary" />
+              <div className="h-7 w-7 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
 
               <p className="text-sm text-cm-text-muted">Loading people...</p>
             </div>
@@ -872,7 +1049,7 @@ function PeopleManagement() {
             }
           />
         )}
-      </div>
+      </section>
     </div>
   );
 }
