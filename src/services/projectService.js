@@ -13,8 +13,30 @@ export async function getProjectOptions() {
   return res.data.data;
 }
 
-export async function getProjects() {
-  const res = await axios.get(BASE, config);
+/**
+ * Fetch projects with optional query parameters.
+ * Example: /api/admin/projects?page=1&limit=10&search=test
+ */
+export async function getProjects({
+  page = 1,
+  limit = 10,
+  search = "",
+  status = "",
+  sortBy = "createdAt",
+  sortOrder = "desc",
+} = {}) {
+  const res = await axios.get(BASE, {
+    ...config,
+    params: {
+      page,
+      limit,
+      ...(search && { search }),
+      ...(status && { status }),
+      sortBy,
+      sortOrder,
+    },
+  });
+
   return res.data.data;
 }
 

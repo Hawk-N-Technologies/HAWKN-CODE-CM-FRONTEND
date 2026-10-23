@@ -1,110 +1,296 @@
+import {
+  Activity,
+  ArrowUpRight,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  FolderKanban,
+  Inbox,
+  Users,
+  UsersRound,
+} from "lucide-react";
+
 import StatCard from "../../components/cards/StatCard";
+import Badge from "../../components/common/Badge";
+import Loader from "../../components/common/Loader";
 import { MOCK_EMPLOYEES } from "../../data/employees";
 
-/**
- * Admin overview dashboard.
- *
- * Total Employees is real (src/data/employees.js). The rest are still
- * static placeholders — src/data/clients.js and projects.js are still
- * empty stubs (Client Management / Project Management haven't been
- * built yet, and belong to BD/Project Lead, not Admin). Swap those
- * once those modules land; nothing else on this page should need to
- * change.
- */
 const ICONS = {
-  employees: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="9" cy="8" r="3" />
-      <path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6M16 11a3 3 0 1 0 0-6M17 21c0-2.2-.9-4-2.3-5.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  projects: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4M9 3v4H5M9 3l12 12" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  clients: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M20 21v-2a4 4 0 0 0-3-3.87M4 21v-2a4 4 0 0 1 3-3.87" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  ),
-  approvals: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  deadline: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
+  employees: <Users size={21} strokeWidth={1.8} />,
+  projects: <FolderKanban size={21} strokeWidth={1.8} />,
+  clients: <UsersRound size={21} strokeWidth={1.8} />,
+  approvals: <ClipboardCheck size={21} strokeWidth={1.8} />,
+  deadline: <Clock3 size={21} strokeWidth={1.8} />,
 };
 
-const kpis = [
-  { label: "Total Employees", value: String(MOCK_EMPLOYEES.length), icon: ICONS.employees, accent: "blue" },
-  { label: "Active Projects", value: "0", icon: ICONS.projects, accent: "success" },
-  { label: "Active Clients", value: "0", icon: ICONS.clients, accent: "purple" },
-  { label: "Pending Approvals", value: "0", icon: ICONS.approvals, accent: "warning" },
-  { label: "Projects Near Deadline", value: "0", icon: ICONS.deadline, accent: "warning" },
+const KPI_CARDS = [
+  {
+    label: "Total Employees",
+    value: String(MOCK_EMPLOYEES.length),
+    icon: ICONS.employees,
+    accent: "blue",
+  },
+  {
+    label: "Active Projects",
+    value: "0",
+    icon: ICONS.projects,
+    accent: "success",
+  },
+  {
+    label: "Active Clients",
+    value: "0",
+    icon: ICONS.clients,
+    accent: "purple",
+  },
+  {
+    label: "Pending Approvals",
+    value: "0",
+    icon: ICONS.approvals,
+    accent: "warning",
+  },
+  {
+    label: "Projects Near Deadline",
+    value: "0",
+    icon: ICONS.deadline,
+    accent: "warning",
+  },
 ];
 
+// Replace these with API data when the modules are available.
 const pendingApprovals = [];
 const activityFeed = [];
 
+function SectionHeader({ icon: Icon, title, description, action }) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-bg text-cm-text">
+          <Icon size={19} strokeWidth={1.8} />
+        </div>
+
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-cm-text">{title}</h2>
+          <p className="mt-1 text-xs leading-5 text-cm-text-muted">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      {action}
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, title, description }) {
+  return (
+    <div className="mt-5 flex min-h-[175px] flex-col items-center justify-center rounded-xl border border-dashed border-cm-border bg-cm-bg/50 px-5 py-7 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cm-border bg-cm-card text-cm-text-muted shadow-sm">
+        <Icon size={22} strokeWidth={1.7} />
+      </div>
+
+      <p className="mt-3 text-sm font-semibold text-cm-text">{title}</p>
+
+      <p className="mt-1 max-w-xs text-xs leading-5 text-cm-text-muted">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function Dashboard() {
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">Welcome back, Admin</h1>
-        <p className="mt-1 text-sm text-cm-text-muted">
-          Here's what's happening across the company today.
-        </p>
-      </div>
+    <div className="flex min-w-0 flex-col gap-7">
+      {/* Welcome header */}
+      <section className="relative isolate overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
+        <div className="relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-cm-blue-600" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-cm-text-muted">
+                Admin workspace
+              </span>
+            </div>
+
+            <h1 className="text-2xl font-bold tracking-tight text-cm-text sm:text-3xl">
+              Welcome back, Admin
+            </h1>
+
+            <p className="mt-2 max-w-xl text-sm leading-6 text-cm-text-muted">
+              Your company at a glance. Review team metrics, track approvals,
+              and stay on top of workspace activity.
+            </p>
+          </div>
+
+          <div className="flex w-full shrink-0 items-center gap-3 rounded-xl border border-cm-border bg-cm-bg p-4 sm:w-auto sm:min-w-[190px]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-card text-cm-text shadow-sm">
+              <Users size={21} strokeWidth={1.8} />
+            </div>
+
+            <div>
+              <p className="text-2xl font-bold leading-7 tracking-tight text-cm-text">
+                {MOCK_EMPLOYEES.length}
+              </p>
+              <p className="mt-1 text-xs text-cm-text-muted">Team members</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Subtle decorative rings */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 -z-0 h-64 w-64 rounded-full border border-cm-border/70"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-4 -top-12 -z-0 h-40 w-40 rounded-full border border-cm-border/70"
+        />
+      </section>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {kpis.map((kpi) => (
-          <StatCard key={kpi.label} {...kpi} />
-        ))}
-      </div>
-
-      {/* Overview panels */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-cm-text">Pending BRD Approvals</h2>
-          {pendingApprovals.length === 0 ? (
-            <p className="mt-4 text-sm text-cm-text-muted">
-              Nothing waiting on your approval right now.
+      <section>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-cm-text">
+              Company overview
+            </h2>
+            <p className="mt-1 text-xs text-cm-text-muted">
+              Key metrics across your organization
             </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {pendingApprovals.map((item) => (
-                <li key={item.id} className="flex items-center justify-between text-sm">
-                  <span className="text-cm-text">{item.name}</span>
-                  <span className="text-cm-text-muted">{item.date}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          </div>
 
-        <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-cm-text">Recent Activity</h2>
-          {activityFeed.length === 0 ? (
-            <p className="mt-4 text-sm text-cm-text-muted">No recent activity to show yet.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {activityFeed.map((item) => (
-                <li key={item.id} className="text-sm text-cm-text">
-                  {item.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+          <div className="inline-flex items-center gap-1.5 text-xs text-cm-text-muted">
+            <Activity size={14} />
+            Current totals
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+          {KPI_CARDS.map((kpi) => (
+            <StatCard key={kpi.label} {...kpi} />
+          ))}
+        </div>
+      </section>
+
+      {/* Workspace activity */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-base font-semibold tracking-tight text-cm-text">
+            Workspace activity
+          </h2>
+          <p className="mt-1 text-xs text-cm-text-muted">
+            Approvals and updates that may need your attention
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          {/* Pending approvals */}
+          <section className="min-w-0 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-6">
+            <SectionHeader
+              icon={ClipboardCheck}
+              title="Pending BRD Approvals"
+              description="Business requirement documents awaiting review"
+              action={
+                <Badge tone={pendingApprovals.length ? "warning" : "neutral"}>
+                  {pendingApprovals.length} pending
+                </Badge>
+              }
+            />
+
+            {pendingApprovals.length === 0 ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title="You're all caught up"
+                description="There are no BRD approvals waiting for your review."
+              />
+            ) : (
+              <ul className="mt-5 divide-y divide-cm-border">
+                {pendingApprovals.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-cm-text">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 text-xs text-cm-text-muted">
+                        Submitted {item.date}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={item.onReview}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-xs font-semibold text-cm-text transition-colors hover:bg-cm-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cm-blue-600"
+                    >
+                      Review
+                      <ArrowUpRight size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Recent activity */}
+          <section className="min-w-0 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-6">
+            <SectionHeader
+              icon={Activity}
+              title="Recent Activity"
+              description="The latest updates from your workspace"
+              action={
+                <Badge tone="neutral" showIcon>
+                  Latest updates
+                </Badge>
+              }
+            />
+
+            {activityFeed.length === 0 ? (
+              <EmptyState
+                icon={Inbox}
+                title="No activity yet"
+                description="Recent company updates and user actions will appear here when activity tracking is connected."
+              />
+            ) : (
+              <ul className="mt-5 divide-y divide-cm-border">
+                {activityFeed.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex gap-3 py-4 first:pt-0 last:pb-0"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-bg text-cm-text-muted">
+                      <CalendarClock size={17} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-sm leading-5 text-cm-text">
+                        {item.message}
+                      </p>
+
+                      {item.date && (
+                        <p className="mt-1 text-xs text-cm-text-muted">
+                          {item.date}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </section>
+
+      {/* Informational footer */}
+      <footer className="flex items-start gap-2 border-t border-cm-border pt-4 text-xs leading-5 text-cm-text-muted">
+        <CalendarClock size={15} className="mt-0.5 shrink-0" />
+        <p>
+          Dashboard metrics reflect the data currently connected to each module.
+          Project, client, approval, and activity data will appear here when
+          those integrations are available.
+        </p>
+      </footer>
     </div>
   );
 }
