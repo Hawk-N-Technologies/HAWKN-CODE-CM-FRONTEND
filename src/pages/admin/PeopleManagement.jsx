@@ -235,18 +235,7 @@ function PeopleManagement() {
   const apiRole = useMemo(() => {
     if (activeRole === "all") return "";
 
-    const tab = ROLE_TABS.find((item) => item.key === activeRole);
-    if (!tab) return "";
-
-    const matchingRole = roles.find((item) => {
-      const normalizedName = normalizeRole(item.name);
-      return tab.aliases.some(
-        (alias) => normalizedName === alias || normalizedName.includes(alias),
-      );
-    });
-
-    // The API expects Role.name, not the UI tab key or role UUID.
-    return matchingRole?.name || "";
+    return roles.find((role) => role.uuid === activeRole)?.name || "";
   }, [activeRole, roles]);
 
   const getPeople = useCallback(async () => {
@@ -713,6 +702,18 @@ function PeopleManagement() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isFormOpen, isSubmitting]);
 
+  const roleOptions = useMemo(
+    () => [
+      { value: "all", label: "All roles" },
+      ...roles
+        .filter((role) => normalizeRole(role.name) !== "client")
+        .map((role) => ({
+          value: role.uuid,
+          label: role.name,
+        })),
+    ],
+    [roles],
+  );
   /**
    * -------------------------------------------------------
    * SAVE USER
@@ -966,44 +967,6 @@ function PeopleManagement() {
           {isRolesLoading ? "Loading roles..." : "Add Employee"}
         </Button>
       </header>
-
-      <section
-        aria-label="Filter people by role"
-        className="rounded-cm-lg border border-cm-border bg-cm-card p-2 shadow-cm-sm sm:p-3"
-      >
-        <div
-          role="tablist"
-          aria-label="People sections"
-          className="flex gap-2 overflow-x-auto pb-1"
-        >
-          {ROLE_TABS.map((tab) => {
-            const isActive = activeRole === tab.key;
-
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-controls="people-list-panel"
-                onClick={() => {
-                  setActiveRole(tab.key);
-                  setPage(1);
-                }}
-                className={[
-                  "flex min-w-max items-center gap-2 rounded-cm-md border px-4 py-3 text-sm font-semibold transition-colors",
-                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus",
-                  isActive
-                    ? "border-cm-navy-950 bg-cm-navy-950 text-white shadow-cm-sm"
-                    : "border-transparent text-cm-text-muted hover:border-cm-border hover:bg-cm-bg hover:text-cm-text",
-                ].join(" ")}
-              >
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
 
       {/* CREATE / EDIT MODAL */}
       {isFormOpen && (
@@ -1344,47 +1307,61 @@ function PeopleManagement() {
         aria-labelledby="people-list-heading"
         className="flex flex-col gap-4"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2
               id="people-list-heading"
-              className="text-base font-semibold text-cm-text"
+              className="text-lg font-bold tracking-tight text-cm-text"
             >
-              All users
+              People
             </h2>
+
             <p className="mt-1 text-sm text-cm-text-muted">
-              {search
-                ? `${pagination.total} matching ${pagination.total === 1 ? "user" : "users"}`
-                : `${pagination.total} ${pagination.total === 1 ? "user" : "users"} in this company`}
+              {pagination.total} {pagination.total === 1 ? "member" : "members"}{" "}
+              in your company
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <select
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:items-end">
+            <Select
+              name="roleFilter"
+              label="Role"
+              value={activeRole}
+              onChange={(event) => {
+                setActiveRole(event.target.value);
+                setPage(1);
+              }}
+              placeholder="All roles"
+              options={roleOptions}
+              containerClassName="w-full sm:w-44"
+            />
+
+            <Select
+              name="statusFilter"
+              label="Employment status"
               value={status}
               onChange={(event) => {
                 setStatus(event.target.value);
                 setPage(1);
               }}
-              aria-label="Filter by employment status"
-              className="rounded-cm-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
-            >
-              <option value="">All employment statuses</option>
-              {EMPLOYMENT_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-
-            <TableSearch
-              value={search}
-              onChange={(value) => {
-                setSearch(value);
-                setPage(1);
-              }}
-              placeholder="Search users, email, role..."
+              placeholder="All statuses"
+              options={EMPLOYMENT_STATUSES.map((value) => ({
+                value,
+                label: value,
+              }))}
+              containerClassName="w-full sm:w-48"
             />
+
+            <div className="w-full lg:w-64">
+              <TableSearch
+                value={search}
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+                placeholder="Search people..."
+              />
+            </div>
           </div>
         </div>
 

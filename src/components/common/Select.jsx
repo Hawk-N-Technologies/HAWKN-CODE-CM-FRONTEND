@@ -1,7 +1,9 @@
 import { forwardRef, useId } from "react";
+import { ChevronDown, AlertCircle } from "lucide-react";
 
 /**
- * Reusable Select
+ * Premium reusable Select
+ *
  * options: Array<{ value, label }>
  * groups: Array<{ label, options: Array<{ value, label }> }>
  */
@@ -12,7 +14,7 @@ const Select = forwardRef(function Select(
     name,
     options = [],
     groups = [],
-    placeholder = "Select…",
+    placeholder = "Select an option",
     error,
     helperText,
     required = false,
@@ -28,62 +30,115 @@ const Select = forwardRef(function Select(
   const errorId = `${selectId}-error`;
   const helperId = `${selectId}-helper`;
 
+  const describedBy = error ? errorId : helperText ? helperId : undefined;
+
   return (
-    <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
+    <div className={`flex min-w-0 flex-col gap-2 ${containerClassName}`}>
+      {/* Label */}
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-cm-text">
+        <label
+          htmlFor={selectId}
+          className="flex items-center gap-1 text-[13px] font-semibold tracking-[0.01em] text-cm-text"
+        >
           {label}
+
           {required && (
-            <span className="ml-0.5 text-cm-danger-600" aria-hidden="true">
+            <span className="text-cm-danger-600" aria-label="required">
               *
             </span>
           )}
         </label>
       )}
 
-      <select
-        ref={ref}
-        id={selectId}
-        name={name}
-        disabled={disabled}
-        required={required}
-        aria-invalid={Boolean(error) || undefined}
-        aria-describedby={error ? errorId : helperText ? helperId : undefined}
-        className={[
-          "h-10 w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text",
-          "transition-colors duration-150",
-          "focus:outline-none focus:ring-2 focus:ring-cm-focus/30 focus:border-cm-focus",
-          "disabled:cursor-not-allowed disabled:bg-cm-bg disabled:text-cm-text-muted",
-          error ? "border-cm-danger-600" : "border-cm-border",
-          className,
-        ].join(" ")}
-        {...rest}
-      >
-        <option value="">{placeholder}</option>
+      {/* Select field */}
+      <div className="group relative">
+        <select
+          ref={ref}
+          id={selectId}
+          name={name}
+          disabled={disabled}
+          required={required}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={describedBy}
+          className={[
+            // Layout
+            "h-11 w-full appearance-none rounded-xl border",
+            "pl-3.5 pr-10 text-sm font-medium",
 
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+            // Surface
+            "bg-white text-cm-text",
+            "shadow-sm shadow-black/[0.02]",
 
-        {groups.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+            // Interaction
+            "transition-all duration-200 ease-out",
+            "hover:border-cm-focus/50",
+            "focus:border-cm-focus",
+            "focus:outline-none focus:ring-4 focus:ring-cm-focus/10",
 
+            // Disabled
+            "disabled:cursor-not-allowed disabled:border-cm-border",
+            "disabled:bg-cm-bg disabled:text-cm-text-muted",
+            "disabled:shadow-none",
+
+            // Validation
+            error
+              ? "border-cm-danger-600 bg-red-50/30 focus:border-cm-danger-600 focus:ring-cm-danger-600/10"
+              : "border-cm-border",
+
+            className,
+          ].join(" ")}
+          {...rest}
+        >
+          <option value="">{placeholder}</option>
+
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+
+          {groups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+
+        {/* Custom dropdown icon */}
+        <div
+          aria-hidden="true"
+          className={[
+            "pointer-events-none absolute right-3.5 top-1/2",
+            "-translate-y-1/2 transition-colors duration-200",
+            error
+              ? "text-cm-danger-600"
+              : "text-cm-text-muted group-focus-within:text-cm-focus",
+          ].join(" ")}
+        >
+          <ChevronDown size={17} strokeWidth={2} />
+        </div>
+      </div>
+
+      {/* Helper / error message */}
       {error ? (
-        <p id={errorId} className="text-sm text-cm-danger-600">
-          {error}
+        <p
+          id={errorId}
+          role="alert"
+          className="flex items-start gap-1.5 text-xs font-medium text-cm-danger-600"
+        >
+          <AlertCircle
+            size={14}
+            className="mt-0.5 shrink-0"
+            aria-hidden="true"
+          />
+          <span>{error}</span>
         </p>
       ) : helperText ? (
-        <p id={helperId} className="text-sm text-cm-text-muted">
+        <p id={helperId} className="text-xs leading-relaxed text-cm-text-muted">
           {helperText}
         </p>
       ) : null}
