@@ -1,14 +1,15 @@
+/* global process */
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-
+  // Local development uses the staging backend on port 3000 when no
+  // environment override is provided. Deployments can still override this
+  // through VITE_BACKEND_URL or BACKEND_URL without changing the app code.
   const backendUrl =
-    mode === "development"
-      ? "http://localhost:3000"
-      : "https://clientportalapi.hawkntechnologies.com";
+    env.VITE_BACKEND_URL || env.BACKEND_URL || "http://localhost:3000";
 
   return {
     plugins: [react(), tailwindcss()],
@@ -16,7 +17,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/api": {
-          target: "http://localhost:3000",
+          target: backendUrl,
           changeOrigin: true,
           credentials: true,
         },
@@ -28,26 +29,11 @@ export default defineConfig(({ mode }) => {
         },
 
         "/uploads": {
-          target: "http://localhost:3000",
+          target: backendUrl,
           changeOrigin: true,
           credentials: true,
         },
       },
     },
-    // server: {
-    //   proxy: {
-    //     "/api": {
-    //       target: "https://clientportalapi.hawkntechnologies.com",
-    //       changeOrigin: true,
-    //       credentials: true,
-    //     },
-
-    //     "/uploads": {
-    //       target: "https://clientportalapi.hawkntechnologies.com",
-    //       changeOrigin: true,
-    //       credentials: true,
-    //     },
-    //   },
-    // },
   };
 });

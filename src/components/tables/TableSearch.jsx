@@ -5,7 +5,7 @@
 function TableSearch({ value, onChange, placeholder = "Search…" }) {
   return (
     <div className="w-full max-w-xs">
-      <label className="mb-1.5 block text-sm font-medium text-transparent">
+      <label className="sr-only">
         Search
       </label>
 
@@ -38,7 +38,7 @@ function TableSearch({ value, onChange, placeholder = "Search…" }) {
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           aria-label="Search table"
-          className="h-10 w-full rounded-cm-md border border-cm-border bg-white pl-9 pr-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-blue-500 focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
+          className="h-10 w-full rounded-cm-md border border-cm-border bg-white pl-9 pr-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30"
         />
       </div>
     </div>

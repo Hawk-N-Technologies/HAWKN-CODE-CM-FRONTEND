@@ -41,7 +41,7 @@ const Input = forwardRef(function Input(
     "w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text",
     "placeholder:text-cm-text-muted",
     "transition-colors duration-150",
-    "focus:outline-none focus:ring-2 focus:ring-cm-blue-500 focus:border-cm-blue-500",
+    "focus:outline-none focus:ring-2 focus:ring-cm-focus/30 focus:border-cm-focus",
     "disabled:cursor-not-allowed disabled:bg-cm-bg disabled:text-cm-text-muted",
     "read-only:bg-cm-bg",
     error ? "border-cm-danger-600" : "border-cm-border",
@@ -103,9 +103,9 @@ const Input = forwardRef(function Input(
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-cm-text-muted hover:text-cm-text"
             aria-label={showPassword ? "Hide password" : "Show password"}
-            tabIndex={-1}
+            tabIndex={0}
+            className="absolute inset-y-0 right-0 flex items-center rounded-r-cm-md px-3 text-cm-text-muted hover:text-cm-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cm-focus"
           >
             {showPassword ? (
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

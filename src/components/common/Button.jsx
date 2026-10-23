@@ -12,19 +12,19 @@ import { forwardRef } from "react";
 
 const VARIANT_CLASSES = {
   primary:
-    "bg-[#000052] text-[#FFFFFF] hover:bg-[#00003D] focus-visible:outline-[#000052] disabled:bg-[#000052]/50",
+    "bg-cm-navy-950 text-white hover:bg-cm-navy-900 focus-visible:outline-cm-focus disabled:bg-cm-navy-950/50",
 
   secondary:
-    "bg-[#F1F4FF] text-[#000052] hover:bg-[#E5E9FF] focus-visible:outline-[#000052] disabled:bg-[#F1F4FF]/50",
+    "bg-cm-blue-50 text-cm-navy-950 hover:bg-cm-blue-100 focus-visible:outline-cm-focus disabled:bg-cm-blue-50/50",
 
   outline:
-    "border border-[#D9DDEB] bg-white text-[#000052] hover:bg-[#F7F8FC] hover:border-[#000052]/30 focus-visible:outline-[#000052] disabled:text-[#98A2B3]",
+    "border border-cm-border bg-white text-cm-navy-950 hover:bg-cm-bg hover:border-cm-navy-700/30 focus-visible:outline-cm-focus disabled:text-cm-text-muted",
 
   ghost:
-    "bg-transparent text-[#000052] hover:bg-[#F1F4FF] focus-visible:outline-[#000052] disabled:text-[#98A2B3]",
+    "bg-transparent text-cm-navy-950 hover:bg-cm-blue-50 focus-visible:outline-cm-focus disabled:text-cm-text-muted",
 
   danger:
-    "bg-[#DC2626] text-white hover:bg-[#B91C1C] focus-visible:outline-[#DC2626] disabled:bg-[#DC2626]/50",
+    "bg-cm-danger-600 text-white hover:bg-red-700 focus-visible:outline-cm-danger-600 disabled:bg-cm-danger-600/50",
 };
 
 const SIZE_CLASSES = {
@@ -87,7 +87,7 @@ const Button = forwardRef(function Button(
       disabled={isDisabled}
       aria-busy={loading || undefined}
       className={[
-        "inline-flex items-center justify-center rounded-cm-md font-semibold",
+        "inline-flex items-center justify-center rounded-cm-md font-semibold shadow-cm-sm",
         "transition-colors duration-150",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
         "disabled:cursor-not-allowed",
