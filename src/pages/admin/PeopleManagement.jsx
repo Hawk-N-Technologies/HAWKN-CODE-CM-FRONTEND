@@ -116,7 +116,8 @@ function mapUserFromApi(user) {
     whatsapp: user.employee?.whatsapp || "",
     joiningDate: user.employee?.joiningDate || "",
     dateOfBirth: user.employee?.dateOfBirth || user.employee?.dateOfBirth || "",
-    linkendinUrl: user.employee?.linkedinUrl || user.employee?.linkendinUrl || "",
+    linkendinUrl:
+      user.employee?.linkedinUrl || user.employee?.linkendinUrl || "",
     githubUrl: user.employee?.githubUrl || user.employee?.githubUrl || "",
     aadhaarLast4:
       user.employee?.aadhaarLast4 || user.employee?.aadhaarLast4 || "",
@@ -415,7 +416,9 @@ function PeopleManagement() {
       case "linkendinUrl":
         if (!formValue) return "";
 
-        if (!/^https?:\/\/(www\.)?linkendinUrl\.com\/.+$/i.test(formValue.trim())) {
+        if (
+          !/^https?:\/\/(www\.)?linkendinUrl\.com\/.+$/i.test(formValue.trim())
+        ) {
           return "Enter a valid linkendinUrl URL.";
         }
 
@@ -424,7 +427,9 @@ function PeopleManagement() {
       case "githubUrl":
         if (!formValue) return "";
 
-        if (!/^https?:\/\/(www\.)?githubUrl\.com\/.+$/i.test(formValue.trim())) {
+        if (
+          !/^https?:\/\/(www\.)?githubUrl\.com\/.+$/i.test(formValue.trim())
+        ) {
           return "Enter a valid githubUrl URL.";
         }
 
@@ -736,22 +741,10 @@ function PeopleManagement() {
     try {
       let res;
       console.log(form.uuid);
-      if (form.employeeId) {
-        res = await axios.put(
-          `/api/employees/${form.employeeId}`,
-          employeePayload,
-          {
-            withCredentials: true,
-          },
-        );
-
-        showToast.success(
-          res.data?.message || "Employee updated successfully.",
-        );
-      } else if (form.uuid && form.id) {
+      if (form.uuid && form.id) {
         res = await axios.put(
           `/api/employees/people/${form.uuid}`,
-          userPayload,
+          employeePayload,
           {
             withCredentials: true,
           },
@@ -759,13 +752,11 @@ function PeopleManagement() {
 
         showToast.success(res.data?.message || "User updated successfully.");
       } else {
-        res = await axios.post("/api/employees", employeePayload, {
+        res = await axios.post("/api/employees/create", employeePayload, {
           withCredentials: true,
         });
 
-        showToast.success(
-          res.data?.message || "Employee created successfully.",
-        );
+        showToast.success(res.data?.message || "User created successfully.");
       }
 
       await getPeople();
