@@ -16,7 +16,7 @@ function Loader({ context = "section", label = "Loading…" }) {
 
   return (
     <div className={wrapperClass} role="status" aria-live="polite">
-      <svg className={`${dim} animate-spin text-cm-blue-600`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg className={`${dim} animate-spin text-cm-blue-600 motion-reduce:animate-none`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
         <path
           className="opacity-75"

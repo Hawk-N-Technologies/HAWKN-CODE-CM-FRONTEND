@@ -7,7 +7,7 @@ import Button from "./Button";
  */
 function ErrorState({ title = "Something went wrong", description, onRetry }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center" role="alert">
       <p className="text-sm font-medium text-cm-danger-600">{title}</p>
       {description && <p className="max-w-xs text-sm text-cm-text-muted">{description}</p>}
       {onRetry && (

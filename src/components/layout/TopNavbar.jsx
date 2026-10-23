@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -24,8 +23,16 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
 
     document.addEventListener("mousedown", handleClickOutside);
 
-    return () =>
+    function handleEscape(event) {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    }
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -53,11 +60,11 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
   }[userRole];
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4 border-b border-cm-border bg-cm-card px-4 sm:px-6">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4 border-b border-cm-border bg-cm-card px-4 shadow-cm-sm sm:px-6">
       <button
         type="button"
         onClick={onMenuClick}
-        className="flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus lg:hidden"
         aria-label="Open menu"
       >
         <svg
@@ -104,7 +111,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
           type="search"
           placeholder="Search…"
           aria-label="Search"
-          className="h-9 w-full rounded-cm-md border border-cm-border bg-cm-bg pl-9 pr-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
+          className="h-9 w-full rounded-cm-md border border-cm-border bg-cm-bg pl-9 pr-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30"
         />
       </div>
 
@@ -116,7 +123,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
             onClick={() => {
               if (notificationPath) navigate(notificationPath);
             }}
-            className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg"
+            className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus"
             aria-label={`Notifications${
               notificationCount > 0
                 ? `, ${notificationCount} unread`
@@ -157,9 +164,10 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-cm-md py-1 pl-1 pr-2 hover:bg-cm-bg"
+            className="flex items-center gap-2 rounded-cm-md py-1 pl-1 pr-2 hover:bg-cm-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus"
             aria-haspopup="menu"
             aria-expanded={isMenuOpen}
+            aria-controls="profile-menu"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cm-blue-100 text-xs font-semibold text-cm-blue-700">
               {initials}
@@ -194,7 +202,8 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
           {isMenuOpen && (
             <div
               role="menu"
-              className="absolute right-0 top-full mt-2 w-48 rounded-cm-md border border-cm-border bg-cm-card py-1 shadow-lg"
+              id="profile-menu"
+              className="absolute right-0 top-full mt-2 w-48 rounded-cm-md border border-cm-border bg-cm-card py-1 shadow-cm-md"
             >
               <div className="border-b border-cm-border px-3 py-2 sm:hidden">
                 <p className="text-sm font-medium text-cm-text">
