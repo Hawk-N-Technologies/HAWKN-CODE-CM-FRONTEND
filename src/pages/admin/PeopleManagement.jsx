@@ -18,19 +18,40 @@ const EMPTY_FORM = {
   lastName: "",
 
   email: "",
+  companyEmail: "",
 
   password: "",
   confirmPassword: "",
 
+  phone1: "",
+  phone2: "",
+  whatsapp: "",
+
+  joiningDate: "",
+  dob: "",
+
+  linkedin: "",
+  github: "",
+
+  aadhaar: "",
+
   role: "",
 
   isActive: true,
+  employmentStatus: "Active",
+  type: "Full Time",
+
+  employeeId: null,
+  employeeUuid: null,
 };
 
 const STATUS_TONE = {
   Active: "success",
   Inactive: "danger",
 };
+
+const EMPLOYMENT_TYPES = ["Full Time", "Intern", "Probation"];
+const EMPLOYMENT_STATUSES = ["Active", "On Leave", "Exited"];
 
 const ROLE_TABS = [
   { key: "all", label: "All members", aliases: [] },
@@ -104,12 +125,27 @@ function mapUserFromApi(user) {
 
     email: user.email || "",
 
+    companyEmail:
+      user.employee?.companyEmail || user.companyEmail || "",
+    phone1: user.employee?.phone1 || "",
+    phone2: user.employee?.phone2 || "",
+    whatsapp: user.employee?.whatsapp || "",
+    joiningDate: user.employee?.joiningDate || "",
+    dob: user.employee?.dateOfBirth || user.employee?.dob || "",
+    linkedin: user.employee?.linkedinUrl || user.employee?.linkedin || "",
+    github: user.employee?.githubUrl || user.employee?.github || "",
+    aadhaar: user.employee?.aadhaarLast4 || user.employee?.aadhaar || "",
+
     role: roleUuid,
     roleName,
 
     isActive: user.isActive ?? true,
 
     status: user.isActive ? "Active" : "Inactive",
+    employmentStatus: user.employee?.employmentStatus || "Active",
+    type: user.employee?.employmentType || "Full Time",
+    employeeId: user.employee?.id || null,
+    employeeUuid: user.employee?.uuid || null,
 
     /**
      * Employee information is optional.
@@ -334,6 +370,15 @@ function PeopleManagement() {
 
         return "";
 
+      case "companyEmail":
+        if (!formValue) return "";
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formValue.trim())) {
+          return "Enter a valid company email address.";
+        }
+
+        return "";
+
       case "password":
         /**
          * Password required only while creating.
@@ -362,11 +407,57 @@ function PeopleManagement() {
 
         return "";
 
+      case "phone1":
+      case "phone2":
+      case "whatsapp":
+        if (!formValue) return "";
+
+        if (!/^[6-9]\d{9}$/.test(formValue)) {
+          return "Enter a valid 10-digit mobile number.";
+        }
+
+        return "";
+
+      case "aadhaar":
+        if (!formValue) return "";
+
+        if (!/^\d{4}$/.test(formValue)) {
+          return "Aadhaar must contain exactly 4 digits.";
+        }
+
+        return "";
+
+      case "linkedin":
+        if (!formValue) return "";
+
+        if (!/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(formValue.trim())) {
+          return "Enter a valid LinkedIn URL.";
+        }
+
+        return "";
+
+      case "github":
+        if (!formValue) return "";
+
+        if (!/^https?:\/\/(www\.)?github\.com\/.+$/i.test(formValue.trim())) {
+          return "Enter a valid GitHub URL.";
+        }
+
+        return "";
+
       case "role":
         if (!formValue) {
           return "Please select a role.";
         }
 
+        return "";
+
+      case "type":
+        if (!formValue) return "Please select employment type.";
+        return "";
+
+      case "employmentStatus":
+        if (!formValue) return "Please select employment status.";
         return "";
 
       default:
@@ -381,9 +472,18 @@ function PeopleManagement() {
       "firstName",
       "lastName",
       "email",
+      "companyEmail",
       "password",
       "confirmPassword",
+      "phone1",
+      "phone2",
+      "whatsapp",
+      "aadhaar",
+      "linkedin",
+      "github",
       "role",
+      "type",
+      "employmentStatus",
     ];
 
     fields.forEach((field) => {
@@ -474,6 +574,8 @@ function PeopleManagement() {
       ...EMPTY_FORM,
       role: roles.length > 0 ? roles[0].uuid : "",
       isActive: true,
+      employmentStatus: "Active",
+      type: "Full Time",
     });
 
     setErrors({});
@@ -490,17 +592,31 @@ function PeopleManagement() {
     if (isSubmitting) {
       return;
     }
-    console.log(person);
     setForm({
       ...EMPTY_FORM,
 
       id: person.id,
-      uuid: person.userUuid,
+      uuid: person.userUuid || person.uuid,
+      employeeId: person.employeeId,
+      employeeUuid: person.employeeUuid,
 
       firstName: person.firstName || "",
       lastName: person.lastName || "",
 
       email: person.email || "",
+      companyEmail: person.companyEmail || "",
+
+      phone1: person.phone1 || "",
+      phone2: person.phone2 || "",
+      whatsapp: person.whatsapp || "",
+
+      joiningDate: person.joiningDate || "",
+      dob: person.dob || "",
+
+      linkedin: person.linkedin || "",
+      github: person.github || "",
+
+      aadhaar: person.aadhaar || "",
 
       password: "",
       confirmPassword: "",
@@ -508,6 +624,8 @@ function PeopleManagement() {
       role: person.role || "",
 
       isActive: person.isActive ?? true,
+      employmentStatus: person.employmentStatus || "Active",
+      type: person.type || "Full Time",
     });
 
     setErrors({});
@@ -529,6 +647,24 @@ function PeopleManagement() {
     setErrors({});
     setForm(EMPTY_FORM);
   };
+
+  useEffect(() => {
+    if (!isFormOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !isSubmitting) {
+        setIsFormOpen(false);
+        setErrors({});
+        setForm(EMPTY_FORM);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isFormOpen, isSubmitting]);
 
   /**
    * -------------------------------------------------------
@@ -563,20 +699,7 @@ function PeopleManagement() {
       return;
     }
 
-    /**
-     * Admin only sends user-related fields.
-     *
-     * No:
-     * phone
-     * DOB
-     * joining date
-     * Aadhaar
-     * employment type
-     * employment status
-     * LinkedIn
-     * GitHub
-     */
-    const payload = {
+    const userPayload = {
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
       email: form.email.trim(),
@@ -584,6 +707,24 @@ function PeopleManagement() {
       roleUuid: form.role,
 
       isActive: form.isActive,
+    };
+
+    const employeePayload = {
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      email: form.email.trim(),
+      companyEmail: form.companyEmail?.trim() || null,
+      phone1: form.phone1 || null,
+      phone2: form.phone2 || null,
+      whatsapp: form.whatsapp || null,
+      joiningDate: form.joiningDate || null,
+      dateOfBirth: form.dob || null,
+      linkedinUrl: form.linkedin?.trim() || null,
+      githubUrl: form.github?.trim() || null,
+      aadhaarLast4: form.aadhaar || null,
+      roleUuid: form.role,
+      employmentType: form.type,
+      employmentStatus: form.employmentStatus,
     };
 
     /**
@@ -596,11 +737,13 @@ function PeopleManagement() {
      * password is optional.
      */
     if (!form.id) {
-      payload.password = form.password;
-      payload.confirmPassword = form.confirmPassword;
+      employeePayload.password = form.password;
+      employeePayload.confirmPassword = form.confirmPassword;
     } else if (form.password || form.confirmPassword) {
-      payload.password = form.password;
-      payload.confirmPassword = form.confirmPassword;
+      userPayload.password = form.password;
+      userPayload.confirmPassword = form.confirmPassword;
+      employeePayload.password = form.password;
+      employeePayload.confirmPassword = form.confirmPassword;
     }
 
     setIsSubmitting(true);
@@ -608,18 +751,24 @@ function PeopleManagement() {
     try {
       let res;
       console.log(form.uuid);
-      if (form.uuid && form.id) {
-        res = await axios.put(`/api/employees/people/${form.uuid}`, payload, {
+      if (form.employeeId) {
+        res = await axios.put(`/api/employees/${form.employeeId}`, employeePayload, {
+          withCredentials: true,
+        });
+
+        showToast.success(res.data?.message || "Employee updated successfully.");
+      } else if (form.uuid && form.id) {
+        res = await axios.put(`/api/employees/people/${form.uuid}`, userPayload, {
           withCredentials: true,
         });
 
         showToast.success(res.data?.message || "User updated successfully.");
       } else {
-        res = await axios.post("/api/employees/create", payload, {
+        res = await axios.post("/api/employees", employeePayload, {
           withCredentials: true,
         });
 
-        showToast.success(res.data?.message || "User created successfully.");
+        showToast.success(res.data?.message || "Employee created successfully.");
       }
 
       await getPeople();
@@ -763,7 +912,7 @@ function PeopleManagement() {
           disabled={isSubmitting || isRolesLoading}
           className="w-full sm:w-auto"
         >
-          {isRolesLoading ? "Loading roles..." : "Add User"}
+          {isRolesLoading ? "Loading roles..." : "Add Employee"}
         </Button>
       </header>
 
@@ -811,34 +960,68 @@ function PeopleManagement() {
 
       {/* FORM */}
       {isFormOpen && (
-        <form
-          ref={formRef}
-          id="people-user-form"
-          onSubmit={save}
-          className="flex flex-col gap-5 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-cm-md sm:p-6"
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/40 p-3 sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSubmitting) {
+              closeForm();
+            }
+          }}
+          role="presentation"
         >
-          <div className="flex flex-col gap-1 border-b border-cm-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-cm-text">
-                {form.id ? "Edit User" : "Add User"}
-              </h2>
-              <p className="mt-1 text-sm text-cm-text-muted">
-                {form.id
-                  ? "Update account details, role and access status."
-                  : "Create a user account and assign its initial role."}
-              </p>
-            </div>
+          <div className="flex min-h-full items-start justify-center py-3 sm:py-8">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="people-user-form-title"
+              className="w-full max-w-4xl"
+            >
+              <form
+                ref={formRef}
+                id="people-user-form"
+                onSubmit={save}
+                className="flex max-h-[calc(100vh-1.5rem)] flex-col gap-5 overflow-y-auto rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-cm-md sm:max-h-[calc(100vh-4rem)] sm:p-6"
+              >
+                <div className="flex flex-col gap-3 border-b border-cm-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 id="people-user-form-title" className="text-base font-semibold text-cm-text">
+                      {form.employeeId
+                        ? "Edit Employee"
+                        : form.id
+                          ? "Edit User"
+                          : "Add Employee"}
+                    </h2>
+                    <p className="mt-1 text-sm text-cm-text-muted">
+                      {form.employeeId || !form.id
+                        ? "Maintain the employee account, contact details and employment information."
+                        : "Update account details, role and access status."}
+                    </p>
+                  </div>
 
-            {isSubmitting && (
-              <div className="flex items-center gap-2 text-xs text-cm-text-muted">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
-                Saving...
-              </div>
-            )}
-          </div>
+                  <div className="flex items-center gap-2 self-end sm:self-start">
+                    {isSubmitting && (
+                      <div className="flex items-center gap-2 text-xs text-cm-text-muted">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
+                        Saving...
+                      </div>
+                    )}
 
-          <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={isSubmitting}
+                      onClick={closeForm}
+                      aria-label="Close employee form"
+                      className="px-2 text-xl leading-none"
+                    >
+                      <span aria-hidden="true">×</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* FIRST NAME */}
               <Input
                 label="First Name"
@@ -867,6 +1050,14 @@ function PeopleManagement() {
                 onChange={handleChange("email")}
               />
 
+              <Input
+                label="Company Email"
+                type="email"
+                value={form.companyEmail}
+                error={errors.companyEmail}
+                onChange={handleChange("companyEmail")}
+              />
+
               {/* PASSWORD */}
               <Input
                 label="Password"
@@ -885,6 +1076,65 @@ function PeopleManagement() {
                 value={form.confirmPassword}
                 error={errors.confirmPassword}
                 onChange={handleChange("confirmPassword")}
+              />
+
+              <Input
+                label="Phone 1"
+                value={form.phone1}
+                error={errors.phone1}
+                onChange={handleChange("phone1")}
+              />
+
+              <Input
+                label="Phone 2"
+                value={form.phone2}
+                error={errors.phone2}
+                onChange={handleChange("phone2")}
+              />
+
+              <Input
+                label="WhatsApp"
+                value={form.whatsapp}
+                error={errors.whatsapp}
+                onChange={handleChange("whatsapp")}
+              />
+
+              <Input
+                label="Date of Joining"
+                type="date"
+                value={form.joiningDate}
+                error={errors.joiningDate}
+                onChange={handleChange("joiningDate")}
+              />
+
+              <Input
+                label="Date of Birth"
+                type="date"
+                value={form.dob}
+                error={errors.dob}
+                onChange={handleChange("dob")}
+              />
+
+              <Input
+                label="LinkedIn"
+                value={form.linkedin}
+                error={errors.linkedin}
+                onChange={handleChange("linkedin")}
+              />
+
+              <Input
+                label="GitHub"
+                value={form.github}
+                error={errors.github}
+                onChange={handleChange("github")}
+              />
+
+              <Input
+                label="Aadhaar Last 4"
+                value={form.aadhaar}
+                error={errors.aadhaar}
+                maxLength={4}
+                onChange={handleChange("aadhaar")}
               />
 
               {/* ROLE */}
@@ -916,35 +1166,60 @@ function PeopleManagement() {
                 ]}
                 onChange={handleStatusChange}
               />
+
+              <Select
+                label="Employment Type"
+                value={form.type}
+                error={errors.type}
+                options={EMPLOYMENT_TYPES.map((value) => ({
+                  value,
+                  label: value,
+                }))}
+                onChange={handleChange("type")}
+              />
+
+              <Select
+                label="Employment Status"
+                value={form.employmentStatus}
+                error={errors.employmentStatus}
+                options={EMPLOYMENT_STATUSES.map((value) => ({
+                  value,
+                  label: value,
+                }))}
+                onChange={handleChange("employmentStatus")}
+              />
+                  </div>
+                </fieldset>
+
+                {/* FORM ACTIONS */}
+                <div className="flex justify-end gap-3 border-t border-cm-border pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSubmitting}
+                    onClick={closeForm}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+
+                        {form.id ? "Saving..." : "Creating..."}
+                      </span>
+                    ) : form.id ? (
+                      "Save Changes"
+                    ) : (
+                      "Add Employee"
+                    )}
+                  </Button>
+                </div>
+              </form>
             </div>
-          </fieldset>
-
-          {/* FORM ACTIONS */}
-          <div className="flex justify-end gap-3 border-t border-cm-border pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isSubmitting}
-              onClick={closeForm}
-            >
-              Cancel
-            </Button>
-
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-
-                  {form.id ? "Saving..." : "Creating..."}
-                </span>
-              ) : form.id ? (
-                "Save Changes"
-              ) : (
-                "Add User"
-              )}
-            </Button>
           </div>
-        </form>
+        </div>
       )}
 
       {/* PROFILE */}
