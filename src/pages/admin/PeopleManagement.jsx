@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import {
+  ContactRound,
+  Eye,
+  PencilLine,
+  UserPlus,
+  UserRoundPen,
+} from "lucide-react";
 
 import Badge from "../../components/common/Badge";
 import Avatar from "../../components/common/Avatar";
 import Button from "../../components/common/Button";
+import Modal from "../../components/common/Modal";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 import Input from "../../components/common/Input";
@@ -21,7 +29,7 @@ const EMPTY_FORM = {
 
   password: "",
   confirmPassword: "",
-
+  companyEmail: "",
   role: "",
   githubUrl: "",
   linkedinUrl: "",
@@ -87,12 +95,12 @@ function mapUserFromApi(user) {
     roleRecord?.uuid ||
     user.roleUuid ||
     user.roleId ||
-    (typeof user.role === "string" ? user.role : "");
+    (typeof user.role === "string" && user.roleUuid ? "" : "");
 
   const roleName =
     roleRecord?.name ||
     user.roleName ||
-    (typeof user.role === "string" && !user.roleUuid ? user.role : "");
+    (typeof user.role === "string" ? user.role : "");
 
   return {
     ...user,
@@ -111,16 +119,14 @@ function mapUserFromApi(user) {
     email: user.email || "",
 
     companyEmail: user.employee?.companyEmail || user.companyEmail || "",
-    phone1: user.employee?.phone1 || "",
-    phone2: user.employee?.phone2 || "",
-    whatsapp: user.employee?.whatsapp || "",
-    joiningDate: user.employee?.joiningDate || "",
-    dateOfBirth: user.employee?.dateOfBirth || user.employee?.dateOfBirth || "",
-    linkendinUrl:
-      user.employee?.linkedinUrl || user.employee?.linkendinUrl || "",
-    githubUrl: user.employee?.githubUrl || user.employee?.githubUrl || "",
-    aadhaarLast4:
-      user.employee?.aadhaarLast4 || user.employee?.aadhaarLast4 || "",
+    phone1: user.phone1 || "",
+    phone2: user.phone2 || "",
+    whatsapp: user.whatsapp || "",
+    joiningDate: user.joiningDate || "",
+    dateOfBirth: user.dateOfBirth || user.employee?.dateOfBirth || "",
+    linkendinUrl: user?.linkedinUrl || user.employee?.linkendinUrl || "",
+    githubUrl: user?.githubUrl || user.employee?.githubUrl || "",
+    aadhaarLast4: user?.aadhaarLast4 || user.employee?.aadhaarLast4 || "",
 
     role: roleUuid,
     roleName,
@@ -128,10 +134,10 @@ function mapUserFromApi(user) {
     isActive: user.isActive ?? true,
 
     status: user.isActive ? "Active" : "Inactive",
-    employmentStatus: user.employee?.employmentStatus || "Active",
-    type: user.employee?.employmentType || "Full Time",
-    employeeId: user.employee?.id || null,
-    employeeUuid: user.employee?.uuid || null,
+    employmentStatus: user?.employmentStatus || "Active",
+    type: user?.employmentType || "Full Time",
+    employeeId: user?.employeeId || null,
+    employeeUuid: user.emloyeeUuid || null,
 
     /**
      * Employee information is optional.
@@ -149,6 +155,15 @@ function PeopleManagement() {
 
   const [search, setSearch] = useState("");
   const [activeRole, setActiveRole] = useState("all");
+  const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
 
   const [selected, setSelected] = useState(null);
 
@@ -165,21 +180,6 @@ function PeopleManagement() {
   const profileRef = useRef(null);
 
   const isInitialLoading = isPeopleLoading || isRolesLoading;
-
-  const roleCounts = useMemo(
-    () =>
-      Object.fromEntries(
-        ROLE_TABS.map((tab) => [
-          tab.key,
-          tab.key === "all"
-            ? people.length
-            : people.filter((person) =>
-                personMatchesRole(person, tab, rolesMap),
-              ).length,
-        ]),
-      ),
-    [people, rolesMap],
-  );
 
   /**
    * -------------------------------------------------------
@@ -232,21 +232,78 @@ function PeopleManagement() {
    *   employee: {...}
    * -------------------------------------------------------
    */
+  const apiRole = useMemo(() => {
+    if (activeRole === "all") return "";
+
+    const tab = ROLE_TABS.find((item) => item.key === activeRole);
+    if (!tab) return "";
+
+    const matchingRole = roles.find((item) => {
+      const normalizedName = normalizeRole(item.name);
+      return tab.aliases.some(
+        (alias) => normalizedName === alias || normalizedName.includes(alias),
+      );
+    });
+
+    // The API expects Role.name, not the UI tab key or role UUID.
+    return matchingRole?.name || "";
+  }, [activeRole, roles]);
+
   const getPeople = useCallback(async () => {
     setIsPeopleLoading(true);
 
     try {
+      const params = {
+        search: search.trim() || undefined,
+        page,
+        limit,
+        status: status || undefined,
+        role: apiRole || undefined,
+      };
+
       const res = await axios.get("/api/employees/getPeople", {
+        params,
         withCredentials: true,
       });
 
-      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      // Supports either { data: [...] , pagination } or
+      // { data: { rows: [...], pagination } } API response formats.
+      const payload = res.data?.data;
+      const data = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.rows)
+          ? payload.rows
+          : Array.isArray(res.data?.rows)
+            ? res.data.rows
+            : [];
+
+      const meta = payload?.pagination ||
+        res.data?.pagination || {
+          total: data.length,
+          page,
+          limit,
+          totalPages: data.length ? 1 : 0,
+        };
 
       setPeople(data.map(mapUserFromApi));
+      setPagination({
+        total: Number(meta.total ?? data.length),
+        page: Number(meta.page ?? page),
+        limit: Number(meta.limit ?? limit),
+        totalPages: Number(
+          meta.totalPages ??
+            Math.ceil(Number(meta.total ?? data.length) / limit),
+        ),
+      });
     } catch (error) {
       console.error("Get people error:", error);
-
       setPeople([]);
+      setPagination({
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      });
 
       showToast.error(
         error.response?.data?.message || "Failed to load people.",
@@ -254,7 +311,7 @@ function PeopleManagement() {
     } finally {
       setIsPeopleLoading(false);
     }
-  }, []);
+  }, [apiRole, limit, page, search, status]);
 
   /**
    * -------------------------------------------------------
@@ -782,6 +839,7 @@ function PeopleManagement() {
     {
       key: "id",
       header: "ID",
+      render: (row) => row.userId ?? row.id,
     },
 
     {
@@ -832,24 +890,29 @@ function PeopleManagement() {
       key: "actions",
       header: "",
       render: (row) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
             disabled={isSubmitting}
-            onClick={() => setSelected(row)}
+            onClick={() => {
+              setSelected(row);
+            }}
+            title={`View ${row.name} profile`}
+            className="group inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-cm-navy-950 hover:bg-cm-navy-950 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Profile
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
+            <Eye size={15} strokeWidth={1.9} />
+            <span>View</span>
+          </button>
+          <button
+            type="button"
             disabled={isSubmitting}
             onClick={() => openEdit(row)}
+            title={`Edit ${row.name}`}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-cm-navy-950 px-3 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-cm-navy-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Edit
-          </Button>
+            <PencilLine size={14} strokeWidth={2} />
+            <span>Edit</span>
+          </button>
         </div>
       ),
     },
@@ -923,7 +986,10 @@ function PeopleManagement() {
                 role="tab"
                 aria-selected={isActive}
                 aria-controls="people-list-panel"
-                onClick={() => setActiveRole(tab.key)}
+                onClick={() => {
+                  setActiveRole(tab.key);
+                  setPage(1);
+                }}
                 className={[
                   "flex min-w-max items-center gap-2 rounded-cm-md border px-4 py-3 text-sm font-semibold transition-colors",
                   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus",
@@ -933,352 +999,342 @@ function PeopleManagement() {
                 ].join(" ")}
               >
                 <span>{tab.label}</span>
-                <span
-                  className={[
-                    "rounded-full px-2 py-0.5 text-xs",
-                    isActive
-                      ? "bg-white/15 text-white"
-                      : "bg-cm-bg text-cm-text-muted",
-                  ].join(" ")}
-                >
-                  {roleCounts[tab.key]}
-                </span>
               </button>
             );
           })}
         </div>
       </section>
 
-      {/* FORM */}
+      {/* CREATE / EDIT MODAL */}
       {isFormOpen && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/40 p-3 sm:p-6"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !isSubmitting) {
-              closeForm();
-            }
-          }}
-          role="presentation"
+        <Modal
+          open={isFormOpen}
+          onClose={closeForm}
+          title={
+            form.id
+              ? form.employeeId
+                ? "Edit employee"
+                : "Edit user"
+              : "Add a team member"
+          }
+          description={
+            form.id
+              ? "Update account details, access, and employment information."
+              : "Create an account and configure the member’s role and employment details."
+          }
+          icon={form.id ? UserRoundPen : UserPlus}
+          size="xl"
+          closeDisabled={isSubmitting}
         >
-          <div className="flex min-h-full items-start justify-center py-3 sm:py-8">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="people-user-form-title"
-              className="w-full max-w-4xl"
+          <form
+            ref={formRef}
+            id="people-user-form"
+            onSubmit={save}
+            className="flex max-h-[min(88vh,900px)] flex-col gap-0 overflow-y-auto bg-white"
+          >
+            <fieldset
+              disabled={isSubmitting}
+              className="flex flex-col gap-4 px-6 py-6 sm:px-8"
             >
-              <form
-                ref={formRef}
-                id="people-user-form"
-                onSubmit={save}
-                className="flex max-h-[calc(100vh-1.5rem)] flex-col gap-5 overflow-y-auto rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-cm-md sm:max-h-[calc(100vh-4rem)] sm:p-6"
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* FIRST NAME */}
+                <Input
+                  label="First Name"
+                  required
+                  value={form.firstName}
+                  error={errors.firstName}
+                  onChange={handleChange("firstName")}
+                />
+
+                {/* LAST NAME */}
+                <Input
+                  label="Last Name"
+                  required
+                  value={form.lastName}
+                  error={errors.lastName}
+                  onChange={handleChange("lastName")}
+                />
+
+                {/* EMAIL */}
+                <Input
+                  label="Email"
+                  type="email"
+                  required
+                  value={form.email}
+                  error={errors.email}
+                  onChange={handleChange("email")}
+                />
+
+                <Input
+                  label="Company Email"
+                  type="email"
+                  value={form.companyEmail}
+                  error={errors.companyEmail}
+                  onChange={handleChange("companyEmail")}
+                />
+
+                {/* PASSWORD */}
+                <Input
+                  label="Password"
+                  type="password"
+                  required={!form.id}
+                  value={form.password}
+                  error={errors.password}
+                  onChange={handleChange("password")}
+                />
+
+                {/* CONFIRM PASSWORD */}
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  required={!form.id}
+                  value={form.confirmPassword}
+                  error={errors.confirmPassword}
+                  onChange={handleChange("confirmPassword")}
+                />
+
+                <Input
+                  label="Phone 1"
+                  value={form.phone1}
+                  error={errors.phone1}
+                  onChange={handleChange("phone1")}
+                />
+
+                <Input
+                  label="Phone 2"
+                  value={form.phone2}
+                  error={errors.phone2}
+                  onChange={handleChange("phone2")}
+                />
+
+                <Input
+                  label="WhatsApp"
+                  value={form.whatsapp}
+                  error={errors.whatsapp}
+                  onChange={handleChange("whatsapp")}
+                />
+
+                <Input
+                  label="Date of Joining"
+                  type="date"
+                  value={form.joiningDate}
+                  error={errors.joiningDate}
+                  onChange={handleChange("joiningDate")}
+                />
+
+                <Input
+                  label="Date of Birth"
+                  type="date"
+                  value={form.dateOfBirth}
+                  error={errors.dateOfBirth}
+                  onChange={handleChange("dateOfBirth")}
+                />
+
+                <Input
+                  label="linkendinUrl"
+                  value={form.linkendinUrl}
+                  error={errors.linkendinUrl}
+                  onChange={handleChange("linkendinUrl")}
+                />
+
+                <Input
+                  label="githubUrl"
+                  value={form.githubUrl}
+                  error={errors.githubUrl}
+                  onChange={handleChange("githubUrl")}
+                />
+
+                <Input
+                  label="Aadhaar Last 4"
+                  value={form.aadhaarLast4}
+                  error={errors.aadhaarLast4}
+                  maxLength={4}
+                  onChange={handleChange("aadhaarLast4")}
+                />
+
+                {/* ROLE */}
+                <Select
+                  label="Role"
+                  value={form.role}
+                  error={errors.role}
+                  disabled={isRolesLoading}
+                  options={roles.map((role) => ({
+                    label: role.name,
+                    value: role.uuid,
+                  }))}
+                  onChange={handleChange("role")}
+                />
+
+                {/* STATUS */}
+                <Select
+                  label="Account Status"
+                  value={String(form.isActive)}
+                  options={[
+                    {
+                      label: "Active",
+                      value: "true",
+                    },
+                    {
+                      label: "Inactive",
+                      value: "false",
+                    },
+                  ]}
+                  onChange={handleStatusChange}
+                />
+
+                <Select
+                  label="Employment Type"
+                  value={form.type}
+                  error={errors.type}
+                  options={EMPLOYMENT_TYPES.map((value) => ({
+                    value,
+                    label: value,
+                  }))}
+                  onChange={handleChange("type")}
+                />
+
+                <Select
+                  label="Employment Status"
+                  value={form.employmentStatus}
+                  error={errors.employmentStatus}
+                  options={EMPLOYMENT_STATUSES.map((value) => ({
+                    value,
+                    label: value,
+                  }))}
+                  onChange={handleChange("employmentStatus")}
+                />
+              </div>
+            </fieldset>
+
+            {/* FORM ACTIONS */}
+            <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-slate-50/90 px-6 py-4 backdrop-blur sm:px-8">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting}
+                onClick={closeForm}
               >
-                <div className="flex flex-col gap-3 border-b border-cm-border pb-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h2
-                      id="people-user-form-title"
-                      className="text-base font-semibold text-cm-text"
-                    >
-                      {form.employeeId
-                        ? "Edit Employee"
-                        : form.id
-                          ? "Edit User"
-                          : "Add Employee"}
-                    </h2>
-                    <p className="mt-1 text-sm text-cm-text-muted">
-                      {form.employeeId || !form.id
-                        ? "Maintain the employee account, contact details and employment information."
-                        : "Update account details, role and access status."}
-                    </p>
-                  </div>
+                Cancel
+              </Button>
 
-                  <div className="flex items-center gap-2 self-end sm:self-start">
-                    {isSubmitting && (
-                      <div className="flex items-center gap-2 text-xs text-cm-text-muted">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
-                        Saving...
-                      </div>
-                    )}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
 
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={isSubmitting}
-                      onClick={closeForm}
-                      aria-label="Close employee form"
-                      className="px-2 text-xl leading-none"
-                    >
-                      <span aria-hidden="true">×</span>
-                    </Button>
-                  </div>
-                </div>
-
-                <fieldset
-                  disabled={isSubmitting}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {/* FIRST NAME */}
-                    <Input
-                      label="First Name"
-                      required
-                      value={form.firstName}
-                      error={errors.firstName}
-                      onChange={handleChange("firstName")}
-                    />
-
-                    {/* LAST NAME */}
-                    <Input
-                      label="Last Name"
-                      required
-                      value={form.lastName}
-                      error={errors.lastName}
-                      onChange={handleChange("lastName")}
-                    />
-
-                    {/* EMAIL */}
-                    <Input
-                      label="Email"
-                      type="email"
-                      required
-                      value={form.email}
-                      error={errors.email}
-                      onChange={handleChange("email")}
-                    />
-
-                    <Input
-                      label="Company Email"
-                      type="email"
-                      value={form.companyEmail}
-                      error={errors.companyEmail}
-                      onChange={handleChange("companyEmail")}
-                    />
-
-                    {/* PASSWORD */}
-                    <Input
-                      label="Password"
-                      type="password"
-                      required={!form.id}
-                      value={form.password}
-                      error={errors.password}
-                      onChange={handleChange("password")}
-                    />
-
-                    {/* CONFIRM PASSWORD */}
-                    <Input
-                      label="Confirm Password"
-                      type="password"
-                      required={!form.id}
-                      value={form.confirmPassword}
-                      error={errors.confirmPassword}
-                      onChange={handleChange("confirmPassword")}
-                    />
-
-                    <Input
-                      label="Phone 1"
-                      value={form.phone1}
-                      error={errors.phone1}
-                      onChange={handleChange("phone1")}
-                    />
-
-                    <Input
-                      label="Phone 2"
-                      value={form.phone2}
-                      error={errors.phone2}
-                      onChange={handleChange("phone2")}
-                    />
-
-                    <Input
-                      label="WhatsApp"
-                      value={form.whatsapp}
-                      error={errors.whatsapp}
-                      onChange={handleChange("whatsapp")}
-                    />
-
-                    <Input
-                      label="Date of Joining"
-                      type="date"
-                      value={form.joiningDate}
-                      error={errors.joiningDate}
-                      onChange={handleChange("joiningDate")}
-                    />
-
-                    <Input
-                      label="Date of Birth"
-                      type="date"
-                      value={form.dateOfBirth}
-                      error={errors.dateOfBirth}
-                      onChange={handleChange("dateOfBirth")}
-                    />
-
-                    <Input
-                      label="linkendinUrl"
-                      value={form.linkendinUrl}
-                      error={errors.linkendinUrl}
-                      onChange={handleChange("linkendinUrl")}
-                    />
-
-                    <Input
-                      label="githubUrl"
-                      value={form.githubUrl}
-                      error={errors.githubUrl}
-                      onChange={handleChange("githubUrl")}
-                    />
-
-                    <Input
-                      label="Aadhaar Last 4"
-                      value={form.aadhaarLast4}
-                      error={errors.aadhaarLast4}
-                      maxLength={4}
-                      onChange={handleChange("aadhaarLast4")}
-                    />
-
-                    {/* ROLE */}
-                    <Select
-                      label="Role"
-                      value={form.role}
-                      error={errors.role}
-                      disabled={isRolesLoading}
-                      options={roles.map((role) => ({
-                        label: role.name,
-                        value: role.uuid,
-                      }))}
-                      onChange={handleChange("role")}
-                    />
-
-                    {/* STATUS */}
-                    <Select
-                      label="Account Status"
-                      value={String(form.isActive)}
-                      options={[
-                        {
-                          label: "Active",
-                          value: "true",
-                        },
-                        {
-                          label: "Inactive",
-                          value: "false",
-                        },
-                      ]}
-                      onChange={handleStatusChange}
-                    />
-
-                    <Select
-                      label="Employment Type"
-                      value={form.type}
-                      error={errors.type}
-                      options={EMPLOYMENT_TYPES.map((value) => ({
-                        value,
-                        label: value,
-                      }))}
-                      onChange={handleChange("type")}
-                    />
-
-                    <Select
-                      label="Employment Status"
-                      value={form.employmentStatus}
-                      error={errors.employmentStatus}
-                      options={EMPLOYMENT_STATUSES.map((value) => ({
-                        value,
-                        label: value,
-                      }))}
-                      onChange={handleChange("employmentStatus")}
-                    />
-                  </div>
-                </fieldset>
-
-                {/* FORM ACTIONS */}
-                <div className="flex justify-end gap-3 border-t border-cm-border pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isSubmitting}
-                    onClick={closeForm}
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-
-                        {form.id ? "Saving..." : "Creating..."}
-                      </span>
-                    ) : form.id ? (
-                      "Save Changes"
-                    ) : (
-                      "Add Employee"
-                    )}
-                  </Button>
-                </div>
-              </form>
+                    {form.id ? "Saving..." : "Creating..."}
+                  </span>
+                ) : form.id ? (
+                  "Save Changes"
+                ) : (
+                  "Add Employee"
+                )}
+              </Button>
             </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
 
-      {/* PROFILE */}
+      {/* PROFILE DETAILS MODAL */}
       {selected && (
-        <section
-          ref={profileRef}
-          aria-labelledby="selected-person-heading"
-          className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-cm-sm sm:p-6"
+        <Modal
+          open={Boolean(selected)}
+          onClose={() => setSelected(null)}
+          title="Member profile"
+          description="Account identity, role, and access overview."
+          icon={ContactRound}
+          size="lg"
         >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs text-cm-text-muted">
-                User ID: {selected.id}
-              </p>
-
-              <h2
-                id="selected-person-heading"
-                className="mt-1 text-lg font-semibold text-cm-text"
-              >
-                {selected.name}
-              </h2>
-
-              <p className="mt-1 text-sm text-cm-text-muted">
-                {selected.email}
-              </p>
-            </div>
-
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isSubmitting}
-              onClick={() => setSelected(null)}
-            >
-              Close
-            </Button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ["First Name", selected.firstName],
-              ["Last Name", selected.lastName],
-              ["Email", selected.email],
-              [
-                "Role",
-                selected.roleName || rolesMap[selected.role]?.name || "—",
-              ],
-              ["Account Status", selected.status],
-              ["Employee", selected.employee ? "Employee" : "User Only"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-cm-md border border-cm-border bg-cm-bg/40 p-4"
-              >
-                <p className="text-xs text-cm-text-muted">{label}</p>
-
-                <p className="mt-1 text-sm font-medium text-cm-text">
-                  {value || "—"}
-                </p>
+          <div className="max-h-[78vh] overflow-y-auto">
+            <div className="bg-cm-navy-950 px-6 py-7 text-white sm:px-8">
+              <div className="flex items-center gap-4">
+                <div
+                  onClick={() => {
+                    console.log(selected);
+                  }}
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-bold shadow-inner"
+                >
+                  {(
+                    selected.firstName?.[0] ||
+                    selected.name?.[0] ||
+                    "U"
+                  ).toUpperCase()}
+                  {(selected.lastName?.[0] || "").toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-xl font-bold tracking-tight">
+                    {selected.name}
+                  </h3>
+                  <p className="mt-1 truncate text-sm text-white/65">
+                    {selected.email}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/90">
+                      {selected.roleName ||
+                        rolesMap[selected.role]?.name ||
+                        "No role assigned"}
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${selected.isActive ? "bg-emerald-400/15 text-emerald-200" : "bg-rose-400/15 text-rose-200"}`}
+                    >
+                      {selected.isActive
+                        ? "Active account"
+                        : "Inactive account"}
+                    </span>
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+            <div className="grid grid-cols-1 gap-3 p-6 sm:grid-cols-2 sm:p-8">
+              {[
+                ["First name", selected.firstName],
+                ["Last name", selected.lastName],
+                ["Email address", selected.email],
+                [
+                  "Role",
+                  selected.roleName || rolesMap[selected.role]?.name || "—",
+                ],
+                ["Account status", selected.isActive ? "Active" : "Inactive"],
+                [
+                  "Employee record",
+                  selected.employeeId ? "Linked employee" : "User only",
+                ],
+                ["Company email", selected.companyEmail],
+                ["Phone", selected.phone1],
+                ["WhatsApp", selected.whatsapp],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition-colors hover:border-slate-300 hover:bg-white"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                    {label}
+                  </p>
+                  <p className="mt-2 break-words text-sm font-semibold text-cm-navy-950">
+                    {value || "—"}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50/80 px-6 py-4 sm:px-8">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => openEdit(selected)}
+                className="inline-flex items-center gap-2 rounded-xl bg-cm-navy-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cm-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                <UserRoundPen size={16} /> Edit member
+              </button>
+            </div>
           </div>
-        </section>
+        </Modal>
       )}
 
       {/* SEARCH + TABLE */}
@@ -1298,35 +1354,55 @@ function PeopleManagement() {
             </h2>
             <p className="mt-1 text-sm text-cm-text-muted">
               {search
-                ? `${filtered.length} matching ${filtered.length === 1 ? "user" : "users"}`
-                : `${people.length} ${people.length === 1 ? "user" : "users"} in this company`}
+                ? `${pagination.total} matching ${pagination.total === 1 ? "user" : "users"}`
+                : `${pagination.total} ${pagination.total === 1 ? "user" : "users"} in this company`}
             </p>
           </div>
 
-          <TableSearch
-            value={search}
-            onChange={setSearch}
-            placeholder="Search users, email, role..."
-          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <select
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter by employment status"
+              className="rounded-cm-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
+            >
+              <option value="">All employment statuses</option>
+              {EMPLOYMENT_STATUSES.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+
+            <TableSearch
+              value={search}
+              onChange={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              placeholder="Search users, email, role..."
+            />
+          </div>
         </div>
 
-        {isPeopleLoading ? (
-          <div className="flex min-h-[250px] items-center justify-center rounded-cm-lg border border-cm-border bg-cm-card">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-7 w-7 animate-spin rounded-full border-2 border-cm-border border-t-cm-blue-600 motion-reduce:animate-none" />
-
-              <p className="text-sm text-cm-text-muted">Loading people...</p>
-            </div>
-          </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            rows={filtered}
-            emptyMessage={
-              search ? "No users match your search." : "No users found."
-            }
-          />
-        )}
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          isLoading={isPeopleLoading}
+          emptyMessage={
+            search ? "No users match your search." : "No users found."
+          }
+          pagination={pagination}
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
       </section>
     </div>
   );
