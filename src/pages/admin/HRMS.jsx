@@ -45,14 +45,24 @@ const formatMoney = (value) =>
 // "2026-10-06" → "6 Oct 2026" (built from parts so timezone can't shift the day)
 const formatDate = (yyyyMmDd) => {
   if (!yyyyMmDd) return "—";
-  const [year, month, day] = String(yyyyMmDd).slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const [year, month, day] = String(yyyyMmDd)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 // "2026-10" → "October 2026"
 const formatMonth = (yyyyMm) => {
   const [year, month] = yyyyMm.split("-").map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
 };
 
 // "project_lead" / "FULL_DAY" → "Project Lead" / "Full Day"
@@ -79,17 +89,32 @@ const withIds = (rows) => (rows ?? []).map((row) => ({ ...row, id: row.uuid }));
  * screen while new data loads, so the page never flashes.
  */
 function useLiveData(fetcher, tick) {
-  const [state, setState] = useState({ data: null, error: null, isLoading: true, updatedAt: null });
+  const [state, setState] = useState({
+    data: null,
+    error: null,
+    isLoading: true,
+    updatedAt: null,
+  });
 
   useEffect(() => {
     let ignore = false; // tab closed / newer request started → drop this answer
     fetcher()
       .then((data) => {
-        if (!ignore) setState({ data, error: null, isLoading: false, updatedAt: new Date() });
+        if (!ignore)
+          setState({
+            data,
+            error: null,
+            isLoading: false,
+            updatedAt: new Date(),
+          });
       })
       .catch((error) => {
         if (!ignore) {
-          setState((prev) => ({ ...prev, error: getErrorMessage(error, "Couldn't load data."), isLoading: false }));
+          setState((prev) => ({
+            ...prev,
+            error: getErrorMessage(error, "Couldn't load data."),
+            isLoading: false,
+          }));
         }
       });
     return () => {
@@ -104,8 +129,12 @@ function useLiveData(fetcher, tick) {
 function Section({ state, onRetry, children }) {
   if (state.error && !state.data) {
     return (
-      <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-        <ErrorState title="Couldn't load data" description={state.error} onRetry={onRetry} />
+      <div className="rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+        <ErrorState
+          title="Couldn't load data"
+          description={state.error}
+          onRetry={onRetry}
+        />
       </div>
     );
   }
@@ -124,8 +153,8 @@ function FilterChips({ options, value, onChange, label }) {
           onClick={() => onChange(option.value)}
           className={`rounded-full border px-3 py-1 text-sm transition-colors ${
             value === option.value
-              ? "border-[#000052] bg-[#000052] text-white"
-              : "border-cm-border bg-cm-card text-cm-text hover:border-[#000052]/30"
+              ? "border-cm-navy-950 bg-cm-navy-950 text-white shadow-sm"
+              : "border-cm-border bg-cm-card text-cm-text hover:border-cm-navy-700/40 hover:bg-cm-navy-950/[0.03]"
           }`}
         >
           {option.label}
@@ -136,17 +165,24 @@ function FilterChips({ options, value, onChange, label }) {
 }
 
 function MiniStat({ label, value, tone }) {
-  const tones = { danger: "text-cm-danger-600", warning: "text-cm-warning-600" };
+  const tones = {
+    danger: "text-cm-danger-600",
+    warning: "text-cm-warning-600",
+  };
   return (
-    <div className="rounded-lg border border-cm-border p-4">
+    <div className="rounded-xl border border-cm-border bg-cm-card/80 p-4 transition-colors hover:bg-cm-navy-950/[0.025]">
       <p className="text-xs text-cm-text-muted">{label}</p>
-      <p className={`mt-1 text-lg font-semibold ${tones[tone] ?? "text-cm-text"}`}>{value}</p>
+      <p
+        className={`mt-1 text-lg font-semibold ${tones[tone] ?? "text-cm-text"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
 
 const inputClass =
-  "h-10 rounded-cm-md border border-cm-border bg-white px-3 text-sm text-cm-text focus:border-cm-blue-500 focus:outline-none focus:ring-2 focus:ring-cm-blue-500";
+  "h-10 rounded-xl border border-cm-border bg-cm-card px-3 text-sm text-cm-text shadow-sm transition placeholder:text-cm-text-muted focus:border-cm-navy-700 focus:outline-none focus:ring-2 focus:ring-cm-navy-700/10";
 
 // ---------------------------------------------------------------------------
 // Tabs
@@ -158,27 +194,43 @@ function OverviewTab({ summary }) {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-cm-text">Attendance & Leave — {formatDate(s.date)}</h2>
+      <section className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-cm-text">
+          Attendance & Leave — {formatDate(s.date)}
+        </h2>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <MiniStat label="Present today" value={s.today.presentToday} />
           <MiniStat label="On leave today" value={s.today.onLeaveToday} />
-          <MiniStat label="Not marked yet" value={s.today.notMarked} tone={s.today.notMarked ? "warning" : undefined} />
-          <MiniStat label="Leave requests pending" value={s.today.pendingLeaves} tone={s.today.pendingLeaves ? "warning" : undefined} />
+          <MiniStat
+            label="Not marked yet"
+            value={s.today.notMarked}
+            tone={s.today.notMarked ? "warning" : undefined}
+          />
+          <MiniStat
+            label="Leave requests pending"
+            value={s.today.pendingLeaves}
+            tone={s.today.pendingLeaves ? "warning" : undefined}
+          />
         </div>
       </section>
 
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
+      <section className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-cm-text">Payroll & People</h2>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <MiniStat label={`Payroll — ${formatMonth(s.payroll.month)}`} value={formatMoney(s.payroll.totalNet)} />
+          <MiniStat
+            label={`Payroll — ${formatMonth(s.payroll.month)}`}
+            value={formatMoney(s.payroll.totalNet)}
+          />
           <MiniStat
             label="Payroll processed / pending"
             value={`${s.payroll.processed} / ${s.payroll.pending}`}
             tone={s.payroll.pending ? "warning" : undefined}
           />
           <MiniStat label="Active employees" value={s.employees.total} />
-          <MiniStat label="Full time / exited" value={`${s.employees.fullTime} / ${s.employees.exited}`} />
+          <MiniStat
+            label="Full time / exited"
+            value={`${s.employees.fullTime} / ${s.employees.exited}`}
+          />
           <MiniStat
             label="Internship / probation ending in 14 days"
             value={s.internshipProbation.dueSoon}
@@ -195,7 +247,11 @@ function OverviewTab({ summary }) {
   );
 }
 
-const EMPLOYEE_STATUS_TONE = { Active: "success", "On Leave": "warning", Exited: "neutral" };
+const EMPLOYEE_STATUS_TONE = {
+  Active: "success",
+  "On Leave": "warning",
+  Exited: "neutral",
+};
 
 function EmployeesTab({ tick, onRetry }) {
   const state = useLiveData(getHrmsEmployees, tick);
@@ -206,35 +262,62 @@ function EmployeesTab({ tick, onRetry }) {
     const list = state.data ?? [];
     if (!query) return list;
     return list.filter((employee) =>
-      [employee.fullName, employee.email, employee.role, employee.employmentType]
+      [
+        employee.fullName,
+        employee.email,
+        employee.role,
+        employee.employmentType,
+      ]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query)),
     );
   }, [state.data, search]);
 
   const columns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.fullName} email={row.email} /> },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => <Person name={row.fullName} email={row.email} />,
+    },
     { key: "role", header: "Role", render: (row) => titleCase(row.role) },
     { key: "type", header: "Type", render: (row) => row.employmentType },
-    { key: "joined", header: "Joined", render: (row) => formatDate(row.joiningDate) },
+    {
+      key: "joined",
+      header: "Joined",
+      render: (row) => formatDate(row.joiningDate),
+    },
     { key: "phone", header: "Phone", render: (row) => row.phone || "—" },
-    { key: "salary", header: "Salary", render: (row) => formatMoney(row.salary) },
+    {
+      key: "salary",
+      header: "Salary",
+      render: (row) => formatMoney(row.salary),
+    },
     {
       key: "status",
       header: "Status",
-      render: (row) => <Badge tone={EMPLOYEE_STATUS_TONE[row.employmentStatus] ?? "neutral"}>{row.employmentStatus}</Badge>,
+      render: (row) => (
+        <Badge tone={EMPLOYEE_STATUS_TONE[row.employmentStatus] ?? "neutral"}>
+          {row.employmentStatus}
+        </Badge>
+      ),
     },
   ];
 
   return (
     <Section state={state} onRetry={onRetry}>
-      <section className="flex flex-col gap-4">
-        <TableSearch value={search} onChange={setSearch} placeholder="Search name, email, role, type…" />
+      <section className="flex flex-col gap-4 rounded-2xl border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
+        <TableSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search name, email, role, type…"
+        />
         <DataTable
           columns={columns}
           rows={withIds(rows)}
           isLoading={state.isLoading}
-          emptyMessage={search ? "No employees match your search." : "No employees yet."}
+          emptyMessage={
+            search ? "No employees match your search." : "No employees yet."
+          }
         />
       </section>
     </Section>
@@ -250,7 +333,11 @@ const DAY_STATUS_TONE = {
 };
 
 const SessionBadge = ({ value }) =>
-  value ? <Badge tone={value === "Present" ? "success" : "danger"}>{value}</Badge> : <span className="text-cm-text-muted">—</span>;
+  value ? (
+    <Badge tone={value === "Present" ? "success" : "danger"}>{value}</Badge>
+  ) : (
+    <span className="text-cm-text-muted">—</span>
+  );
 
 function AttendanceTab({ tick, onRetry }) {
   const [date, setDate] = useState(todayLocal());
@@ -266,22 +353,40 @@ function AttendanceTab({ tick, onRetry }) {
   }, [state.data]);
 
   const columns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.fullName} email={row.email} /> },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => <Person name={row.fullName} email={row.email} />,
+    },
     { key: "role", header: "Role", render: (row) => titleCase(row.role) },
-    { key: "first", header: "First Half", render: (row) => <SessionBadge value={row.firstHalf} /> },
-    { key: "second", header: "Second Half", render: (row) => <SessionBadge value={row.secondHalf} /> },
+    {
+      key: "first",
+      header: "First Half",
+      render: (row) => <SessionBadge value={row.firstHalf} />,
+    },
+    {
+      key: "second",
+      header: "Second Half",
+      render: (row) => <SessionBadge value={row.secondHalf} />,
+    },
     { key: "checkIn", header: "Check-in", render: (row) => row.checkIn ?? "—" },
     {
       key: "day",
       header: "Day",
-      render: (row) => <Badge tone={DAY_STATUS_TONE[row.dayStatus]}>{row.dayStatus}</Badge>,
+      render: (row) => (
+        <Badge tone={DAY_STATUS_TONE[row.dayStatus]}>{row.dayStatus}</Badge>
+      ),
     },
-    { key: "leave", header: "Leave", render: (row) => (row.leave ? titleCase(row.leave) : "—") },
+    {
+      key: "leave",
+      header: "Leave",
+      render: (row) => (row.leave ? titleCase(row.leave) : "—"),
+    },
   ];
 
   return (
     <Section state={state} onRetry={onRetry}>
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4 rounded-2xl border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm text-cm-text">
             Date
@@ -289,7 +394,9 @@ function AttendanceTab({ tick, onRetry }) {
               type="date"
               value={date}
               max={todayLocal()}
-              onChange={(event) => event.target.value && setDate(event.target.value)}
+              onChange={(event) =>
+                event.target.value && setDate(event.target.value)
+              }
               className={inputClass}
             />
           </label>
@@ -312,7 +419,11 @@ function AttendanceTab({ tick, onRetry }) {
   );
 }
 
-const LEAVE_STATUS_TONE = { PENDING: "warning", APPROVED: "success", REJECTED: "danger" };
+const LEAVE_STATUS_TONE = {
+  PENDING: "warning",
+  APPROVED: "success",
+  REJECTED: "danger",
+};
 const LEAVE_FILTERS = [
   { value: "", label: "All" },
   { value: "PENDING", label: "Pending" },
@@ -326,14 +437,28 @@ function LeavesTab({ tick, onRetry }) {
   const state = useLiveData(fetcher, tick);
 
   const columns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.employee.fullName} email={row.employee.email} /> },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => (
+        <Person name={row.employee.fullName} email={row.employee.email} />
+      ),
+    },
     { key: "date", header: "Date", render: (row) => formatDate(row.leaveDate) },
     { key: "type", header: "Type", render: (row) => titleCase(row.leaveType) },
-    { key: "session", header: "Session", render: (row) => titleCase(row.leaveSession) },
+    {
+      key: "session",
+      header: "Session",
+      render: (row) => titleCase(row.leaveSession),
+    },
     {
       key: "status",
       header: "Status",
-      render: (row) => <Badge tone={LEAVE_STATUS_TONE[row.leaveStatus]}>{titleCase(row.leaveStatus)}</Badge>,
+      render: (row) => (
+        <Badge tone={LEAVE_STATUS_TONE[row.leaveStatus]}>
+          {titleCase(row.leaveStatus)}
+        </Badge>
+      ),
     },
     {
       key: "pay",
@@ -344,14 +469,23 @@ function LeavesTab({ tick, onRetry }) {
         return <span className="text-cm-text-muted">—</span>;
       },
     },
-    { key: "reviewer", header: "Reviewed By", render: (row) => row.reviewedBy ?? "—" },
+    {
+      key: "reviewer",
+      header: "Reviewed By",
+      render: (row) => row.reviewedBy ?? "—",
+    },
     { key: "reason", header: "Reason", render: (row) => row.reason || "—" },
   ];
 
   return (
     <Section state={state} onRetry={onRetry}>
-      <section className="flex flex-col gap-4">
-        <FilterChips options={LEAVE_FILTERS} value={status} onChange={setStatus} label="Filter leaves by status" />
+      <section className="flex flex-col gap-4 rounded-2xl border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
+        <FilterChips
+          options={LEAVE_FILTERS}
+          value={status}
+          onChange={setStatus}
+          label="Filter leaves by status"
+        />
         <DataTable
           columns={columns}
           rows={withIds(state.data)}
@@ -370,59 +504,130 @@ function PayrollTab({ tick, onRetry }) {
   const data = state.data;
 
   const payrollColumns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.employee.fullName} email={row.employee.email} /> },
-    { key: "base", header: "Base", render: (row) => formatMoney(row.baseSalary) },
-    { key: "lop", header: "LOP", render: (row) => formatMoney(row.lopDeduction) },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => (
+        <Person name={row.employee.fullName} email={row.employee.email} />
+      ),
+    },
+    {
+      key: "base",
+      header: "Base",
+      render: (row) => formatMoney(row.baseSalary),
+    },
+    {
+      key: "lop",
+      header: "LOP",
+      render: (row) => formatMoney(row.lopDeduction),
+    },
     { key: "bonus", header: "Bonus", render: (row) => formatMoney(row.bonus) },
-    { key: "net", header: "Net", render: (row) => <span className="font-semibold">{formatMoney(row.netSalary)}</span> },
+    {
+      key: "net",
+      header: "Net",
+      render: (row) => (
+        <span className="font-semibold">{formatMoney(row.netSalary)}</span>
+      ),
+    },
     { key: "method", header: "Payment", render: (row) => row.paymentMethod },
     {
       key: "status",
       header: "Status",
-      render: (row) => <Badge tone={row.status === "Processed" ? "success" : "warning"}>{row.status}</Badge>,
+      render: (row) => (
+        <Badge tone={row.status === "Processed" ? "success" : "warning"}>
+          {row.status}
+        </Badge>
+      ),
     },
   ];
 
   const bonusColumns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.employee.fullName} email={row.employee.email} /> },
-    { key: "type", header: "Type", render: (row) => <Badge tone="neutral">{row.bonusType}</Badge> },
-    { key: "amount", header: "Amount", render: (row) => <span className="font-semibold">{formatMoney(row.amount)}</span> },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => (
+        <Person name={row.employee.fullName} email={row.employee.email} />
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (row) => <Badge tone="neutral">{row.bonusType}</Badge>,
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (row) => (
+        <span className="font-semibold">{formatMoney(row.amount)}</span>
+      ),
+    },
     { key: "reason", header: "Reason", render: (row) => row.reason || "—" },
   ];
 
   const incrementColumns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.employee.fullName} email={row.employee.email} /> },
-    { key: "previous", header: "Previous", render: (row) => formatMoney(row.previousSalary) },
-    { key: "new", header: "New", render: (row) => <span className="font-semibold">{formatMoney(row.newSalary)}</span> },
-    { key: "increase", header: "Increase", render: (row) => <Badge tone="success">+{row.increasePercent}%</Badge> },
-    { key: "effective", header: "Effective", render: (row) => formatDate(row.effectiveDate) },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => (
+        <Person name={row.employee.fullName} email={row.employee.email} />
+      ),
+    },
+    {
+      key: "previous",
+      header: "Previous",
+      render: (row) => formatMoney(row.previousSalary),
+    },
+    {
+      key: "new",
+      header: "New",
+      render: (row) => (
+        <span className="font-semibold">{formatMoney(row.newSalary)}</span>
+      ),
+    },
+    {
+      key: "increase",
+      header: "Increase",
+      render: (row) => <Badge tone="success">+{row.increasePercent}%</Badge>,
+    },
+    {
+      key: "effective",
+      header: "Effective",
+      render: (row) => formatDate(row.effectiveDate),
+    },
     { key: "reason", header: "Reason", render: (row) => row.reason || "—" },
   ];
 
   return (
     <Section state={state} onRetry={onRetry}>
-      <section className="flex flex-col gap-6">
+      <section className="flex flex-col gap-6 rounded-2xl border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm text-cm-text">
             Month
             <input
               type="month"
               value={month}
-              onChange={(event) => event.target.value && setMonth(event.target.value)}
+              onChange={(event) =>
+                event.target.value && setMonth(event.target.value)
+              }
               className={inputClass}
             />
           </label>
           {data && (
             <p className="text-sm text-cm-text-muted">
-              {data.totals.count} payroll{data.totals.count === 1 ? "" : "s"} · Total net{" "}
-              <strong className="text-cm-text">{formatMoney(data.totals.totalNet)}</strong>
+              {data.totals.count} payroll{data.totals.count === 1 ? "" : "s"} ·
+              Total net{" "}
+              <strong className="text-cm-text">
+                {formatMoney(data.totals.totalNet)}
+              </strong>
               {data.totals.pending > 0 && ` · ${data.totals.pending} pending`}
             </p>
           )}
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold text-cm-text">Payroll — {formatMonth(month)}</h3>
+          <h3 className="text-sm font-semibold text-cm-text">
+            Payroll — {formatMonth(month)}
+          </h3>
           <DataTable
             columns={payrollColumns}
             rows={withIds(data?.payrolls)}
@@ -432,7 +637,9 @@ function PayrollTab({ tick, onRetry }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold text-cm-text">Bonuses — {formatMonth(month)}</h3>
+          <h3 className="text-sm font-semibold text-cm-text">
+            Bonuses — {formatMonth(month)}
+          </h3>
           <DataTable
             columns={bonusColumns}
             rows={withIds(data?.bonuses)}
@@ -442,7 +649,9 @@ function PayrollTab({ tick, onRetry }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold text-cm-text">Recent Increments</h3>
+          <h3 className="text-sm font-semibold text-cm-text">
+            Recent Increments
+          </h3>
           <DataTable
             columns={incrementColumns}
             rows={withIds(data?.increments)}
@@ -455,8 +664,19 @@ function PayrollTab({ tick, onRetry }) {
   );
 }
 
-const PERIOD_STATUS_TONE = { Active: "info", Confirmed: "success", Converted: "success", Ended: "neutral", Terminated: "danger" };
-const PERFORMANCE_TONE = { Pending: "neutral", "Needs Improvement": "warning", Good: "info", Excellent: "success" };
+const PERIOD_STATUS_TONE = {
+  Active: "info",
+  Confirmed: "success",
+  Converted: "success",
+  Ended: "neutral",
+  Terminated: "danger",
+};
+const PERFORMANCE_TONE = {
+  Pending: "neutral",
+  "Needs Improvement": "warning",
+  Good: "info",
+  Excellent: "success",
+};
 const PERIOD_FILTERS = [
   { value: "Active", label: "Active" },
   { value: "Closed", label: "Closed" },
@@ -465,11 +685,20 @@ const PERIOD_FILTERS = [
 
 function TimeLeft({ row }) {
   if (row.status !== "Active") {
-    return <Badge tone={PERIOD_STATUS_TONE[row.status]}>{row.status === "Converted" ? "Moved to Probation" : row.status}</Badge>;
+    return (
+      <Badge tone={PERIOD_STATUS_TONE[row.status]}>
+        {row.status === "Converted" ? "Moved to Probation" : row.status}
+      </Badge>
+    );
   }
-  if (row.isOverdue) return <Badge tone="danger">Overdue by {Math.abs(row.daysLeft)}d</Badge>;
+  if (row.isOverdue)
+    return <Badge tone="danger">Overdue by {Math.abs(row.daysLeft)}d</Badge>;
   if (row.daysLeft === 0) return <Badge tone="warning">Ends today</Badge>;
-  return <Badge tone={row.isDueSoon ? "warning" : "neutral"}>{row.daysLeft}d left</Badge>;
+  return (
+    <Badge tone={row.isDueSoon ? "warning" : "neutral"}>
+      {row.daysLeft}d left
+    </Badge>
+  );
 }
 
 function InternshipTab({ tick, onRetry }) {
@@ -487,11 +716,21 @@ function InternshipTab({ tick, onRetry }) {
   );
 
   const columns = [
-    { key: "name", header: "Employee", render: (row) => <Person name={row.employee.fullName} email={row.employee.email} /> },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row) => (
+        <Person name={row.employee.fullName} email={row.employee.email} />
+      ),
+    },
     {
       key: "type",
       header: "Type",
-      render: (row) => <Badge tone={row.periodType === "Internship" ? "info" : "warning"}>{row.periodType}</Badge>,
+      render: (row) => (
+        <Badge tone={row.periodType === "Internship" ? "info" : "warning"}>
+          {row.periodType}
+        </Badge>
+      ),
     },
     {
       key: "period",
@@ -503,30 +742,49 @@ function InternshipTab({ tick, onRetry }) {
           </div>
           {row.extensionCount > 0 && (
             <div className="text-xs text-cm-text-muted">
-              Extended {row.extensionCount}× (was {formatDate(row.originalEndDate)})
+              Extended {row.extensionCount}× (was{" "}
+              {formatDate(row.originalEndDate)})
             </div>
           )}
         </div>
       ),
     },
     { key: "time", header: "Status", render: (row) => <TimeLeft row={row} /> },
-    { key: "stipend", header: "Stipend", render: (row) => (row.stipend === null ? "—" : `${formatMoney(row.stipend)}/mo`) },
+    {
+      key: "stipend",
+      header: "Stipend",
+      render: (row) =>
+        row.stipend === null ? "—" : `${formatMoney(row.stipend)}/mo`,
+    },
     {
       key: "performance",
       header: "Performance",
-      render: (row) => <Badge tone={PERFORMANCE_TONE[row.performance]}>{row.performance}</Badge>,
+      render: (row) => (
+        <Badge tone={PERFORMANCE_TONE[row.performance]}>
+          {row.performance}
+        </Badge>
+      ),
     },
   ];
 
   return (
     <Section state={state} onRetry={onRetry}>
-      <section className="flex flex-col gap-4">
-        <FilterChips options={PERIOD_FILTERS} value={filter} onChange={setFilter} label="Filter by status" />
+      <section className="flex flex-col gap-4 rounded-2xl border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
+        <FilterChips
+          options={PERIOD_FILTERS}
+          value={filter}
+          onChange={setFilter}
+          label="Filter by status"
+        />
         <DataTable
           columns={columns}
           rows={withIds(rows)}
           isLoading={state.isLoading}
-          emptyMessage={filter === "Active" ? "No one is on internship or probation right now." : "No records."}
+          emptyMessage={
+            filter === "Active"
+              ? "No one is on internship or probation right now."
+              : "No records."
+          }
         />
       </section>
     </Section>
@@ -542,14 +800,25 @@ function HierarchyTab({ tick, onRetry }) {
   return (
     <Section state={state} onRetry={onRetry}>
       {images.length === 0 ? (
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <EmptyState title="No hierarchy images yet" description="They appear here once uploaded in Company → Employee Hierarchy." />
+        <div className="rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+          <EmptyState
+            title="No hierarchy images yet"
+            description="They appear here once uploaded in Company → Employee Hierarchy."
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {images.map((image) => (
-            <figure key={image.uuid} className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-              <img src={image.fileUrl} alt={image.originalFileName} className="w-full object-contain" loading="lazy" />
+            <figure
+              key={image.uuid}
+              className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm transition-shadow hover:shadow-md"
+            >
+              <img
+                src={image.fileUrl}
+                alt={image.originalFileName}
+                className="w-full object-contain"
+                loading="lazy"
+              />
               <figcaption className="border-t border-cm-border px-4 py-2 text-xs text-cm-text-muted">
                 {image.originalFileName}
               </figcaption>
@@ -563,8 +832,11 @@ function HierarchyTab({ tick, onRetry }) {
 
 function SopsTab() {
   return (
-    <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-      <EmptyState title="SOPs coming soon" description="The SOP module isn't built yet — it will show here once it is." />
+    <div className="rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+      <EmptyState
+        title="SOPs coming soon"
+        description="The SOP module isn't built yet — it will show here once it is."
+      />
     </div>
   );
 }
@@ -600,59 +872,133 @@ function HRMS() {
   const s = summary.data;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">HRMS</h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Company-wide employee, attendance, leave, payroll and people administration.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1 text-xs text-cm-text-muted">
-            <Eye className="h-3.5 w-3.5" aria-hidden="true" /> View only
-            {summary.updatedAt && ` · Updated ${summary.updatedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
-          </span>
-          <Button size="sm" variant="outline" onClick={refresh} aria-label="Refresh HRMS data">
-            <RefreshCw className="mr-1 h-4 w-4" aria-hidden="true" /> Refresh
+    <div className="flex flex-col gap-6 text-cm-text">
+      <header className="relative overflow-hidden rounded-2xl border border-cm-border bg-gradient-to-br from-cm-card via-cm-card to-cm-navy-950/[0.06] p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-cm-navy-950/[0.04] blur-2xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cm-navy-950 text-white shadow-sm">
+              <Eye className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold tracking-tight text-cm-text">
+                  HRMS
+                </h1>
+                <span className="inline-flex items-center rounded-full border border-cm-border bg-cm-card px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-cm-text-muted">
+                  Read only
+                </span>
+              </div>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-cm-text-muted">
+                A live overview of employees, attendance, leave, payroll and
+                people operations.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-cm-text-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
+                  Auto-refreshes every minute
+                </span>
+                {summary.updatedAt && (
+                  <span>
+                    Last updated{" "}
+                    {summary.updatedAt.toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={refresh}
+            aria-label="Refresh HRMS data"
+          >
+            <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" /> Refresh
+            data
           </Button>
         </div>
-      </div>
+      </header>
 
       {summary.error && !s ? (
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState title="Couldn't load HRMS" description={summary.error} onRetry={refresh} />
+        <div className="rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+          <ErrorState
+            title="Couldn't load HRMS"
+            description={summary.error}
+            onRetry={refresh}
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Present Today" value={s ? s.today.presentToday : "…"} accent="success" />
-          <StatCard label="On Leave" value={s ? s.today.onLeaveToday : "…"} accent="warning" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Present Today"
+            value={s ? s.today.presentToday : "…"}
+            accent="success"
+          />
+          <StatCard
+            label="On Leave"
+            value={s ? s.today.onLeaveToday : "…"}
+            accent="warning"
+          />
           <StatCard label="Interns" value={s ? s.employees.interns : "…"} />
-          <StatCard label="Probation" value={s ? s.employees.probation : "…"} accent="purple" />
+          <StatCard
+            label="Probation"
+            value={s ? s.employees.probation : "…"}
+            accent="purple"
+          />
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {TABS.map(([value, label]) => (
-          <Button
-            key={value}
-            size="sm"
-            variant={activeSection === value ? "primary" : "outline"}
-            onClick={() => setActiveSection(value)}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+      <nav
+        aria-label="HRMS sections"
+        className="rounded-2xl border border-cm-border bg-cm-card p-2 shadow-sm"
+      >
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          {TABS.map(([value, label]) => {
+            const active = activeSection === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => setActiveSection(value)}
+                className={`shrink-0 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-cm-navy-700/20 ${
+                  active
+                    ? "bg-cm-navy-950 text-white shadow-sm"
+                    : "text-cm-text-muted hover:bg-cm-navy-950/[0.05] hover:text-cm-text"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
-      {activeSection === "overview" && <OverviewTab summary={summary} />}
-      {activeSection === "employees" && <EmployeesTab tick={tick} onRetry={refresh} />}
-      {activeSection === "attendance" && <AttendanceTab tick={tick} onRetry={refresh} />}
-      {activeSection === "leave" && <LeavesTab tick={tick} onRetry={refresh} />}
-      {activeSection === "payroll" && <PayrollTab tick={tick} onRetry={refresh} />}
-      {activeSection === "internship" && <InternshipTab tick={tick} onRetry={refresh} />}
-      {activeSection === "hierarchy" && <HierarchyTab tick={tick} onRetry={refresh} />}
-      {activeSection === "sops" && <SopsTab />}
+      <div className="min-w-0">
+        {activeSection === "overview" && <OverviewTab summary={summary} />}
+        {activeSection === "employees" && (
+          <EmployeesTab tick={tick} onRetry={refresh} />
+        )}
+        {activeSection === "attendance" && (
+          <AttendanceTab tick={tick} onRetry={refresh} />
+        )}
+        {activeSection === "leave" && (
+          <LeavesTab tick={tick} onRetry={refresh} />
+        )}
+        {activeSection === "payroll" && (
+          <PayrollTab tick={tick} onRetry={refresh} />
+        )}
+        {activeSection === "internship" && (
+          <InternshipTab tick={tick} onRetry={refresh} />
+        )}
+        {activeSection === "hierarchy" && (
+          <HierarchyTab tick={tick} onRetry={refresh} />
+        )}
+        {activeSection === "sops" && <SopsTab />}
+      </div>
     </div>
   );
 }
