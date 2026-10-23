@@ -18,31 +18,20 @@ const EMPTY_FORM = {
   lastName: "",
 
   email: "",
-  companyEmail: "",
 
   password: "",
   confirmPassword: "",
 
+  role: "",
+  githubUrl: "",
+  linkedinUrl: "",
   phone1: "",
   phone2: "",
   whatsapp: "",
-
   joiningDate: "",
-  dob: "",
-
-  linkedin: "",
-  github: "",
-
-  aadhaar: "",
-
-  role: "",
-
+  dateOfBirth: "",
+  aadhaarLast4: "",
   isActive: true,
-  employmentStatus: "Active",
-  type: "Full Time",
-
-  employeeId: null,
-  employeeUuid: null,
 };
 
 const STATUS_TONE = {
@@ -81,13 +70,9 @@ function normalizeRole(value) {
 function personMatchesRole(person, tab, rolesMap = {}) {
   if (tab.key === "all") return true;
 
-  const role = normalizeRole(
-    person.roleName || rolesMap[person.role]?.name,
-  );
+  const role = normalizeRole(person.roleName || rolesMap[person.role]?.name);
 
-  return tab.aliases.some(
-    (alias) => role === alias || role.includes(alias),
-  );
+  return tab.aliases.some((alias) => role === alias || role.includes(alias));
 }
 
 function mapUserFromApi(user) {
@@ -125,16 +110,16 @@ function mapUserFromApi(user) {
 
     email: user.email || "",
 
-    companyEmail:
-      user.employee?.companyEmail || user.companyEmail || "",
+    companyEmail: user.employee?.companyEmail || user.companyEmail || "",
     phone1: user.employee?.phone1 || "",
     phone2: user.employee?.phone2 || "",
     whatsapp: user.employee?.whatsapp || "",
     joiningDate: user.employee?.joiningDate || "",
-    dob: user.employee?.dateOfBirth || user.employee?.dob || "",
-    linkedin: user.employee?.linkedinUrl || user.employee?.linkedin || "",
-    github: user.employee?.githubUrl || user.employee?.github || "",
-    aadhaar: user.employee?.aadhaarLast4 || user.employee?.aadhaar || "",
+    dateOfBirth: user.employee?.dateOfBirth || user.employee?.dateOfBirth || "",
+    linkendinUrl: user.employee?.linkedinUrl || user.employee?.linkendinUrl || "",
+    githubUrl: user.employee?.githubUrl || user.employee?.githubUrl || "",
+    aadhaarLast4:
+      user.employee?.aadhaarLast4 || user.employee?.aadhaarLast4 || "",
 
     role: roleUuid,
     roleName,
@@ -418,29 +403,29 @@ function PeopleManagement() {
 
         return "";
 
-      case "aadhaar":
+      case "aadhaarLast4":
         if (!formValue) return "";
 
         if (!/^\d{4}$/.test(formValue)) {
-          return "Aadhaar must contain exactly 4 digits.";
+          return "aadhaarLast4 must contain exactly 4 digits.";
         }
 
         return "";
 
-      case "linkedin":
+      case "linkendinUrl":
         if (!formValue) return "";
 
-        if (!/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(formValue.trim())) {
-          return "Enter a valid LinkedIn URL.";
+        if (!/^https?:\/\/(www\.)?linkendinUrl\.com\/.+$/i.test(formValue.trim())) {
+          return "Enter a valid linkendinUrl URL.";
         }
 
         return "";
 
-      case "github":
+      case "githubUrl":
         if (!formValue) return "";
 
-        if (!/^https?:\/\/(www\.)?github\.com\/.+$/i.test(formValue.trim())) {
-          return "Enter a valid GitHub URL.";
+        if (!/^https?:\/\/(www\.)?githubUrl\.com\/.+$/i.test(formValue.trim())) {
+          return "Enter a valid githubUrl URL.";
         }
 
         return "";
@@ -478,9 +463,9 @@ function PeopleManagement() {
       "phone1",
       "phone2",
       "whatsapp",
-      "aadhaar",
-      "linkedin",
-      "github",
+      "aadhaarLast4",
+      "linkendinUrl",
+      "githubUrl",
       "role",
       "type",
       "employmentStatus",
@@ -611,12 +596,12 @@ function PeopleManagement() {
       whatsapp: person.whatsapp || "",
 
       joiningDate: person.joiningDate || "",
-      dob: person.dob || "",
+      dateOfBirth: person.dateOfBirth || "",
 
-      linkedin: person.linkedin || "",
-      github: person.github || "",
+      linkendinUrl: person.linkendinUrl || "",
+      githubUrl: person.githubUrl || "",
 
-      aadhaar: person.aadhaar || "",
+      aadhaarLast4: person.aadhaarLast4 || "",
 
       password: "",
       confirmPassword: "",
@@ -718,10 +703,10 @@ function PeopleManagement() {
       phone2: form.phone2 || null,
       whatsapp: form.whatsapp || null,
       joiningDate: form.joiningDate || null,
-      dateOfBirth: form.dob || null,
-      linkedinUrl: form.linkedin?.trim() || null,
-      githubUrl: form.github?.trim() || null,
-      aadhaarLast4: form.aadhaar || null,
+      dateOfBirth: form.dateOfBirth || null,
+      linkedinUrl: form.linkendinUrl?.trim() || null,
+      githubUrl: form.githubUrl?.trim() || null,
+      aadhaarLast4: form.aadhaarLast4 || null,
       roleUuid: form.role,
       employmentType: form.type,
       employmentStatus: form.employmentStatus,
@@ -752,15 +737,25 @@ function PeopleManagement() {
       let res;
       console.log(form.uuid);
       if (form.employeeId) {
-        res = await axios.put(`/api/employees/${form.employeeId}`, employeePayload, {
-          withCredentials: true,
-        });
+        res = await axios.put(
+          `/api/employees/${form.employeeId}`,
+          employeePayload,
+          {
+            withCredentials: true,
+          },
+        );
 
-        showToast.success(res.data?.message || "Employee updated successfully.");
+        showToast.success(
+          res.data?.message || "Employee updated successfully.",
+        );
       } else if (form.uuid && form.id) {
-        res = await axios.put(`/api/employees/people/${form.uuid}`, userPayload, {
-          withCredentials: true,
-        });
+        res = await axios.put(
+          `/api/employees/people/${form.uuid}`,
+          userPayload,
+          {
+            withCredentials: true,
+          },
+        );
 
         showToast.success(res.data?.message || "User updated successfully.");
       } else {
@@ -768,7 +763,9 @@ function PeopleManagement() {
           withCredentials: true,
         });
 
-        showToast.success(res.data?.message || "Employee created successfully.");
+        showToast.success(
+          res.data?.message || "Employee created successfully.",
+        );
       }
 
       await getPeople();
@@ -916,7 +913,10 @@ function PeopleManagement() {
         </Button>
       </header>
 
-      <section aria-label="Filter people by role" className="rounded-cm-lg border border-cm-border bg-cm-card p-2 shadow-cm-sm sm:p-3">
+      <section
+        aria-label="Filter people by role"
+        className="rounded-cm-lg border border-cm-border bg-cm-card p-2 shadow-cm-sm sm:p-3"
+      >
         <div
           role="tablist"
           aria-label="People sections"
@@ -984,7 +984,10 @@ function PeopleManagement() {
               >
                 <div className="flex flex-col gap-3 border-b border-cm-border pb-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h2 id="people-user-form-title" className="text-base font-semibold text-cm-text">
+                    <h2
+                      id="people-user-form-title"
+                      className="text-base font-semibold text-cm-text"
+                    >
                       {form.employeeId
                         ? "Edit Employee"
                         : form.id
@@ -1020,174 +1023,177 @@ function PeopleManagement() {
                   </div>
                 </div>
 
-                <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
+                <fieldset
+                  disabled={isSubmitting}
+                  className="flex flex-col gap-4"
+                >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* FIRST NAME */}
-              <Input
-                label="First Name"
-                required
-                value={form.firstName}
-                error={errors.firstName}
-                onChange={handleChange("firstName")}
-              />
+                    {/* FIRST NAME */}
+                    <Input
+                      label="First Name"
+                      required
+                      value={form.firstName}
+                      error={errors.firstName}
+                      onChange={handleChange("firstName")}
+                    />
 
-              {/* LAST NAME */}
-              <Input
-                label="Last Name"
-                required
-                value={form.lastName}
-                error={errors.lastName}
-                onChange={handleChange("lastName")}
-              />
+                    {/* LAST NAME */}
+                    <Input
+                      label="Last Name"
+                      required
+                      value={form.lastName}
+                      error={errors.lastName}
+                      onChange={handleChange("lastName")}
+                    />
 
-              {/* EMAIL */}
-              <Input
-                label="Email"
-                type="email"
-                required
-                value={form.email}
-                error={errors.email}
-                onChange={handleChange("email")}
-              />
+                    {/* EMAIL */}
+                    <Input
+                      label="Email"
+                      type="email"
+                      required
+                      value={form.email}
+                      error={errors.email}
+                      onChange={handleChange("email")}
+                    />
 
-              <Input
-                label="Company Email"
-                type="email"
-                value={form.companyEmail}
-                error={errors.companyEmail}
-                onChange={handleChange("companyEmail")}
-              />
+                    <Input
+                      label="Company Email"
+                      type="email"
+                      value={form.companyEmail}
+                      error={errors.companyEmail}
+                      onChange={handleChange("companyEmail")}
+                    />
 
-              {/* PASSWORD */}
-              <Input
-                label="Password"
-                type="password"
-                required={!form.id}
-                value={form.password}
-                error={errors.password}
-                onChange={handleChange("password")}
-              />
+                    {/* PASSWORD */}
+                    <Input
+                      label="Password"
+                      type="password"
+                      required={!form.id}
+                      value={form.password}
+                      error={errors.password}
+                      onChange={handleChange("password")}
+                    />
 
-              {/* CONFIRM PASSWORD */}
-              <Input
-                label="Confirm Password"
-                type="password"
-                required={!form.id}
-                value={form.confirmPassword}
-                error={errors.confirmPassword}
-                onChange={handleChange("confirmPassword")}
-              />
+                    {/* CONFIRM PASSWORD */}
+                    <Input
+                      label="Confirm Password"
+                      type="password"
+                      required={!form.id}
+                      value={form.confirmPassword}
+                      error={errors.confirmPassword}
+                      onChange={handleChange("confirmPassword")}
+                    />
 
-              <Input
-                label="Phone 1"
-                value={form.phone1}
-                error={errors.phone1}
-                onChange={handleChange("phone1")}
-              />
+                    <Input
+                      label="Phone 1"
+                      value={form.phone1}
+                      error={errors.phone1}
+                      onChange={handleChange("phone1")}
+                    />
 
-              <Input
-                label="Phone 2"
-                value={form.phone2}
-                error={errors.phone2}
-                onChange={handleChange("phone2")}
-              />
+                    <Input
+                      label="Phone 2"
+                      value={form.phone2}
+                      error={errors.phone2}
+                      onChange={handleChange("phone2")}
+                    />
 
-              <Input
-                label="WhatsApp"
-                value={form.whatsapp}
-                error={errors.whatsapp}
-                onChange={handleChange("whatsapp")}
-              />
+                    <Input
+                      label="WhatsApp"
+                      value={form.whatsapp}
+                      error={errors.whatsapp}
+                      onChange={handleChange("whatsapp")}
+                    />
 
-              <Input
-                label="Date of Joining"
-                type="date"
-                value={form.joiningDate}
-                error={errors.joiningDate}
-                onChange={handleChange("joiningDate")}
-              />
+                    <Input
+                      label="Date of Joining"
+                      type="date"
+                      value={form.joiningDate}
+                      error={errors.joiningDate}
+                      onChange={handleChange("joiningDate")}
+                    />
 
-              <Input
-                label="Date of Birth"
-                type="date"
-                value={form.dob}
-                error={errors.dob}
-                onChange={handleChange("dob")}
-              />
+                    <Input
+                      label="Date of Birth"
+                      type="date"
+                      value={form.dateOfBirth}
+                      error={errors.dateOfBirth}
+                      onChange={handleChange("dateOfBirth")}
+                    />
 
-              <Input
-                label="LinkedIn"
-                value={form.linkedin}
-                error={errors.linkedin}
-                onChange={handleChange("linkedin")}
-              />
+                    <Input
+                      label="linkendinUrl"
+                      value={form.linkendinUrl}
+                      error={errors.linkendinUrl}
+                      onChange={handleChange("linkendinUrl")}
+                    />
 
-              <Input
-                label="GitHub"
-                value={form.github}
-                error={errors.github}
-                onChange={handleChange("github")}
-              />
+                    <Input
+                      label="githubUrl"
+                      value={form.githubUrl}
+                      error={errors.githubUrl}
+                      onChange={handleChange("githubUrl")}
+                    />
 
-              <Input
-                label="Aadhaar Last 4"
-                value={form.aadhaar}
-                error={errors.aadhaar}
-                maxLength={4}
-                onChange={handleChange("aadhaar")}
-              />
+                    <Input
+                      label="Aadhaar Last 4"
+                      value={form.aadhaarLast4}
+                      error={errors.aadhaarLast4}
+                      maxLength={4}
+                      onChange={handleChange("aadhaarLast4")}
+                    />
 
-              {/* ROLE */}
-              <Select
-                label="Role"
-                value={form.role}
-                error={errors.role}
-                disabled={isRolesLoading}
-                options={roles.map((role) => ({
-                  label: role.name,
-                  value: role.uuid,
-                }))}
-                onChange={handleChange("role")}
-              />
+                    {/* ROLE */}
+                    <Select
+                      label="Role"
+                      value={form.role}
+                      error={errors.role}
+                      disabled={isRolesLoading}
+                      options={roles.map((role) => ({
+                        label: role.name,
+                        value: role.uuid,
+                      }))}
+                      onChange={handleChange("role")}
+                    />
 
-              {/* STATUS */}
-              <Select
-                label="Account Status"
-                value={String(form.isActive)}
-                options={[
-                  {
-                    label: "Active",
-                    value: "true",
-                  },
-                  {
-                    label: "Inactive",
-                    value: "false",
-                  },
-                ]}
-                onChange={handleStatusChange}
-              />
+                    {/* STATUS */}
+                    <Select
+                      label="Account Status"
+                      value={String(form.isActive)}
+                      options={[
+                        {
+                          label: "Active",
+                          value: "true",
+                        },
+                        {
+                          label: "Inactive",
+                          value: "false",
+                        },
+                      ]}
+                      onChange={handleStatusChange}
+                    />
 
-              <Select
-                label="Employment Type"
-                value={form.type}
-                error={errors.type}
-                options={EMPLOYMENT_TYPES.map((value) => ({
-                  value,
-                  label: value,
-                }))}
-                onChange={handleChange("type")}
-              />
+                    <Select
+                      label="Employment Type"
+                      value={form.type}
+                      error={errors.type}
+                      options={EMPLOYMENT_TYPES.map((value) => ({
+                        value,
+                        label: value,
+                      }))}
+                      onChange={handleChange("type")}
+                    />
 
-              <Select
-                label="Employment Status"
-                value={form.employmentStatus}
-                error={errors.employmentStatus}
-                options={EMPLOYMENT_STATUSES.map((value) => ({
-                  value,
-                  label: value,
-                }))}
-                onChange={handleChange("employmentStatus")}
-              />
+                    <Select
+                      label="Employment Status"
+                      value={form.employmentStatus}
+                      error={errors.employmentStatus}
+                      options={EMPLOYMENT_STATUSES.map((value) => ({
+                        value,
+                        label: value,
+                      }))}
+                      onChange={handleChange("employmentStatus")}
+                    />
                   </div>
                 </fieldset>
 
@@ -1235,7 +1241,10 @@ function PeopleManagement() {
                 User ID: {selected.id}
               </p>
 
-              <h2 id="selected-person-heading" className="mt-1 text-lg font-semibold text-cm-text">
+              <h2
+                id="selected-person-heading"
+                className="mt-1 text-lg font-semibold text-cm-text"
+              >
                 {selected.name}
               </h2>
 
@@ -1290,7 +1299,10 @@ function PeopleManagement() {
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 id="people-list-heading" className="text-base font-semibold text-cm-text">
+            <h2
+              id="people-list-heading"
+              className="text-base font-semibold text-cm-text"
+            >
               All users
             </h2>
             <p className="mt-1 text-sm text-cm-text-muted">
