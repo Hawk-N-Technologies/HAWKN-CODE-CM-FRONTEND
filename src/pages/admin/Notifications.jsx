@@ -109,13 +109,16 @@ function Notifications() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">Notifications</h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-cm-border pb-5">
+        <div className="min-w-0">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cm-primary">
+            Admin activity
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-cm-text">Notifications</h1>
+          <p className="mt-2 text-sm leading-6 text-cm-text-muted">
             Company events and items requiring Admin attention.
           </p>
-          <p className="mt-1 text-sm text-cm-text-muted">
+          <p className="mt-2 inline-flex rounded-full border border-cm-border bg-white px-3 py-1 text-xs font-medium text-cm-text-muted">
             {unreadCount} unread notification{unreadCount === 1 ? "" : "s"}
           </p>
         </div>
@@ -139,9 +142,9 @@ function Notifications() {
             Mark All Read
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 rounded-cm-lg border border-cm-border bg-white p-3 shadow-sm">
         {FILTERS.map((value) => (
           <Button
             key={value}
@@ -158,11 +161,13 @@ function Notifications() {
         ))}
       </div>
 
-      <TableSearch
-        value={search}
-        onChange={setSearch}
-        placeholder="Search notifications..."
-      />
+      <div className="rounded-cm-lg border border-cm-border bg-white p-3 shadow-sm">
+        <TableSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search notifications..."
+        />
+      </div>
 
       {(error || actionError) && (
         <div
@@ -174,11 +179,11 @@ function Notifications() {
       )}
 
       {loading ? (
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-6 text-sm text-cm-text-muted">
+        <div className="rounded-cm-lg border border-cm-border bg-white p-6 text-sm text-cm-text-muted shadow-sm">
           Loading notifications...
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-6 text-center text-sm text-cm-text-muted">
+        <div className="rounded-cm-lg border border-cm-border bg-white p-10 text-center text-sm text-cm-text-muted shadow-sm">
           {notifications.length === 0
             ? "No notifications yet."
             : "No notifications match your search or filter."}
@@ -188,10 +193,10 @@ function Notifications() {
           {filtered.map((item) => (
             <article
               key={item.id}
-              className={`rounded-cm-lg border bg-cm-card p-5 shadow-sm ${
+              className={`rounded-cm-lg border bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${
                 item.readAt
                   ? "border-cm-border"
-                  : "border-blue-300"
+                  : "border-cm-primary/40 bg-cm-primary/[0.025]"
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
