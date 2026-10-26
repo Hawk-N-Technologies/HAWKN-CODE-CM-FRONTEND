@@ -60,15 +60,13 @@ function DeliveryHandover() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="border-b border-cm-border pb-5">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cm-primary">
-          Delivery workspace
+      <div>
+        <h1 className="text-xl font-bold text-cm-text">Delivery & Handover</h1>
+        <p className="mt-1 text-sm text-cm-text-muted">
+          Complete build testing, field training and final delivery after all
+          phases are complete.
         </p>
-        <h1 className="text-2xl font-bold tracking-tight text-cm-text">Delivery & Handover</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
-          Coordinate build testing, field training, and final delivery once project phases are complete.
-        </p>
-      </header>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {projects.map((project) => (
@@ -76,7 +74,7 @@ function DeliveryHandover() {
             key={project.id}
             type="button"
             onClick={() => setSelectedId(project.id)}
-            className={`rounded-cm-lg border bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cm-primary focus:ring-offset-2 ${selectedId === project.id ? "border-cm-primary ring-1 ring-cm-primary/20" : "border-cm-border"}` }
+            className="rounded-cm-lg border border-cm-border bg-cm-card p-5 text-left shadow-sm"
           >
             <p className="text-xs text-cm-text-muted">{project.id}</p>
             <h2 className="mt-1 font-semibold text-cm-text">{project.name}</h2>
@@ -95,7 +93,7 @@ function DeliveryHandover() {
       </div>
 
       {selected && (
-        <section className="rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm">
+        <section className="rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs text-cm-text-muted">{selected.id}</p>
@@ -117,7 +115,7 @@ function DeliveryHandover() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-lg border border-cm-border bg-cm-bg/50 p-4"
+                className="rounded-lg border border-cm-border p-4"
               >
                 <p className="text-xs text-cm-text-muted">{label}</p>
                 <p className="mt-1 text-sm font-semibold text-cm-text">
@@ -148,7 +146,7 @@ function DeliveryHandover() {
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-cm-border bg-white p-5">
+            <div className="rounded-lg border border-cm-border p-5">
               <h3 className="text-sm font-semibold text-cm-text">
                 Field Training
               </h3>
@@ -173,7 +171,7 @@ function DeliveryHandover() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-cm-border bg-white p-5">
+            <div className="rounded-lg border border-cm-border p-5">
               <h3 className="text-sm font-semibold text-cm-text">
                 Bug-Fixing Loop
               </h3>
