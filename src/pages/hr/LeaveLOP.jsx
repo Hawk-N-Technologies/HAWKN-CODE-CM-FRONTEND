@@ -190,7 +190,7 @@ const LeaveLOP = () => {
 
     try {
       await axios.post(
-        "/api/company/leaves",
+        "/api/leaves",
         {
           employeeId: form.employee,
           leaveType: form.type,
@@ -321,10 +321,10 @@ const LeaveLOP = () => {
             Manage leave requests, approvals and LOP.
           </p>
         </div>
-
+        {/* 
         <Button onClick={() => setShowForm((value) => !value)}>
           {showForm ? "Close" : "Add Leave"}
-        </Button>
+        </Button> */}
       </div>
 
       {/* Add Leave Form */}
