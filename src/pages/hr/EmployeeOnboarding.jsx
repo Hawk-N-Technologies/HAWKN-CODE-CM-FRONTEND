@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -36,13 +37,36 @@ const EMPTY_FORM = {
   phone1: "",
 };
 
+const FILTERS = ["All", "Not Started", "In Progress", "Completed"];
+
 const STATUS_TONE = {
   "Not Started": "neutral",
   "In Progress": "warning",
   Completed: "success",
 };
 
-const FILTERS = ["All", "Not Started", "In Progress", "Completed"];
+const STATUS_STYLES = {
+  All: {
+    icon: "◫",
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-700",
+  },
+  "Not Started": {
+    icon: "○",
+    iconBg: "bg-slate-100",
+    iconColor: "text-slate-600",
+  },
+  "In Progress": {
+    icon: "◷",
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-700",
+  },
+  Completed: {
+    icon: "✓",
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-700",
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -69,6 +93,13 @@ const formatDate = (value) => {
 const fullName = (employee) =>
   [employee?.firstName, employee?.lastName].filter(Boolean).join(" ") ||
   "Unnamed";
+
+const getInitials = (employee) => {
+  const first = employee?.firstName?.trim()?.[0] ?? "";
+  const last = employee?.lastName?.trim()?.[0] ?? "";
+
+  return (first + last).toUpperCase() || "?";
+};
 
 // ---------------------------------------------------------------------------
 // Start Onboarding modal
@@ -128,7 +159,7 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/40 p-3 backdrop-blur-md sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isSubmitting) {
           onCancel();
@@ -139,39 +170,41 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-modal-title"
-        className="my-auto flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh]"
+        className="my-auto flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:max-h-[90vh] sm:rounded-3xl"
       >
-        {/* Dark modal header */}
-        <header className="relative shrink-0 overflow-hidden bg-[#0b1932] px-5 py-5 text-white sm:px-8 sm:py-6">
+        {/* Soft navy header */}
+        <header className="relative shrink-0 overflow-hidden border-b border-slate-200 bg-gradient-to-r from-[#0b1932] via-[#112746] to-[#19385d] px-5 py-5 text-white sm:px-8 sm:py-6">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -right-10 -top-20 h-48 w-48 rounded-full border border-white/10"
+            className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-white/10"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -right-2 -top-12 h-32 w-32 rounded-full border border-white/10"
+            className="pointer-events-none absolute -right-1 -top-16 h-44 w-44 rounded-full border border-white/10"
           />
 
           <div className="relative flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-lg font-semibold text-white sm:h-12 sm:w-12">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-2xl font-light text-blue-100 sm:h-12 sm:w-12">
                 +
               </div>
 
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">
-                  HR Management
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="onboarding-modal-title"
+                    className="text-xl font-bold tracking-tight sm:text-2xl"
+                  >
+                    Start onboarding
+                  </h2>
 
-                <h2
-                  id="onboarding-modal-title"
-                  className="mt-1 text-xl font-bold tracking-tight sm:text-2xl"
-                >
-                  Start Onboarding
-                </h2>
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+                    New joiner
+                  </span>
+                </div>
 
-                <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
-                  Create a new joiner record and set up their onboarding
+                <p className="mt-1.5 max-w-xl text-sm leading-5 text-slate-300">
+                  Add employee details to create their record and onboarding
                   checklist.
                 </p>
               </div>
@@ -182,31 +215,45 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
               aria-label="Close onboarding form"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-slate-200 transition hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
               ×
             </button>
           </div>
+
+          <div className="relative mt-5 flex items-center gap-2 text-xs text-blue-100/90">
+            <span className="h-2 w-2 rounded-full bg-blue-300" />
+            Employee details
+            <span className="text-white/40">/</span>
+            Role and joining information
+          </div>
         </header>
 
-        {/* Scrollable form content */}
         <form
           noValidate
           onSubmit={handleSubmit(onSubmit)}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-8 sm:py-7">
-            <div className="mb-5">
-              <h3 className="text-sm font-bold text-slate-900">
-                Employee details
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                Enter the employee's information, role, and joining details.
-                Fields marked with * are required.
-              </p>
+          {/* Scrollable modal body */}
+          <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-8 sm:py-7">
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-lg text-blue-700 shadow-sm ring-1 ring-blue-100">
+                i
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">
+                  Employee information
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Provide accurate details. The employee's role and joining
+                  information will be used to create the onboarding record.
+                  Fields marked with * are required.
+                </p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
               <Input
                 label="First Name"
                 required
@@ -246,6 +293,19 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
                 })}
               />
 
+              <Input
+                label="Phone"
+                type="tel"
+                placeholder="+91 98765 43210"
+                error={errors.phone1?.message}
+                {...register("phone1", {
+                  pattern: {
+                    value: /^[0-9+\-\s()]{7,20}$/,
+                    message: "Enter a valid phone number",
+                  },
+                })}
+              />
+
               <Select
                 label="Role"
                 required
@@ -273,35 +333,24 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
                 })}
               />
 
-              <Input
-                label="Joining Date"
-                type="date"
-                required
-                error={errors.joiningDate?.message}
-                {...register("joiningDate", {
-                  required: "Joining date is required",
-                })}
-              />
-
-              <Input
-                label="Phone"
-                type="tel"
-                placeholder="+91 98765 43210"
-                error={errors.phone1?.message}
-                {...register("phone1", {
-                  pattern: {
-                    value: /^[0-9+\-\s()]{7,20}$/,
-                    message: "Enter a valid phone number",
-                  },
-                })}
-              />
+              <div className="sm:col-span-2">
+                <Input
+                  label="Joining Date"
+                  type="date"
+                  required
+                  error={errors.joiningDate?.message}
+                  {...register("joiningDate", {
+                    required: "Joining date is required",
+                  })}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Fixed modal footer */}
-          <footer className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <p className="hidden text-xs text-slate-500 sm:block">
-              The employee record and checklist will be created on submission.
+          {/* Persistent footer */}
+          <footer className="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-slate-50/90 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <p className="text-xs leading-5 text-slate-500">
+              The onboarding checklist will be generated when you submit.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -326,7 +375,7 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
 }
 
 // ---------------------------------------------------------------------------
-// One onboarding card
+// Onboarding record card
 // ---------------------------------------------------------------------------
 
 function OnboardingCard({ record, onChange, onRemoved }) {
@@ -373,127 +422,198 @@ function OnboardingCard({ record, onChange, onRemoved }) {
 
     try {
       await cancelOnboarding(record.uuid);
+
       showToast.info(
         `Onboarding cancelled for ${fullName(employee)}.`,
       );
+
       onRemoved(record.uuid);
     } catch (error) {
       showToast.error(
         getErrorMessage(error, "Couldn't cancel onboarding."),
       );
+
       setIsCancelling(false);
       setConfirmingCancel(false);
     }
   };
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
-      {/* Employee header */}
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="break-words text-base font-bold text-slate-900">
-            {fullName(employee)}
-          </h2>
+    <article className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+      {/* Accent strip */}
+      <div
+        className={`h-1 w-full ${
+          isCompleted
+            ? "bg-emerald-500"
+            : record.status === "In Progress"
+              ? "bg-blue-500"
+              : "bg-slate-300"
+        }`}
+      />
 
-          <p className="mt-1 truncate text-sm text-slate-500">
-            {employee?.email}
-          </p>
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        {/* Identity and status */}
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-sm font-bold text-blue-800">
+            {getInitials(employee)}
+          </div>
 
-          <p className="mt-2 break-words text-xs leading-5 text-slate-500">
-            {formatRole(employee?.role?.name)} · {employee?.employmentType}
-            {" · "}Joining {formatDate(employee?.joiningDate)}
-          </p>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h3 className="break-words text-sm font-bold text-slate-900 sm:text-base">
+              {fullName(employee)}
+            </h3>
+
+            <p className="mt-1 truncate text-xs text-slate-500 sm:text-sm">
+              {employee?.email}
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            <Badge tone={STATUS_TONE[record.status] ?? "neutral"}>
+              {record.status}
+            </Badge>
+          </div>
         </div>
 
-        <div className="shrink-0">
-          <Badge tone={STATUS_TONE[record.status] ?? "neutral"}>
-            {record.status}
-          </Badge>
-        </div>
-      </div>
-
-      {/* Progress */}
-      <div className="mt-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-          <span>
-            {record.completedSteps} of {record.totalSteps} steps done
+        {/* Employment details */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+            {formatRole(employee?.role?.name)}
           </span>
+
+          <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+            {employee?.employmentType || "Employment type unavailable"}
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+          <span>Joining date</span>
           <span className="font-semibold text-slate-700">
-            {record.progress}%
+            {formatDate(employee?.joiningDate)}
           </span>
         </div>
 
-        <div
-          className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
-          role="progressbar"
-          aria-valuenow={record.progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Onboarding progress for ${fullName(employee)}`}
-        >
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${
-              isCompleted ? "bg-emerald-600" : "bg-blue-600"
-            }`}
-            style={{ width: `${record.progress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Checklist */}
-      <ul className="mt-5 flex flex-col gap-3">
-        {record.checklist.map((item) => (
-          <li key={item.key}>
-            <label className="flex min-w-0 cursor-pointer items-start gap-3 text-sm text-slate-800">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#0b1932] disabled:cursor-wait"
-                checked={item.done}
-                disabled={savingItem !== null || isCancelling}
-                onChange={() => toggleItem(item)}
-              />
-
-              <span
-                className={`min-w-0 flex-1 break-words leading-5 ${
-                  item.done ? "text-slate-400 line-through" : ""
-                }`}
-              >
-                {item.label}
-              </span>
-
-              {savingItem === item.key && (
-                <span className="shrink-0">
-                  <Loader context="inline" />
+        {/* Progress panel */}
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-slate-500">
+                Checklist progress
+              </p>
+              <p className="mt-1 text-sm font-bold text-slate-900">
+                {record.completedSteps}{" "}
+                <span className="font-medium text-slate-400">
+                  / {record.totalSteps} steps
                 </span>
-              )}
-            </label>
-          </li>
-        ))}
-      </ul>
+              </p>
+            </div>
 
-      {/* Card actions */}
-      {!isCompleted && (
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
-          {confirmingCancel && !isCancelling && (
+            <div
+              className={`text-xl font-bold tracking-tight ${
+                isCompleted ? "text-emerald-700" : "text-blue-700"
+              }`}
+            >
+              {record.progress}%
+            </div>
+          </div>
+
+          <div
+            className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200"
+            role="progressbar"
+            aria-valuenow={record.progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Onboarding progress for ${fullName(employee)}`}
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                isCompleted ? "bg-emerald-500" : "bg-blue-600"
+              }`}
+              style={{ width: `${record.progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Checklist */}
+        <div className="mt-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+              Onboarding checklist
+            </h4>
+
+            <span className="text-xs text-slate-400">
+              {record.totalSteps
+                ? `${record.completedSteps}/${record.totalSteps}`
+                : "0 steps"}
+            </span>
+          </div>
+
+          <ul className="flex flex-col gap-3">
+            {record.checklist.map((item) => (
+              <li key={item.key}>
+                <label className="flex min-w-0 cursor-pointer items-start gap-3 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#17365d] disabled:cursor-wait"
+                    checked={item.done}
+                    disabled={savingItem !== null || isCancelling}
+                    onChange={() => toggleItem(item)}
+                  />
+
+                  <span
+                    className={`min-w-0 flex-1 break-words leading-5 ${
+                      item.done
+                        ? "text-slate-400 line-through"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+
+                  {savingItem === item.key && (
+                    <span className="shrink-0">
+                      <Loader context="inline" />
+                    </span>
+                  )}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Actions */}
+        {!isCompleted && (
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
+            {confirmingCancel && !isCancelling && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmingCancel(false)}
+              >
+                Keep employee
+              </Button>
+            )}
+
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => setConfirmingCancel(false)}
+              variant="danger"
+              loading={isCancelling}
+              onClick={handleCancel}
             >
-              Keep
+              {confirmingCancel ? "Confirm cancel?" : "Cancel Onboarding"}
             </Button>
-          )}
+          </div>
+        )}
 
-          <Button
-            size="sm"
-            variant="danger"
-            loading={isCancelling}
-            onClick={handleCancel}
-          >
-            {confirmingCancel ? "Confirm cancel?" : "Cancel Onboarding"}
-          </Button>
-        </div>
-      )}
+        {isCompleted && (
+          <div className="mt-5 flex items-center gap-2 border-t border-emerald-100 pt-4 text-xs font-medium text-emerald-700">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
+              ✓
+            </span>
+            Onboarding checklist completed
+          </div>
+        )}
+      </div>
     </article>
   );
 }
@@ -588,52 +708,46 @@ function EmployeeOnboarding() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-5 sm:gap-6">
-      {/* Page header, matching the HRMS visual style */}
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-100 p-5 shadow-sm sm:p-7">
+    <div className="mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-6">
+      {/* Page heading */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/60 p-5 shadow-sm sm:p-7">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-blue-100 sm:h-80 sm:w-80"
+          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full border border-blue-100 sm:h-80 sm:w-80"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-blue-100 sm:h-64 sm:w-64"
+          className="pointer-events-none absolute -right-5 -top-12 h-44 w-44 rounded-full border border-blue-100"
         />
 
         <div className="relative flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0b1932] text-sm font-bold text-white shadow-sm sm:h-14 sm:w-14">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0b1932] text-lg font-bold text-white shadow-sm sm:h-14 sm:w-14">
               HR
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 sm:text-xs">
                 People Operations
               </p>
 
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  Employee Onboarding
-                </h1>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Employee Onboarding
+              </h1>
 
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  HR Workspace
-                </span>
-              </div>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-                Track new joiners through offers, documents, system access,
-                and induction.
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                A clear view of new joiners, checklist progress, and the
+                steps needed to get every employee ready.
               </p>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs text-slate-600">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Onboarding records
+                  Employee lifecycle
                 </span>
 
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">
-                  {records.length} total
+                <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs text-slate-600">
+                  {records.length} onboarding records
                 </span>
               </div>
             </div>
@@ -652,27 +766,28 @@ function EmployeeOnboarding() {
         </div>
       </section>
 
-      {/* Status summary */}
+      {/* Status overview */}
       {!isLoading && !loadError && (
-        <section aria-label="Onboarding status summary">
-          <div className="mb-3">
-            <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-              Onboarding overview
-            </h2>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-              Track new joiners by onboarding status
-            </p>
+        <section>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                Onboarding overview
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Select a status to filter the employee list.
+              </p>
+            </div>
+
+            <span className="text-xs font-medium text-slate-400">
+              Live record totals
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            {FILTERS.map((status, index) => {
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {FILTERS.map((status) => {
+              const style = STATUS_STYLES[status];
               const active = filter === status;
-              const styles = [
-                "bg-blue-50 text-blue-700",
-                "bg-slate-100 text-slate-700",
-                "bg-amber-50 text-amber-700",
-                "bg-emerald-50 text-emerald-700",
-              ];
 
               return (
                 <button
@@ -680,31 +795,50 @@ function EmployeeOnboarding() {
                   type="button"
                   onClick={() => setFilter(status)}
                   aria-pressed={active}
-                  className={`min-w-0 rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:p-5 ${
+                  className={`group min-w-0 rounded-2xl border bg-white p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:p-5 ${
                     active
-                      ? "border-blue-300 ring-1 ring-blue-200"
-                      : "border-slate-200"
+                      ? "border-blue-200 ring-1 ring-blue-100"
+                      : "border-slate-200 hover:border-blue-200"
                   }`}
                 >
-                  <span
-                    className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-semibold ${styles[index]}`}
-                  >
-                    {status}
-                  </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 text-xs font-medium leading-5 text-slate-500 sm:text-sm">
+                      {status === "All" ? "Total records" : status}
+                    </span>
 
-                  <span className="mt-3 block text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                    {counts[status] ?? 0}
-                  </span>
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg font-semibold ${style.iconBg} ${style.iconColor}`}
+                    >
+                      {style.icon}
+                    </span>
+                  </div>
 
-                  <span className="mt-1 block text-xs text-slate-500">
-                    {status === "All"
-                      ? "All records"
-                      : status === "Not Started"
-                        ? "Awaiting progress"
-                        : status === "In Progress"
-                          ? "Currently underway"
-                          : "Fully onboarded"}
-                  </span>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                      {counts[status] ?? 0}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-500">
+                      {status === "All"
+                        ? "All employees"
+                        : status === "Not Started"
+                          ? "Awaiting progress"
+                          : status === "In Progress"
+                            ? "Currently underway"
+                            : "Fully onboarded"}
+                    </span>
+
+                    <span
+                      className={`text-sm transition-transform group-hover:translate-x-0.5 ${
+                        active ? "text-blue-700" : "text-slate-400"
+                      }`}
+                      aria-hidden="true"
+                    >
+                      →
+                    </span>
+                  </div>
                 </button>
               );
             })}
@@ -712,24 +846,43 @@ function EmployeeOnboarding() {
         </section>
       )}
 
-      {/* Main records */}
+      {/* Employee records */}
       <section className="min-w-0">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
-              Onboarding records
+            <h2 className="text-lg font-bold tracking-tight text-slate-900">
+              Employee records
             </h2>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+
+            <p className="mt-1 text-sm text-slate-500">
               {isLoading
-                ? "Loading employee records…"
-                : `${visibleRecords.length} ${filter === "All" ? "records" : `${filter.toLowerCase()} records`}`}
+                ? "Loading onboarding records…"
+                : `${visibleRecords.length} ${
+                    filter === "All"
+                      ? "employees"
+                      : `${filter.toLowerCase()} records`
+                  }`}
             </p>
           </div>
 
           {!isLoading && !loadError && (
-            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
-              {filter} view
-            </span>
+            <div className="flex flex-wrap gap-2" aria-label="Onboarding filters">
+              {FILTERS.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setFilter(status)}
+                  aria-pressed={filter === status}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    filter === status
+                      ? "border-[#0b1932] bg-[#0b1932] text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/50"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -764,7 +917,7 @@ function EmployeeOnboarding() {
             />
           </div>
         ) : (
-          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             {visibleRecords.map((record) => (
               <OnboardingCard
                 key={record.uuid}
@@ -777,7 +930,7 @@ function EmployeeOnboarding() {
         )}
       </section>
 
-      {/* Modal is rendered above the page and blurs the background */}
+      {/* Modal sits above the dashboard and blurs the background */}
       {isFormOpen && (
         <StartOnboardingForm
           roles={roles}
