@@ -3,16 +3,12 @@ import axios from "axios";
 import {
   CalendarDays,
   CalendarCheck2,
-  CalendarX2,
-  Clock3,
-  Search,
   Plus,
   X,
   FileClock,
   History,
   CheckCircle2,
   RefreshCw,
-  ArrowUpRight,
 } from "lucide-react";
 
 import Badge from "../../components/common/Badge";
@@ -125,11 +121,25 @@ const LeaveRequest = () => {
 
   const resetForm = () => setForm({ ...EMPTY_FORM });
 
+  const openAddModal = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
   const closeForm = () => {
     if (submitting) return;
     resetForm();
     setShowForm(false);
   };
+
+  useEffect(() => {
+    if (!showForm) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !submitting) closeForm();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showForm, submitting]);
 
   const submitLeave = async (event) => {
     event.preventDefault();
@@ -157,18 +167,22 @@ const LeaveRequest = () => {
 
     try {
       setSubmitting(true);
-      const response = await axios.post(
-        "/api/leave",
-        {
-          leave_date: form.leaveDate,
-          leave_type: form.leaveType,
-          leave_session: form.leaveSession,
-          reason: form.reason.trim() || null,
-        },
-        { withCredentials: true },
-      );
+      const payload = {
+        leave_date: form.leaveDate,
+        leave_type: form.leaveType,
+        leave_session: form.leaveSession,
+        reason: form.reason.trim() || null,
+      };
 
-      if (response.status === 201 || response.status === 200) {
+      const response = await axios.post("/api/leave", payload, {
+        withCredentials: true,
+      });
+
+      if (
+        response.status === 201 ||
+        response.status === 200 ||
+        response.status === 204
+      ) {
         showToast.success(
           response.data?.message || "Leave request submitted successfully.",
         );
@@ -293,104 +307,165 @@ const LeaveRequest = () => {
         </div>
 
         <Button
-          onClick={() => setShowForm((value) => !value)}
+          onClick={openAddModal}
           disabled={submitting}
           className="w-full shrink-0 sm:w-auto"
         >
           <span className="inline-flex items-center justify-center gap-2">
-            {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? "Close form" : "Apply for leave"}
+            <Plus size={16} />
+            Apply for leave
           </span>
         </Button>
       </header>
 
-      {/* Apply form */}
+      {/* Add leave modal */}
       {showForm && (
-        <section className="border border-cm-border bg-cm-card">
-          <div className="flex flex-col gap-3 border-b border-cm-border bg-cm-bg/50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-indigo-50 text-indigo-700">
-                <CalendarCheck2 size={19} />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-cm-text">
-                  New leave request
-                </h2>
-                <p className="mt-1 text-xs leading-5 text-cm-text-muted">
-                  Complete the details below for HR review.
-                </p>
-              </div>
-            </div>
-            <span className="text-xs text-cm-text-muted">
-              Fields marked required must be completed.
-            </span>
-          </div>
-
-          <form
-            onSubmit={submitLeave}
-            className="grid grid-cols-1 gap-x-5 gap-y-4 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3"
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeForm();
+          }}
+          role="presentation"
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-modal-title"
+            className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-cm-border bg-cm-card shadow-2xl sm:rounded-2xl"
           >
-            <Input
-              label="Leave date"
-              type="date"
-              required
-              min={getTodayDate()}
-              value={form.leaveDate}
-              onChange={(event) =>
-                handleChange("leaveDate", event.target.value)
-              }
-            />
-            <Select
-              label="Leave type"
-              value={form.leaveType}
-              options={LEAVE_TYPE_OPTIONS}
-              onChange={(event) =>
-                handleChange("leaveType", event.target.value)
-              }
-            />
-            <Select
-              label="Duration"
-              value={form.leaveSession}
-              options={SESSION_OPTIONS}
-              onChange={(event) =>
-                handleChange("leaveSession", event.target.value)
-              }
-            />
-
-            <div className="sm:col-span-2 lg:col-span-3">
-              <Input
-                label="Reason (optional)"
-                placeholder="Briefly explain the reason for your leave"
-                value={form.reason}
-                onChange={(event) => handleChange("reason", event.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 border-t border-cm-border pt-4 sm:col-span-2 sm:flex-row sm:justify-end lg:col-span-3">
-              <Button
+            <div className="flex items-start justify-between gap-4 border-b border-cm-border bg-cm-bg/60 px-5 py-5 sm:px-6">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                  <CalendarCheck2 size={20} />
+                </div>
+                <div className="min-w-0">
+                  <h2
+                    id="leave-modal-title"
+                    className="text-lg font-semibold tracking-tight text-cm-text"
+                  >
+                    Apply for leave
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-cm-text-muted">
+                    Share the details below to send your request to HR.
+                  </p>
+                </div>
+              </div>
+              <button
                 type="button"
-                variant="outline"
-                disabled={submitting}
                 onClick={closeForm}
+                disabled={submitting}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-text disabled:opacity-50"
+                aria-label="Close modal"
               >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <RefreshCw size={15} className="animate-spin" />
-                    Submitting…
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-2">
-                    <CheckCircle2 size={15} />
-                    Submit request
-                  </span>
-                )}
-              </Button>
+                <X size={18} />
+              </button>
             </div>
-          </form>
-        </section>
+
+            <form onSubmit={submitLeave} className="min-h-0 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-x-5 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="leave-date"
+                    className="mb-2 block text-sm font-medium text-cm-text"
+                  >
+                    Leave date <span className="text-rose-600">*</span>
+                  </label>
+                  <Input
+                    id="leave-date"
+                    label=""
+                    type="date"
+                    required
+                    min={getTodayDate()}
+                    value={form.leaveDate}
+                    onChange={(event) =>
+                      handleChange("leaveDate", event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-cm-text">
+                    Leave type <span className="text-rose-600">*</span>
+                  </label>
+                  <Select
+                    label=""
+                    value={form.leaveType}
+                    options={LEAVE_TYPE_OPTIONS}
+                    onChange={(event) =>
+                      handleChange("leaveType", event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-cm-text">
+                    Duration <span className="text-rose-600">*</span>
+                  </label>
+                  <Select
+                    label=""
+                    value={form.leaveSession}
+                    options={SESSION_OPTIONS}
+                    onChange={(event) =>
+                      handleChange("leaveSession", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="leave-reason"
+                    className="mb-2 block text-sm font-medium text-cm-text"
+                  >
+                    Reason{" "}
+                    <span className="font-normal text-cm-text-muted">
+                      (optional)
+                    </span>
+                  </label>
+                  <textarea
+                    id="leave-reason"
+                    rows={4}
+                    maxLength={1000}
+                    value={form.reason}
+                    onChange={(event) =>
+                      handleChange("reason", event.target.value)
+                    }
+                    placeholder="Briefly explain why you need leave…"
+                    className="w-full resize-y rounded-lg border border-cm-border bg-cm-card px-3.5 py-3 text-sm text-cm-text outline-none transition placeholder:text-cm-text-muted/70 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                  />
+                  <p className="mt-1.5 text-right text-xs text-cm-text-muted">
+                    {form.reason.length}/1000 characters
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-cm-border bg-cm-bg/40 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={submitting}
+                  onClick={closeForm}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full sm:w-auto"
+                >
+                  {submitting ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <RefreshCw size={15} className="animate-spin" />
+                      Submitting…
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <CheckCircle2 size={15} />
+                      Submit request
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
 
       {/* Views */}
