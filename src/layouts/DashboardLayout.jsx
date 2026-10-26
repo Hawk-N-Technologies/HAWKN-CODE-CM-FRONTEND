@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -13,14 +14,14 @@ function DashboardLayoutContent({ sections }) {
   const { unreadCount } = useNotifications();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-cm-bg">
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-cm-bg">
       <Sidebar
         sections={sections}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TopNavbar
           onMenuClick={() => setIsSidebarOpen(true)}
           notificationCount={unreadCount}
@@ -29,7 +30,7 @@ function DashboardLayoutContent({ sections }) {
         <main
           id="main-content"
           tabIndex="-1"
-          className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7"
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-6 lg:p-7"
         >
           <Outlet />
         </main>
@@ -43,10 +44,10 @@ function DashboardLayout({ sections = [] }) {
 
   return (
     <NotificationProvider
-  enabled={["admin", "hr", "bde"].includes(
-    String(role || "").toLowerCase(),
-  )}
->
+      enabled={["admin", "hr", "bde"].includes(
+        String(role || "").toLowerCase(),
+      )}
+    >
       <DashboardLayoutContent sections={sections} />
     </NotificationProvider>
   );

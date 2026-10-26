@@ -144,7 +144,7 @@ const normalizeBRD = (brd) => {
 
 function SummaryCard({ title, value, icon: Icon, description }) {
   return (
-    <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
+    <div className="rounded-cm-lg border border-cm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm text-cm-text-muted">{title}</p>
@@ -408,14 +408,17 @@ function AdminBRDApproval() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-cm-border pb-5">
+        <div className="min-w-0">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cm-primary">
+            Business requirements
+          </p>
           <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-cm-primary" />
-            <h1 className="text-xl font-bold text-cm-text">BRD Approval</h1>
+            <FileText className="h-6 w-6 text-cm-primary" aria-hidden="true" />
+            <h1 className="text-2xl font-bold tracking-tight text-cm-text">BRD Approval</h1>
           </div>
 
-          <p className="mt-1 max-w-2xl text-sm text-cm-text-muted">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
             Review uploaded Business Requirements Documents, verify project
             details, and approve or reject submissions.
           </p>
@@ -430,7 +433,7 @@ function AdminBRDApproval() {
           {!refreshing && <RefreshCw className="mr-2 h-4 w-4" />}
           Refresh
         </Button>
-      </div>
+      </header>
 
       {/* Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -464,7 +467,7 @@ function AdminBRDApproval() {
       </div>
 
       {/* BRD table */}
-      <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
+      <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-white shadow-sm">
         <div className="border-b border-cm-border p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
