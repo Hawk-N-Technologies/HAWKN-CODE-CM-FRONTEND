@@ -123,7 +123,7 @@ function PlanForm({ projectUuid, onSaved }) {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-6 rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm"
+      className="flex flex-col gap-6 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm"
     >
       <div>
         <h2 className="text-sm font-semibold text-cm-text">
@@ -131,15 +131,15 @@ function PlanForm({ projectUuid, onSaved }) {
           <span className="ml-2 text-xs font-normal text-cm-text-muted">({loadState.project.clientName})</span>
         </h2>
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-cm-border bg-cm-bg/50 p-4">
+          <div className="rounded-lg border border-cm-border p-4">
             <p className="text-xs text-cm-text-muted">GitHub</p>
             <Badge tone={repositoryUrl ? "success" : "warning"}>{repositoryUrl ? "Connected" : "Not Connected"}</Badge>
           </div>
-          <div className="rounded-lg border border-cm-border bg-cm-bg/50 p-4">
+          <div className="rounded-lg border border-cm-border p-4">
             <p className="text-xs text-cm-text-muted">Server</p>
             <Badge tone={statusTone(serverStatus)}>{serverStatus}</Badge>
           </div>
-          <div className="rounded-lg border border-cm-border bg-cm-bg/50 p-4">
+          <div className="rounded-lg border border-cm-border p-4">
             <p className="text-xs text-cm-text-muted">CI/CD</p>
             <Badge tone={statusTone(cicdStatus)}>{cicdStatus}</Badge>
           </div>
@@ -303,14 +303,11 @@ function DeploymentPlanning() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-cm-border pb-5">
-        <div className="min-w-0">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cm-primary">
-            Release workspace
-          </p>
-          <h1 className="text-2xl font-bold tracking-tight text-cm-text">Deployment Planning</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
-            Track repository, server, CI/CD, and environment configuration for each project.
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-cm-text">Deployment Planning</h1>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            Track repository, server, CI/CD and environment configuration for each project.
           </p>
         </div>
 
@@ -331,7 +328,7 @@ function DeploymentPlanning() {
             ))}
           </select>
         </label>
-      </header>
+      </div>
 
       {selectedUuid ? (
         <PlanForm key={selectedUuid} projectUuid={selectedUuid} onSaved={reload} />
@@ -351,8 +348,8 @@ function DeploymentPlanning() {
           <ErrorState title="Couldn't load projects" description={loadError} onRetry={retry} />
         </div>
       ) : (
-        <section className="flex flex-col gap-3 rounded-cm-lg border border-cm-border bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-base font-semibold text-cm-text">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-cm-text">
             All Projects{" "}
             {!isLoading && rows.length > 0 && (
               <span className="font-normal text-cm-text-muted">
@@ -366,7 +363,7 @@ function DeploymentPlanning() {
             isLoading={isLoading}
             emptyMessage="No projects yet — create one in Project Management first."
           />
-        </section>
+        </div>
       )}
     </div>
   );
