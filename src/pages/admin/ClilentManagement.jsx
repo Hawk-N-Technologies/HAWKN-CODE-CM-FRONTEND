@@ -255,22 +255,24 @@ function ClientManagement() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">Client Management</h1>
-
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Create client login accounts and manage client information.
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-cm-border pb-5">
+        <div className="min-w-0">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cm-primary">
+            Company administration
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-cm-text">Client Management</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
+            Manage client accounts, contact details, and access to the client workspace.
           </p>
         </div>
 
         <Button onClick={openAdd}>Add Client</Button>
-      </div>
+      </header>
 
       {isFormOpen && (
         <form
           onSubmit={saveClient}
-          className="flex flex-col gap-5 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm"
+          className="flex flex-col gap-5 rounded-cm-lg border border-cm-border bg-white p-6 shadow-sm"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -389,7 +391,13 @@ function ClientManagement() {
         </form>
       )}
 
-      <div className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4 rounded-cm-lg border border-cm-border bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-cm-text">Clients</h2>
+            <p className="mt-1 text-sm text-cm-text-muted">{filteredClients.length} of {clients.length} client{clients.length === 1 ? "" : "s"}</p>
+          </div>
+        </div>
         <TableSearch
           value={search}
           onChange={setSearch}
@@ -407,7 +415,7 @@ function ClientManagement() {
             emptyMessage="No clients found."
           />
         )}
-      </div>
+      </section>
     </div>
   );
 }
