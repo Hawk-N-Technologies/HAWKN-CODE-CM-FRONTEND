@@ -91,31 +91,23 @@ function Overview() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
-  const loadOverview = useCallback(async (signal) => {
+  const loadOverview = async () => {
     try {
-      setError("");
       const response = await axios.get("/api/admin/overview", {
-        signal,
         withCredentials: true,
       });
-
-      setData({ ...EMPTY_OVERVIEW, ...response.data.data });
-    } catch (requestError) {
-      if (requestError.code === "ERR_CANCELED") return;
-
-      setError(
-        requestError.response?.data?.message ||
-          "Unable to load the admin overview.",
-      );
+      console.log(response.data.data);
+    } catch (error) {
+      console.log(error);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    const controller = new AbortController();
-    Promise.resolve().then(() => loadOverview(controller.signal));
+    console.log("Overview component mounted");
+    console.log("Calling overview API...");
 
-    return () => controller.abort();
-  }, [loadOverview]);
+    loadOverview();
+  }, []);
 
   if (error) {
     return (
@@ -139,7 +131,9 @@ function Overview() {
   const pendingApprovals = Array.isArray(data.pendingApprovals)
     ? data.pendingApprovals
     : [];
-  const activityFeed = Array.isArray(data.activityFeed) ? data.activityFeed : [];
+  const activityFeed = Array.isArray(data.activityFeed)
+    ? data.activityFeed
+    : [];
 
   const kpis = [
     {
@@ -320,12 +314,17 @@ function Overview() {
             ) : (
               <ul className="mt-5 divide-y divide-cm-border">
                 {activityFeed.map((item) => (
-                  <li key={item.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
+                  <li
+                    key={item.id}
+                    className="flex gap-3 py-4 first:pt-0 last:pb-0"
+                  >
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-bg text-cm-text-muted">
                       <CalendarClock size={17} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm leading-5 text-cm-text">{item.message}</p>
+                      <p className="text-sm leading-5 text-cm-text">
+                        {item.message}
+                      </p>
                       {item.date && (
                         <p className="mt-1 text-xs text-cm-text-muted">
                           {formatDate(item.date)}
@@ -342,7 +341,9 @@ function Overview() {
 
       <footer className="flex items-start gap-2 border-t border-cm-border pt-4 text-xs leading-5 text-cm-text-muted">
         <CalendarClock size={15} className="mt-0.5 shrink-0" />
-        <p>Dashboard metrics reflect the latest data from your connected modules.</p>
+        <p>
+          Dashboard metrics reflect the latest data from your connected modules.
+        </p>
       </footer>
     </div>
   );
