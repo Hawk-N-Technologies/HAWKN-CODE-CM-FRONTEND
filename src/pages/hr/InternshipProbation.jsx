@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { AlertTriangle, Clock, GraduationCap, UserCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  GraduationCap,
+  UserCheck,
+  X,
+} from "lucide-react";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
@@ -9,7 +15,11 @@ import ErrorState from "../../components/common/ErrorState";
 import DataTable from "../../components/tables/DataTable";
 import EmployeeAutocomplete from "../../components/payroll/EmployeeAutocomplete";
 import { showToast } from "../../components/common/Toast";
-import { getErrorMessage, getFieldErrors, searchSalaryEmployees } from "../../services/payrollService";
+import {
+  getErrorMessage,
+  getFieldErrors,
+  searchSalaryEmployees,
+} from "../../services/payrollService";
 import {
   closePeriod,
   createPeriod,
@@ -50,24 +60,39 @@ const STATUS_LABEL = {
   Terminated: "Terminated",
 };
 
-const formatMoney = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatMoney = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 const pad = (n) => String(n).padStart(2, "0");
-const toYmd = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+const toYmd = (date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 const today = () => toYmd(new Date());
 
 // "2026-10-01" → "1 Oct 2026" (built from parts so timezone can't shift the day)
 const formatDate = (yyyyMmDd) => {
-  const [year, month, day] = String(yyyyMmDd).slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const [year, month, day] = String(yyyyMmDd)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 // "2026-01-31" + 1 month → "2026-02-28" (clamps to the last day of the month)
 const addMonths = (yyyyMmDd, months) => {
   const [year, month, day] = yyyyMmDd.split("-").map(Number);
   const target = new Date(year, month - 1 + months, 1);
-  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-  return toYmd(new Date(target.getFullYear(), target.getMonth(), Math.min(day, lastDay)));
+  const lastDay = new Date(
+    target.getFullYear(),
+    target.getMonth() + 1,
+    0,
+  ).getDate();
+  return toYmd(
+    new Date(target.getFullYear(), target.getMonth(), Math.min(day, lastDay)),
+  );
 };
 
 // "YYYY-MM-DD" + n days
@@ -87,26 +112,70 @@ function applyServerErrors(error, setError, setEmployeeError) {
 }
 
 // Shared card wrapper for the action forms
-function FormCard({ title, subtitle, onSubmit, children }) {
+function FormCard({ title, subtitle, onSubmit, onCancel, children }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onCancel?.();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
+
   return (
-    <form
-      noValidate
-      onSubmit={onSubmit}
-      className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel?.();
+      }}
     >
-      <div className="md:col-span-3">
-        <h2 className="text-sm font-semibold text-cm-text">{title}</h2>
-        {subtitle && <p className="mt-1 text-sm text-cm-text-muted">{subtitle}</p>}
-      </div>
-      {children}
-    </form>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-cm-border bg-cm-card shadow-2xl sm:rounded-2xl"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-cm-border bg-cm-bg/60 px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-tight text-cm-text sm:text-lg">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="mt-1 text-sm leading-5 text-cm-text-muted">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close dialog"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cm-border bg-cm-card text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-text focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
+          >
+            <X size={17} />
+          </button>
+        </header>
+        <form
+          noValidate
+          onSubmit={onSubmit}
+          className="grid grid-cols-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3"
+        >
+          {children}
+        </form>
+      </section>
+    </div>
   );
 }
 
 function FormButtons({ onCancel, isSubmitting, label, variant = "primary" }) {
   return (
     <div className="flex justify-end gap-3 md:col-span-3">
-      <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={isSubmitting}
+        onClick={onCancel}
+      >
         Cancel
       </Button>
       <Button type="submit" variant={variant} loading={isSubmitting}>
@@ -148,7 +217,9 @@ function StartForm({ onDone, onCancel }) {
 
   const suggestEnd = (type, startDate) => {
     if (endTouched || !startDate) return;
-    setValue("endDate", addMonths(startDate, DEFAULT_MONTHS[type]), { shouldValidate: true });
+    setValue("endDate", addMonths(startDate, DEFAULT_MONTHS[type]), {
+      shouldValidate: true,
+    });
   };
 
   const onSubmit = async (values) => {
@@ -163,7 +234,10 @@ function StartForm({ onDone, onCancel }) {
         startDate: values.startDate,
         endDate: values.endDate,
         // Stipend is only for internships; empty box → no stipend
-        stipend: values.periodType === "Internship" && values.stipend !== "" ? Number(values.stipend) : null,
+        stipend:
+          values.periodType === "Internship" && values.stipend !== ""
+            ? Number(values.stipend)
+            : null,
         notes: values.notes,
       });
       showToast.success(`${res.message}.`);
@@ -179,6 +253,7 @@ function StartForm({ onDone, onCancel }) {
       title="Start Internship / Probation"
       subtitle="The employee's employment type is updated automatically."
       onSubmit={handleSubmit(onSubmit)}
+      onCancel={onCancel}
     >
       <EmployeeAutocomplete
         label="Employee"
@@ -196,11 +271,15 @@ function StartForm({ onDone, onCancel }) {
       <Select
         label="Type"
         required
-        options={["Internship", "Probation"].map((type) => ({ value: type, label: type }))}
+        options={["Internship", "Probation"].map((type) => ({
+          value: type,
+          label: type,
+        }))}
         error={errors.periodType?.message}
         {...register("periodType", {
           required: "Type is required",
-          onChange: (event) => suggestEnd(event.target.value, getValues("startDate")),
+          onChange: (event) =>
+            suggestEnd(event.target.value, getValues("startDate")),
         })}
       />
 
@@ -212,7 +291,8 @@ function StartForm({ onDone, onCancel }) {
           step="0.01"
           error={errors.stipend?.message}
           {...register("stipend", {
-            validate: (value) => value === "" || Number(value) >= 0 || "Stipend can't be negative",
+            validate: (value) =>
+              value === "" || Number(value) >= 0 || "Stipend can't be negative",
           })}
         />
       ) : (
@@ -226,7 +306,8 @@ function StartForm({ onDone, onCancel }) {
         error={errors.startDate?.message}
         {...register("startDate", {
           required: "Start date is required",
-          onChange: (event) => suggestEnd(getValues("periodType"), event.target.value),
+          onChange: (event) =>
+            suggestEnd(getValues("periodType"), event.target.value),
         })}
       />
 
@@ -238,7 +319,9 @@ function StartForm({ onDone, onCancel }) {
         error={errors.endDate?.message}
         {...register("endDate", {
           required: "End date is required",
-          validate: (value) => value > getValues("startDate") || "End date must be after the start date",
+          validate: (value) =>
+            value > getValues("startDate") ||
+            "End date must be after the start date",
           onChange: () => setEndTouched(true),
         })}
       />
@@ -247,10 +330,16 @@ function StartForm({ onDone, onCancel }) {
         label="Notes (optional)"
         placeholder="e.g. Frontend intern, reports to Project Lead"
         error={errors.notes?.message}
-        {...register("notes", { maxLength: { value: 1000, message: "Max 1000 characters" } })}
+        {...register("notes", {
+          maxLength: { value: 1000, message: "Max 1000 characters" },
+        })}
       />
 
-      <FormButtons onCancel={onCancel} isSubmitting={isSubmitting} label="Start" />
+      <FormButtons
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        label="Start"
+      />
     </FormCard>
   );
 }
@@ -277,7 +366,8 @@ function ReviewForm({ record, onDone, onCancel }) {
   const onSubmit = async (values) => {
     const payload = { performance: values.performance, notes: values.notes };
     // Internship: empty box clears the stipend; probation never sends it
-    if (isInternship) payload.stipend = values.stipend === "" ? null : Number(values.stipend);
+    if (isInternship)
+      payload.stipend = values.stipend === "" ? null : Number(values.stipend);
 
     try {
       await reviewPeriod(record.uuid, payload);
@@ -294,6 +384,7 @@ function ReviewForm({ record, onDone, onCancel }) {
       title={`Review — ${record.employee.fullName}`}
       subtitle={`${record.periodType} · ${formatDate(record.startDate)} → ${formatDate(record.endDate)}`}
       onSubmit={handleSubmit(onSubmit)}
+      onCancel={onCancel}
     >
       <Select
         label="Performance"
@@ -312,7 +403,8 @@ function ReviewForm({ record, onDone, onCancel }) {
           helperText="Leave empty for no stipend."
           error={errors.stipend?.message}
           {...register("stipend", {
-            validate: (value) => value === "" || Number(value) >= 0 || "Stipend can't be negative",
+            validate: (value) =>
+              value === "" || Number(value) >= 0 || "Stipend can't be negative",
           })}
         />
       ) : (
@@ -323,10 +415,16 @@ function ReviewForm({ record, onDone, onCancel }) {
         label="Notes"
         placeholder="Review notes"
         error={errors.notes?.message}
-        {...register("notes", { maxLength: { value: 1000, message: "Max 1000 characters" } })}
+        {...register("notes", {
+          maxLength: { value: 1000, message: "Max 1000 characters" },
+        })}
       />
 
-      <FormButtons onCancel={onCancel} isSubmitting={isSubmitting} label="Save Review" />
+      <FormButtons
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        label="Save Review"
+      />
     </FormCard>
   );
 }
@@ -343,12 +441,19 @@ function ExtendForm({ record, onDone, onCancel }) {
     setValue,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: { newEndDate: addMonths(record.endDate, 1), notes: "" } });
+  } = useForm({
+    defaultValues: { newEndDate: addMonths(record.endDate, 1), notes: "" },
+  });
 
   const onSubmit = async (values) => {
     try {
-      await extendPeriod(record.uuid, { newEndDate: values.newEndDate, notes: values.notes });
-      showToast.success(`${record.employee.fullName}'s ${record.periodType.toLowerCase()} extended to ${formatDate(values.newEndDate)}.`);
+      await extendPeriod(record.uuid, {
+        newEndDate: values.newEndDate,
+        notes: values.notes,
+      });
+      showToast.success(
+        `${record.employee.fullName}'s ${record.periodType.toLowerCase()} extended to ${formatDate(values.newEndDate)}.`,
+      );
       onDone();
     } catch (error) {
       applyServerErrors(error, setError);
@@ -361,6 +466,7 @@ function ExtendForm({ record, onDone, onCancel }) {
       title={`Extend ${record.periodType} — ${record.employee.fullName}`}
       subtitle={`Currently ends ${formatDate(record.endDate)}${record.extensionCount ? ` (extended ${record.extensionCount}× already)` : ""}.`}
       onSubmit={handleSubmit(onSubmit)}
+      onCancel={onCancel}
     >
       <div className="flex flex-col gap-2">
         <Input
@@ -371,7 +477,8 @@ function ExtendForm({ record, onDone, onCancel }) {
           error={errors.newEndDate?.message}
           {...register("newEndDate", {
             required: "New end date is required",
-            validate: (value) => value >= minDate || "Must be after the current end date",
+            validate: (value) =>
+              value >= minDate || "Must be after the current end date",
           })}
         />
         <div className="flex gap-2">
@@ -381,7 +488,11 @@ function ExtendForm({ record, onDone, onCancel }) {
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => setValue("newEndDate", addMonths(record.endDate, months), { shouldValidate: true })}
+              onClick={() =>
+                setValue("newEndDate", addMonths(record.endDate, months), {
+                  shouldValidate: true,
+                })
+              }
             >
               +{months} month{months > 1 ? "s" : ""}
             </Button>
@@ -394,10 +505,16 @@ function ExtendForm({ record, onDone, onCancel }) {
         placeholder="e.g. Needs more time on core skills"
         containerClassName="md:col-span-2"
         error={errors.notes?.message}
-        {...register("notes", { maxLength: { value: 1000, message: "Max 1000 characters" } })}
+        {...register("notes", {
+          maxLength: { value: 1000, message: "Max 1000 characters" },
+        })}
       />
 
-      <FormButtons onCancel={onCancel} isSubmitting={isSubmitting} label="Extend" />
+      <FormButtons
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        label="Extend"
+      />
     </FormCard>
   );
 }
@@ -435,7 +552,11 @@ function CloseForm({ record, onDone, onCancel }) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm({
-    defaultValues: { outcome: "Confirmed", probationEndDate: addMonths(today(), DEFAULT_MONTHS.Probation), notes: "" },
+    defaultValues: {
+      outcome: "Confirmed",
+      probationEndDate: addMonths(today(), DEFAULT_MONTHS.Probation),
+      notes: "",
+    },
   });
 
   const outcome = useWatch({ control, name: "outcome" });
@@ -443,7 +564,8 @@ function CloseForm({ record, onDone, onCancel }) {
 
   const onSubmit = async (values) => {
     const payload = { outcome: values.outcome, notes: values.notes };
-    if (values.outcome === "Converted") payload.probationEndDate = values.probationEndDate;
+    if (values.outcome === "Converted")
+      payload.probationEndDate = values.probationEndDate;
 
     try {
       const res = await closePeriod(record.uuid, payload);
@@ -460,6 +582,7 @@ function CloseForm({ record, onDone, onCancel }) {
       title={`Close ${record.periodType} — ${record.employee.fullName}`}
       subtitle={`${formatDate(record.startDate)} → ${formatDate(record.endDate)} · Performance: ${record.performance}`}
       onSubmit={handleSubmit(onSubmit)}
+      onCancel={onCancel}
     >
       <Select
         label="Outcome"
@@ -491,13 +614,19 @@ function CloseForm({ record, onDone, onCancel }) {
         label="Notes (optional)"
         placeholder="e.g. Passed review"
         error={errors.notes?.message}
-        {...register("notes", { maxLength: { value: 1000, message: "Max 1000 characters" } })}
+        {...register("notes", {
+          maxLength: { value: 1000, message: "Max 1000 characters" },
+        })}
       />
 
       {isExit && (
         <div className="flex items-start gap-2 rounded-lg border border-cm-danger-600/30 bg-cm-danger-100 p-3 text-sm text-cm-danger-600 md:col-span-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          This can't be undone here — {record.employee.fullName} will be marked as Exited.
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0"
+            aria-hidden="true"
+          />
+          This can't be undone here — {record.employee.fullName} will be marked
+          as Exited.
         </div>
       )}
 
@@ -523,7 +652,9 @@ function SummaryCard({ icon: Icon, label, value, tone }) {
   };
   return (
     <div className="flex items-center gap-3 rounded-cm-lg border border-cm-border bg-cm-card p-4 shadow-sm">
-      <span className={`flex h-10 w-10 items-center justify-center rounded-full ${tones[tone]}`}>
+      <span
+        className={`flex h-10 w-10 items-center justify-center rounded-full ${tones[tone]}`}
+      >
         <Icon className="h-5 w-5" aria-hidden="true" />
       </span>
       <div>
@@ -537,11 +668,19 @@ function SummaryCard({ icon: Icon, label, value, tone }) {
 // "12 days left" / "Ends today" / "Overdue by 4 days"
 function TimeLeft({ record }) {
   if (record.status !== "Active") {
-    return <Badge tone={STATUS_TONE[record.status]}>{STATUS_LABEL[record.status]}</Badge>;
+    return (
+      <Badge tone={STATUS_TONE[record.status]}>
+        {STATUS_LABEL[record.status]}
+      </Badge>
+    );
   }
   if (record.isOverdue) {
     const days = Math.abs(record.daysLeft);
-    return <Badge tone="danger">Overdue by {days} day{days === 1 ? "" : "s"}</Badge>;
+    return (
+      <Badge tone="danger">
+        Overdue by {days} day{days === 1 ? "" : "s"}
+      </Badge>
+    );
   }
   if (record.daysLeft === 0) return <Badge tone="warning">Ends today</Badge>;
   return (
@@ -578,7 +717,8 @@ function InternshipProbation() {
         setLoadError(null);
       })
       .catch((error) => {
-        if (!ignore) setLoadError(getErrorMessage(error, "Couldn't load records."));
+        if (!ignore)
+          setLoadError(getErrorMessage(error, "Couldn't load records."));
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
@@ -597,7 +737,6 @@ function InternshipProbation() {
   const openForm = (next) => {
     setForm(next);
     setFormKey((key) => key + 1); // fresh form with the right defaults
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDone = () => {
@@ -609,8 +748,10 @@ function InternshipProbation() {
   const summary = useMemo(() => {
     const active = records.filter((record) => record.status === "Active");
     return {
-      interns: active.filter((record) => record.periodType === "Internship").length,
-      probation: active.filter((record) => record.periodType === "Probation").length,
+      interns: active.filter((record) => record.periodType === "Internship")
+        .length,
+      probation: active.filter((record) => record.periodType === "Probation")
+        .length,
       dueSoon: active.filter((record) => record.isDueSoon).length,
       overdue: active.filter((record) => record.isOverdue).length,
     };
@@ -619,7 +760,8 @@ function InternshipProbation() {
   const visible = useMemo(
     () =>
       records.filter((record) => {
-        if (typeFilter !== "All" && record.periodType !== typeFilter) return false;
+        if (typeFilter !== "All" && record.periodType !== typeFilter)
+          return false;
         if (statusFilter === "Active") return record.status === "Active";
         if (statusFilter === "Closed") return record.status !== "Active";
         return true;
@@ -633,7 +775,9 @@ function InternshipProbation() {
       header: "Employee",
       render: (row) => (
         <div>
-          <div className="font-medium text-cm-text">{row.employee.fullName}</div>
+          <div className="font-medium text-cm-text">
+            {row.employee.fullName}
+          </div>
           <div className="text-xs text-cm-text-muted">{row.employee.email}</div>
         </div>
       ),
@@ -641,7 +785,11 @@ function InternshipProbation() {
     {
       key: "type",
       header: "Type",
-      render: (row) => <Badge tone={row.periodType === "Internship" ? "info" : "warning"}>{row.periodType}</Badge>,
+      render: (row) => (
+        <Badge tone={row.periodType === "Internship" ? "info" : "warning"}>
+          {row.periodType}
+        </Badge>
+      ),
     },
     {
       key: "period",
@@ -653,22 +801,32 @@ function InternshipProbation() {
           </div>
           {row.extensionCount > 0 && (
             <div className="text-xs text-cm-text-muted">
-              Extended {row.extensionCount}× (was {formatDate(row.originalEndDate)})
+              Extended {row.extensionCount}× (was{" "}
+              {formatDate(row.originalEndDate)})
             </div>
           )}
         </div>
       ),
     },
-    { key: "time", header: "Status", render: (row) => <TimeLeft record={row} /> },
+    {
+      key: "time",
+      header: "Status",
+      render: (row) => <TimeLeft record={row} />,
+    },
     {
       key: "stipend",
       header: "Stipend",
-      render: (row) => (row.stipend === null ? "—" : `${formatMoney(row.stipend)}/mo`),
+      render: (row) =>
+        row.stipend === null ? "—" : `${formatMoney(row.stipend)}/mo`,
     },
     {
       key: "performance",
       header: "Performance",
-      render: (row) => <Badge tone={PERFORMANCE_TONE[row.performance]}>{row.performance}</Badge>,
+      render: (row) => (
+        <Badge tone={PERFORMANCE_TONE[row.performance]}>
+          {row.performance}
+        </Badge>
+      ),
     },
     {
       key: "actions",
@@ -676,13 +834,24 @@ function InternshipProbation() {
       render: (row) =>
         row.status === "Active" ? (
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => openForm({ mode: "review", record: row })}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openForm({ mode: "review", record: row })}
+            >
               Review
             </Button>
-            <Button size="sm" variant="outline" onClick={() => openForm({ mode: "extend", record: row })}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openForm({ mode: "extend", record: row })}
+            >
               Extend
             </Button>
-            <Button size="sm" onClick={() => openForm({ mode: "close", record: row })}>
+            <Button
+              size="sm"
+              onClick={() => openForm({ mode: "close", record: row })}
+            >
               Close
             </Button>
           </div>
@@ -690,40 +859,81 @@ function InternshipProbation() {
     },
   ];
 
-  const formProps = { key: formKey, onDone: handleDone, onCancel: () => setForm(null) };
+  const formProps = {
+    key: formKey,
+    onDone: handleDone,
+    onCancel: () => setForm(null),
+  };
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-cm-text">Internship / Probation</h1>
+          <h1 className="text-xl font-bold text-cm-text">
+            Internship / Probation
+          </h1>
           <p className="mt-1 text-sm text-cm-text-muted">
-            Track internship and probation periods, performance and intern stipend.
+            Track internship and probation periods, performance and intern
+            stipend.
           </p>
         </div>
-        <Button onClick={() => (form?.mode === "start" ? setForm(null) : openForm({ mode: "start" }))}>
+        <Button
+          onClick={() =>
+            form?.mode === "start" ? setForm(null) : openForm({ mode: "start" })
+          }
+        >
           {form?.mode === "start" ? "Close" : "Start Internship / Probation"}
         </Button>
       </div>
 
       {/* Dashboard */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <SummaryCard icon={GraduationCap} label="Active interns" value={summary.interns} tone="info" />
-        <SummaryCard icon={UserCheck} label="On probation" value={summary.probation} tone="info" />
-        <SummaryCard icon={Clock} label="Ending in 14 days" value={summary.dueSoon} tone="warning" />
-        <SummaryCard icon={AlertTriangle} label="Overdue — action needed" value={summary.overdue} tone="danger" />
+        <SummaryCard
+          icon={GraduationCap}
+          label="Active interns"
+          value={summary.interns}
+          tone="info"
+        />
+        <SummaryCard
+          icon={UserCheck}
+          label="On probation"
+          value={summary.probation}
+          tone="info"
+        />
+        <SummaryCard
+          icon={Clock}
+          label="Ending in 14 days"
+          value={summary.dueSoon}
+          tone="warning"
+        />
+        <SummaryCard
+          icon={AlertTriangle}
+          label="Overdue — action needed"
+          value={summary.overdue}
+          tone="danger"
+        />
       </div>
 
       {/* Action form (one at a time) */}
       {form?.mode === "start" && <StartForm {...formProps} />}
-      {form?.mode === "review" && <ReviewForm record={form.record} {...formProps} />}
-      {form?.mode === "extend" && <ExtendForm record={form.record} {...formProps} />}
-      {form?.mode === "close" && <CloseForm record={form.record} {...formProps} />}
+      {form?.mode === "review" && (
+        <ReviewForm record={form.record} {...formProps} />
+      )}
+      {form?.mode === "extend" && (
+        <ExtendForm record={form.record} {...formProps} />
+      )}
+      {form?.mode === "close" && (
+        <CloseForm record={form.record} {...formProps} />
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by type">
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filter by type"
+        >
           {TYPE_FILTERS.map((option) => (
             <button
               key={option}
@@ -758,7 +968,11 @@ function InternshipProbation() {
 
       {loadError ? (
         <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState title="Couldn't load records" description={loadError} onRetry={reload} />
+          <ErrorState
+            title="Couldn't load records"
+            description={loadError}
+            onRetry={reload}
+          />
         </div>
       ) : (
         <DataTable
@@ -766,7 +980,9 @@ function InternshipProbation() {
           rows={visible.map((record) => ({ ...record, id: record.uuid }))}
           isLoading={isLoading}
           emptyMessage={
-            statusFilter === "Active" ? "No one is on internship or probation right now." : "No records found."
+            statusFilter === "Active"
+              ? "No one is on internship or probation right now."
+              : "No records found."
           }
         />
       )}

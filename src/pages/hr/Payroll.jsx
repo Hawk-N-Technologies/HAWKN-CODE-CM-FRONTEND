@@ -284,7 +284,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
+      className="grid grid-cols-1 gap-4 p-4 sm:p-6 md:grid-cols-3"
     >
       {/* Employee */}
       <div className="flex flex-col gap-1">
@@ -483,6 +483,15 @@ function PayrollRuns() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (!showForm) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setShowForm(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showForm]);
+
+  useEffect(() => {
     let ignore = false;
 
     getPayroll({
@@ -648,16 +657,56 @@ function PayrollRuns() {
           Monthly payroll records — create, filter and process.
         </p>
 
-        <Button onClick={() => setShowForm((value) => !value)}>
-          {showForm ? "Close" : "Create Payroll"}
-        </Button>
+        <Button onClick={() => setShowForm(true)}>Create Payroll</Button>
       </div>
 
       {showForm && (
-        <CreatePayrollForm
-          onCreated={handleCreated}
-          onCancel={() => setShowForm(false)}
-        />
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowForm(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-payroll-title"
+            className="flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl border border-cm-border bg-cm-card shadow-2xl sm:max-h-[90vh] sm:rounded-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-cm-border px-4 py-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cm-text-muted">
+                  Payroll management
+                </p>
+                <h2
+                  id="create-payroll-title"
+                  className="mt-1 text-lg font-semibold tracking-tight text-cm-text sm:text-xl"
+                >
+                  Create payroll
+                </h2>
+                <p className="mt-1 text-sm text-cm-text-muted">
+                  Review salary calculations and payment details before saving.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close create payroll modal"
+                onClick={() => setShowForm(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cm-border text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#000052]"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="min-h-0 overflow-y-auto">
+              <CreatePayrollForm
+                onCreated={handleCreated}
+                onCancel={() => setShowForm(false)}
+              />
+            </div>
+          </section>
+        </div>
       )}
 
       {/* Filter bar */}

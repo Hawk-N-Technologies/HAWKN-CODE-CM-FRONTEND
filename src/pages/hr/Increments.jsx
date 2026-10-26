@@ -9,7 +9,11 @@ import ErrorState from "../../components/common/ErrorState";
 import DataTable from "../../components/tables/DataTable";
 import EmployeeAutocomplete from "../../components/payroll/EmployeeAutocomplete";
 import { showToast } from "../../components/common/Toast";
-import { getErrorMessage, getFieldErrors, searchSalaryEmployees } from "../../services/payrollService";
+import {
+  getErrorMessage,
+  getFieldErrors,
+  searchSalaryEmployees,
+} from "../../services/payrollService";
 import {
   createBonus,
   createIncrement,
@@ -20,23 +24,88 @@ import {
   updateIncrement,
 } from "../../services/bonusIncrementService";
 
+// Accessible reusable modal used by bonus and increment actions.
+function Modal({ title, description, onClose, size = "max-w-3xl", children }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bonus-increment-modal-title"
+        aria-describedby={
+          description ? "bonus-increment-modal-description" : undefined
+        }
+        className={`flex max-h-[90vh] w-full ${size} flex-col overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-2xl`}
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-cm-border px-6 py-4">
+          <div>
+            <h2
+              id="bonus-increment-modal-title"
+              className="text-lg font-semibold text-cm-text"
+            >
+              {title}
+            </h2>
+            {description && (
+              <p
+                id="bonus-increment-modal-description"
+                className="mt-1 text-sm text-cm-text-muted"
+              >
+                {description}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="rounded-lg p-2 text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#000052]"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </header>
+        <div className="overflow-y-auto p-6">{children}</div>
+      </section>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const BONUS_TYPES = ["Performance", "Festival", "Referral", "Joining", "Other"];
 
-const formatMoney = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatMoney = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 // "2026-10" → "October 2026"
 const formatMonth = (yyyyMm) => {
   const [year, month] = yyyyMm.split("-").map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
 };
 
 // "2026-10-01" → "1 Oct 2026" (built from parts so timezone can't shift the day)
 const formatDate = (yyyyMmDd) => {
-  const [year, month, day] = String(yyyyMmDd).slice(0, 10).split("-").map(Number);
+  const [year, month, day] = String(yyyyMmDd)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
   return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -69,7 +138,13 @@ function applyServerErrors(error, setError, setEmployeeError) {
  * Filter bar shared by both tabs: employee autocomplete + 🔍 button.
  * Calls onSearch(employee | null) only when the button is clicked.
  */
-function EmployeeFilterBar({ searchFn, onSearch, applied, resultCount, label }) {
+function EmployeeFilterBar({
+  searchFn,
+  onSearch,
+  applied,
+  resultCount,
+  label,
+}) {
   const [draft, setDraft] = useState(null);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -93,7 +168,12 @@ function EmployeeFilterBar({ searchFn, onSearch, applied, resultCount, label }) 
 
   return (
     <>
-      <form onSubmit={submit} className="flex flex-col gap-2" role="search" aria-label={`Filter ${label}`}>
+      <form
+        onSubmit={submit}
+        className="flex flex-col gap-2"
+        role="search"
+        aria-label={`Filter ${label}`}
+      >
         <div className="flex items-center gap-2 rounded-full border border-cm-border bg-white px-3 py-2 shadow-sm">
           <EmployeeAutocomplete
             selected={draft}
@@ -121,7 +201,8 @@ function EmployeeFilterBar({ searchFn, onSearch, applied, resultCount, label }) 
       {applied && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-cm-text-muted">
           <span>
-            Showing {resultCount} {label} for <strong className="text-cm-text">{applied.fullName}</strong>
+            Showing {resultCount} {label} for{" "}
+            <strong className="text-cm-text">{applied.fullName}</strong>
           </span>
           <button
             type="button"
@@ -156,7 +237,8 @@ function useEmployeeList(fetchFn) {
         setLoadError(null);
       })
       .catch((error) => {
-        if (!ignore) setLoadError(getErrorMessage(error, "Couldn't load records."));
+        if (!ignore)
+          setLoadError(getErrorMessage(error, "Couldn't load records."));
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
@@ -184,7 +266,12 @@ function useEmployeeList(fetchFn) {
 // Bonuses tab
 // ---------------------------------------------------------------------------
 
-const BONUS_DEFAULTS = () => ({ payPeriod: currentMonth(), bonusType: "Performance", amount: "", reason: "" });
+const BONUS_DEFAULTS = () => ({
+  payPeriod: currentMonth(),
+  bonusType: "Performance",
+  amount: "",
+  reason: "",
+});
 
 function BonusForm({ onSaved, onCancel }) {
   const [employee, setEmployee] = useState(null);
@@ -209,7 +296,9 @@ function BonusForm({ onSaved, onCancel }) {
         amount: Number(values.amount),
         reason: values.reason,
       });
-      showToast.success(`Bonus of ${formatMoney(record.amount)} added for ${record.employee.fullName}.`);
+      showToast.success(
+        `Bonus of ${formatMoney(record.amount)} added for ${record.employee.fullName}.`,
+      );
       onSaved();
     } catch (error) {
       applyServerErrors(error, setError, setEmployeeError);
@@ -221,10 +310,8 @@ function BonusForm({ onSaved, onCancel }) {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
+      className="grid grid-cols-1 gap-4 md:grid-cols-3"
     >
-      <h2 className="text-sm font-semibold text-cm-text md:col-span-3">New Bonus</h2>
-
       <EmployeeAutocomplete
         label="Employee"
         required
@@ -263,7 +350,8 @@ function BonusForm({ onSaved, onCancel }) {
         error={errors.amount?.message}
         {...register("amount", {
           required: "Amount is required",
-          validate: (value) => Number(value) > 0 || "Amount must be more than 0",
+          validate: (value) =>
+            Number(value) > 0 || "Amount must be more than 0",
         })}
       />
 
@@ -272,11 +360,18 @@ function BonusForm({ onSaved, onCancel }) {
         placeholder="e.g. Q3 target achieved"
         containerClassName="md:col-span-2"
         error={errors.reason?.message}
-        {...register("reason", { maxLength: { value: 500, message: "Max 500 characters" } })}
+        {...register("reason", {
+          maxLength: { value: 500, message: "Max 500 characters" },
+        })}
       />
 
       <div className="flex justify-end gap-3 md:col-span-3">
-        <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSubmitting}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
         <Button type="submit" loading={isSubmitting}>
@@ -301,7 +396,9 @@ function BonusesTab() {
     setDeletingUuid(row.uuid);
     try {
       await deleteBonus(row.uuid);
-      list.setRecords((prev) => prev.filter((record) => record.uuid !== row.uuid));
+      list.setRecords((prev) =>
+        prev.filter((record) => record.uuid !== row.uuid),
+      );
       showToast.success("Bonus deleted.");
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't delete bonus."));
@@ -317,39 +414,45 @@ function BonusesTab() {
       header: "Employee",
       render: (row) => (
         <div>
-          <div className="font-medium text-cm-text">{row.employee.fullName}</div>
+          <div className="font-medium text-cm-text">
+            {row.employee.fullName}
+          </div>
           <div className="text-xs text-cm-text-muted">{row.employee.email}</div>
         </div>
       ),
     },
-    { key: "month", header: "Pay Month", render: (row) => formatMonth(row.payPeriod) },
-    { key: "type", header: "Type", render: (row) => <Badge tone="neutral">{row.bonusType}</Badge> },
+    {
+      key: "month",
+      header: "Pay Month",
+      render: (row) => formatMonth(row.payPeriod),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (row) => <Badge tone="neutral">{row.bonusType}</Badge>,
+    },
     {
       key: "amount",
       header: "Amount",
-      render: (row) => <span className="font-semibold">{formatMoney(row.amount)}</span>,
+      render: (row) => (
+        <span className="font-semibold">{formatMoney(row.amount)}</span>
+      ),
     },
     { key: "reason", header: "Reason", render: (row) => row.reason || "—" },
     {
       key: "actions",
       header: "",
       render: (row) => {
-        const isConfirming = confirmUuid === row.uuid;
         return (
-          <div className="flex justify-end gap-2">
-            {isConfirming && deletingUuid !== row.uuid && (
-              <Button size="sm" variant="ghost" onClick={() => setConfirmUuid(null)}>
-                Keep
-              </Button>
-            )}
+          <div className="flex justify-end">
             <Button
               size="sm"
               variant="danger"
               loading={deletingUuid === row.uuid}
-              disabled={deletingUuid !== null && deletingUuid !== row.uuid}
-              onClick={() => handleDelete(row)}
+              disabled={deletingUuid !== null}
+              onClick={() => setConfirmUuid(row.uuid)}
             >
-              {isConfirming ? "Confirm delete?" : "Delete"}
+              Delete
             </Button>
           </div>
         );
@@ -363,34 +466,95 @@ function BonusesTab() {
         <p className="text-sm text-cm-text-muted">
           One-time bonuses. Locked once that month's payroll is processed.
         </p>
-        <Button onClick={() => setFormKey((key) => (key === null ? Date.now() : null))}>
+        <Button
+          onClick={() =>
+            setFormKey((key) => (key === null ? Date.now() : null))
+          }
+        >
           {formKey === null ? "Add Bonus" : "Close"}
         </Button>
       </div>
 
       {formKey !== null && (
-        <BonusForm
-          key={formKey}
-          onSaved={() => {
-            setFormKey(null);
-            list.reload();
-          }}
-          onCancel={() => setFormKey(null)}
-        />
+        <Modal
+          title="Add Bonus"
+          description="Add a one-time bonus to the selected employee's payroll."
+          onClose={() => setFormKey(null)}
+        >
+          <BonusForm
+            key={formKey}
+            onSaved={() => {
+              setFormKey(null);
+              list.reload();
+            }}
+            onCancel={() => setFormKey(null)}
+          />
+        </Modal>
       )}
 
-      <EmployeeFilterBar onSearch={list.search} applied={list.applied} resultCount={list.records.length} label="bonuses" />
+      {confirmUuid &&
+        (() => {
+          const record = list.records.find((item) => item.uuid === confirmUuid);
+          return record ? (
+            <Modal
+              title="Delete bonus?"
+              description="This action cannot be undone."
+              onClose={() => setConfirmUuid(null)}
+              size="max-w-md"
+            >
+              <p className="text-sm text-cm-text-muted">
+                Delete the {formatMoney(record.amount)}{" "}
+                {record.bonusType.toLowerCase()} bonus for{" "}
+                <strong className="text-cm-text">
+                  {record.employee.fullName}
+                </strong>
+                ?
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmUuid(null)}
+                  disabled={deletingUuid !== null}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  loading={deletingUuid === record.uuid}
+                  onClick={() => handleDelete(record)}
+                >
+                  Delete bonus
+                </Button>
+              </div>
+            </Modal>
+          ) : null;
+        })()}
+
+      <EmployeeFilterBar
+        onSearch={list.search}
+        applied={list.applied}
+        resultCount={list.records.length}
+        label="bonuses"
+      />
 
       {list.loadError ? (
         <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState title="Couldn't load bonuses" description={list.loadError} onRetry={list.reload} />
+          <ErrorState
+            title="Couldn't load bonuses"
+            description={list.loadError}
+            onRetry={list.reload}
+          />
         </div>
       ) : (
         <DataTable
           columns={columns}
           rows={list.records.map((record) => ({ ...record, id: record.uuid }))}
           isLoading={list.isLoading}
-          emptyMessage={list.applied ? "No bonuses for this employee yet." : "No bonuses added yet."}
+          emptyMessage={
+            list.applied
+              ? "No bonuses for this employee yet."
+              : "No bonuses added yet."
+          }
         />
       )}
     </div>
@@ -403,8 +567,10 @@ function BonusesTab() {
 
 // Percent ↔ salary, in whole paise — same rounding as the backend,
 // so 10% of ₹52,000.50 is always exactly ₹57,200.55
-const salaryFromPercent = (base, percent) => Math.round(base * 100 * (1 + percent / 100)) / 100;
-const percentFromSalary = (base, salary) => Math.round(((salary - base) / base) * 10000) / 100;
+const salaryFromPercent = (base, percent) =>
+  Math.round(base * 100 * (1 + percent / 100)) / 100;
+const percentFromSalary = (base, salary) =>
+  Math.round(((salary - base) / base) * 10000) / 100;
 
 /**
  * editing = null → give a new increment.
@@ -432,7 +598,12 @@ function IncrementForm({ editing, onSaved, onCancel }) {
           effectiveDate: String(editing.effectiveDate).slice(0, 10),
           reason: editing.reason ?? "",
         }
-      : { newSalary: "", increasePercent: "", effectiveDate: today(), reason: "" },
+      : {
+          newSalary: "",
+          increasePercent: "",
+          effectiveDate: today(),
+          reason: "",
+        },
   });
 
   // The salary the increase is measured from
@@ -447,7 +618,9 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       setValue("increasePercent", "");
       return;
     }
-    setValue("increasePercent", percentFromSalary(base, Number(value)), { shouldValidate: true });
+    setValue("increasePercent", percentFromSalary(base, Number(value)), {
+      shouldValidate: true,
+    });
   };
 
   const syncFromPercent = (value) => {
@@ -455,7 +628,9 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       setValue("newSalary", "");
       return;
     }
-    setValue("newSalary", salaryFromPercent(base, Number(value)), { shouldValidate: true });
+    setValue("newSalary", salaryFromPercent(base, Number(value)), {
+      shouldValidate: true,
+    });
   };
 
   const handlePick = (picked) => {
@@ -464,7 +639,11 @@ function IncrementForm({ editing, onSaved, onCancel }) {
     // New base salary → re-calculate the % for whatever salary is typed
     const typed = getValues("newSalary");
     if (picked?.salary != null && typed !== "" && Number(typed) > 0) {
-      setValue("increasePercent", percentFromSalary(picked.salary, Number(typed)), { shouldValidate: true });
+      setValue(
+        "increasePercent",
+        percentFromSalary(picked.salary, Number(typed)),
+        { shouldValidate: true },
+      );
     }
   };
 
@@ -492,7 +671,12 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       onSaved();
     } catch (error) {
       applyServerErrors(error, setError, setEmployeeError);
-      showToast.error(getErrorMessage(error, `Couldn't ${isEdit ? "update" : "apply"} increment.`));
+      showToast.error(
+        getErrorMessage(
+          error,
+          `Couldn't ${isEdit ? "update" : "apply"} increment.`,
+        ),
+      );
     }
   };
 
@@ -500,12 +684,8 @@ function IncrementForm({ editing, onSaved, onCancel }) {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
+      className="grid grid-cols-1 gap-4 md:grid-cols-3"
     >
-      <h2 className="text-sm font-semibold text-cm-text md:col-span-3">
-        {isEdit ? "Edit Increment" : "New Increment"}
-      </h2>
-
       {isEdit ? (
         // Locked in edit mode
         <Input
@@ -527,7 +707,9 @@ function IncrementForm({ editing, onSaved, onCancel }) {
             placeholder="Start typing a name…"
           />
           {employee && (
-            <p className={`text-xs ${base === null ? "text-cm-danger-600" : "text-cm-text-muted"}`}>
+            <p
+              className={`text-xs ${base === null ? "text-cm-danger-600" : "text-cm-text-muted"}`}
+            >
               {base === null
                 ? "No salary set — set it in Payroll → Salary Structure first."
                 : `Current salary: ${formatMoney(base)}`}
@@ -570,7 +752,8 @@ function IncrementForm({ editing, onSaved, onCancel }) {
           validate: (value) => {
             if (value === "" || value === null) return true;
             if (Number(value) <= 0) return "Must be more than 0%";
-            if (Number(value) > 1000) return "That's more than 1000% — check the number";
+            if (Number(value) > 1000)
+              return "That's more than 1000% — check the number";
             return true;
           },
           onChange: (event) => syncFromPercent(event.target.value),
@@ -585,7 +768,8 @@ function IncrementForm({ editing, onSaved, onCancel }) {
         error={errors.effectiveDate?.message}
         {...register("effectiveDate", {
           required: "Effective date is required",
-          validate: (value) => value <= today() || "Effective date can't be in the future",
+          validate: (value) =>
+            value <= today() || "Effective date can't be in the future",
         })}
       />
 
@@ -594,13 +778,17 @@ function IncrementForm({ editing, onSaved, onCancel }) {
         placeholder="e.g. Annual appraisal"
         containerClassName="md:col-span-2"
         error={errors.reason?.message}
-        {...register("reason", { maxLength: { value: 500, message: "Max 500 characters" } })}
+        {...register("reason", {
+          maxLength: { value: 500, message: "Max 500 characters" },
+        })}
       />
 
       {increase !== null && (
         <div className="rounded-lg border border-cm-border p-4 text-sm text-cm-text md:col-span-3">
           {formatMoney(base)} → <strong>{formatMoney(newSalary)}</strong>
-          <span className={`ml-2 ${increase > 0 ? "text-green-700" : "text-cm-danger-600"}`}>
+          <span
+            className={`ml-2 ${increase > 0 ? "text-green-700" : "text-cm-danger-600"}`}
+          >
             ({increase > 0 ? "+" : ""}
             {formatMoney(increase)}, {increase > 0 ? "+" : ""}
             {percentFromSalary(base, newSalary)}%)
@@ -609,7 +797,12 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       )}
 
       <div className="flex justify-end gap-3 md:col-span-3">
-        <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSubmitting}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
         <Button type="submit" loading={isSubmitting} disabled={base === null}>
@@ -643,7 +836,9 @@ function IncrementsTab() {
     setRevertingUuid(row.uuid);
     try {
       await revertIncrement(row.uuid);
-      showToast.success(`Increment reverted — ${row.employee.fullName} back to ${formatMoney(row.previousSalary)}.`);
+      showToast.success(
+        `Increment reverted — ${row.employee.fullName} back to ${formatMoney(row.previousSalary)}.`,
+      );
       if (form?.record?.uuid === row.uuid) setForm(null); // was being edited
       list.reload(); // the previous increment (if any) becomes the latest
     } catch (error) {
@@ -660,16 +855,24 @@ function IncrementsTab() {
       header: "Employee",
       render: (row) => (
         <div>
-          <div className="font-medium text-cm-text">{row.employee.fullName}</div>
+          <div className="font-medium text-cm-text">
+            {row.employee.fullName}
+          </div>
           <div className="text-xs text-cm-text-muted">{row.employee.email}</div>
         </div>
       ),
     },
-    { key: "previous", header: "Previous", render: (row) => formatMoney(row.previousSalary) },
+    {
+      key: "previous",
+      header: "Previous",
+      render: (row) => formatMoney(row.previousSalary),
+    },
     {
       key: "new",
       header: "New Salary",
-      render: (row) => <span className="font-semibold">{formatMoney(row.newSalary)}</span>,
+      render: (row) => (
+        <span className="font-semibold">{formatMoney(row.newSalary)}</span>
+      ),
     },
     {
       key: "increase",
@@ -680,7 +883,11 @@ function IncrementsTab() {
         </Badge>
       ),
     },
-    { key: "effective", header: "Effective", render: (row) => formatDate(row.effectiveDate) },
+    {
+      key: "effective",
+      header: "Effective",
+      render: (row) => formatDate(row.effectiveDate),
+    },
     { key: "reason", header: "Reason", render: (row) => row.reason || "—" },
     {
       key: "actions",
@@ -688,7 +895,6 @@ function IncrementsTab() {
       render: (row) => {
         // Only the latest increment of each employee can be edited / reverted
         if (!row.isLatest) return null;
-        const isConfirming = confirmUuid === row.uuid;
         return (
           <div className="flex justify-end gap-2">
             <Button
@@ -699,19 +905,14 @@ function IncrementsTab() {
             >
               Edit
             </Button>
-            {isConfirming && revertingUuid !== row.uuid && (
-              <Button size="sm" variant="ghost" onClick={() => setConfirmUuid(null)}>
-                Keep
-              </Button>
-            )}
             <Button
               size="sm"
               variant="outline"
               loading={revertingUuid === row.uuid}
-              disabled={revertingUuid !== null && revertingUuid !== row.uuid}
-              onClick={() => handleRevert(row)}
+              disabled={revertingUuid !== null}
+              onClick={() => setConfirmUuid(row.uuid)}
             >
-              {isConfirming ? "Confirm revert?" : "Revert"}
+              Revert
             </Button>
           </div>
         );
@@ -725,22 +926,78 @@ function IncrementsTab() {
         <p className="text-sm text-cm-text-muted">
           Salary raises. Applying one updates Salary Structure immediately.
         </p>
-        <Button onClick={() => (form ? setForm(null) : openForm({ mode: "create" }))}>
+        <Button
+          onClick={() => (form ? setForm(null) : openForm({ mode: "create" }))}
+        >
           {form ? "Close" : "Give Increment"}
         </Button>
       </div>
 
       {form && (
-        <IncrementForm
-          key={formKey}
-          editing={form.mode === "edit" ? form.record : null}
-          onSaved={() => {
-            setForm(null);
-            list.reload();
-          }}
-          onCancel={() => setForm(null)}
-        />
+        <Modal
+          title={
+            form.mode === "edit" ? "Edit Increment" : "Give Salary Increment"
+          }
+          description={
+            form.mode === "edit"
+              ? `Update the latest salary increment for ${form.record.employee.fullName}.`
+              : "Choose an employee and set the new monthly salary."
+          }
+          onClose={() => setForm(null)}
+        >
+          <IncrementForm
+            key={formKey}
+            editing={form.mode === "edit" ? form.record : null}
+            onSaved={() => {
+              setForm(null);
+              list.reload();
+            }}
+            onCancel={() => setForm(null)}
+          />
+        </Modal>
       )}
+
+      {confirmUuid &&
+        (() => {
+          const record = list.records.find((item) => item.uuid === confirmUuid);
+          return record ? (
+            <Modal
+              title="Revert salary increment?"
+              description="The employee's salary will return to the previous amount."
+              onClose={() => setConfirmUuid(null)}
+              size="max-w-md"
+            >
+              <div className="rounded-xl border border-cm-border bg-cm-bg p-4">
+                <p className="text-sm text-cm-text-muted">
+                  {record.employee.fullName}
+                </p>
+                <div className="mt-2 flex items-center gap-3 text-sm">
+                  <span>{formatMoney(record.newSalary)}</span>
+                  <span aria-hidden="true">→</span>
+                  <strong className="text-cm-text">
+                    {formatMoney(record.previousSalary)}
+                  </strong>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmUuid(null)}
+                  disabled={revertingUuid !== null}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  loading={revertingUuid === record.uuid}
+                  onClick={() => handleRevert(record)}
+                >
+                  Revert increment
+                </Button>
+              </div>
+            </Modal>
+          ) : null;
+        })()}
 
       <EmployeeFilterBar
         searchFn={searchSalaryEmployees}
@@ -752,14 +1009,22 @@ function IncrementsTab() {
 
       {list.loadError ? (
         <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState title="Couldn't load increments" description={list.loadError} onRetry={list.reload} />
+          <ErrorState
+            title="Couldn't load increments"
+            description={list.loadError}
+            onRetry={list.reload}
+          />
         </div>
       ) : (
         <DataTable
           columns={columns}
           rows={list.records.map((record) => ({ ...record, id: record.uuid }))}
           isLoading={list.isLoading}
-          emptyMessage={list.applied ? "No increments for this employee yet." : "No increments given yet."}
+          emptyMessage={
+            list.applied
+              ? "No increments for this employee yet."
+              : "No increments given yet."
+          }
         />
       )}
     </div>
@@ -783,11 +1048,16 @@ function Increments() {
       <div>
         <h1 className="text-xl font-bold text-cm-text">Bonuses & Increments</h1>
         <p className="mt-1 text-sm text-cm-text-muted">
-          One-time bonuses feed into payroll; increments update salary structure.
+          One-time bonuses feed into payroll; increments update salary
+          structure.
         </p>
       </div>
 
-      <div role="tablist" aria-label="Bonuses and increments" className="flex gap-1 border-b border-cm-border">
+      <div
+        role="tablist"
+        aria-label="Bonuses and increments"
+        className="flex gap-1 border-b border-cm-border"
+      >
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -809,7 +1079,11 @@ function Increments() {
       </div>
 
       {/* Only the active tab is mounted → it always loads fresh data */}
-      <div role="tabpanel" id={`bi-panel-${activeTab}`} aria-labelledby={`bi-tab-${activeTab}`}>
+      <div
+        role="tabpanel"
+        id={`bi-panel-${activeTab}`}
+        aria-labelledby={`bi-tab-${activeTab}`}
+      >
         {activeTab === "bonuses" ? <BonusesTab /> : <IncrementsTab />}
       </div>
     </div>
