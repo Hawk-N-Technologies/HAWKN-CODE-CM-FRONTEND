@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import {
@@ -5,8 +6,20 @@ import {
   Clock,
   GraduationCap,
   UserCheck,
+  CalendarDays,
+  CalendarClock,
+  Plus,
+  RefreshCw,
+  ClipboardCheck,
+  Search,
   X,
+  UserRound,
+  CircleDollarSign,
+  ArrowRight,
+  CheckCircle2,
+  FileText,
 } from "lucide-react";
+
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
@@ -29,13 +42,20 @@ import {
 } from "../../services/internshipProbationService";
 
 // ---------------------------------------------------------------------------
-// Constants + helpers
+// Constants and helpers
 // ---------------------------------------------------------------------------
 
-const PERFORMANCE = ["Pending", "Needs Improvement", "Good", "Excellent"];
+const PERFORMANCE = [
+  "Pending",
+  "Needs Improvement",
+  "Good",
+  "Excellent",
+];
 
-// Default length when HR picks a start date (they can change it)
-const DEFAULT_MONTHS = { Internship: 6, Probation: 3 };
+const DEFAULT_MONTHS = {
+  Internship: 6,
+  Probation: 3,
+};
 
 const PERFORMANCE_TONE = {
   Pending: "neutral",
@@ -61,19 +81,25 @@ const STATUS_LABEL = {
 };
 
 const formatMoney = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  `₹${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })}`;
 
-const pad = (n) => String(n).padStart(2, "0");
+const pad = (number) => String(number).padStart(2, "0");
+
 const toYmd = (date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
 const today = () => toYmd(new Date());
 
-// "2026-10-01" → "1 Oct 2026" (built from parts so timezone can't shift the day)
-const formatDate = (yyyyMmDd) => {
-  const [year, month, day] = String(yyyyMmDd)
+const formatDate = (value) => {
+  if (!value) return "—";
+
+  const [year, month, day] = String(value)
     .slice(0, 10)
     .split("-")
     .map(Number);
+
   return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -81,95 +107,146 @@ const formatDate = (yyyyMmDd) => {
   });
 };
 
-// "2026-01-31" + 1 month → "2026-02-28" (clamps to the last day of the month)
-const addMonths = (yyyyMmDd, months) => {
-  const [year, month, day] = yyyyMmDd.split("-").map(Number);
+const addMonths = (value, months) => {
+  const [year, month, day] = value.split("-").map(Number);
   const target = new Date(year, month - 1 + months, 1);
   const lastDay = new Date(
     target.getFullYear(),
     target.getMonth() + 1,
-    0,
+    0
   ).getDate();
+
   return toYmd(
-    new Date(target.getFullYear(), target.getMonth(), Math.min(day, lastDay)),
+    new Date(
+      target.getFullYear(),
+      target.getMonth(),
+      Math.min(day, lastDay)
+    )
   );
 };
 
-// "YYYY-MM-DD" + n days
-const addDays = (yyyyMmDd, days) => {
-  const [year, month, day] = yyyyMmDd.split("-").map(Number);
+const addDays = (value, days) => {
+  const [year, month, day] = value.split("-").map(Number);
   return toYmd(new Date(year, month - 1, day + days));
 };
 
-// Backend field errors → under the matching inputs
 function applyServerErrors(error, setError, setEmployeeError) {
   const fieldErrors = getFieldErrors(error);
+
   if (!fieldErrors) return;
+
   Object.entries(fieldErrors).forEach(([field, message]) => {
-    if (field === "userUuid" && setEmployeeError) setEmployeeError(message);
-    else setError(field, { type: "server", message });
+    if (field === "userUuid" && setEmployeeError) {
+      setEmployeeError(message);
+    } else {
+      setError(field, { type: "server", message });
+    }
   });
 }
 
-// Shared card wrapper for the action forms
-function FormCard({ title, subtitle, onSubmit, onCancel, children }) {
+// ---------------------------------------------------------------------------
+// Shared form components
+// ---------------------------------------------------------------------------
+
+function InternshipModal({
+  title,
+  subtitle,
+  icon: Icon,
+  badge,
+  onClose,
+  dismissDisabled = false,
+  children,
+}) {
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onCancel?.();
+      if (event.key === "Escape" && !dismissDisabled) onClose();
     };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [dismissDisabled, onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onCancel?.();
+        if (event.target === event.currentTarget && !dismissDisabled) {
+          onClose();
+        }
       }}
     >
       <section
         role="dialog"
         aria-modal="true"
-        aria-label={title}
-        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-cm-border bg-cm-card shadow-2xl sm:rounded-2xl"
+        aria-labelledby="internship-modal-title"
+        className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-cm-border bg-cm-bg/60 px-5 py-4 sm:px-6">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold tracking-tight text-cm-text sm:text-lg">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-1 text-sm leading-5 text-cm-text-muted">
-                {subtitle}
-              </p>
-            )}
+        <header className="relative isolate shrink-0 overflow-hidden border-b border-white/10 bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-5 text-white sm:px-7">
+          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/[0.07]" />
+          <div className="pointer-events-none absolute -right-1 -top-10 h-36 w-36 rounded-full border border-white/[0.07]" />
+
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
+                <Icon size={19} />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="internship-modal-title"
+                    className="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                  >
+                    {title}
+                  </h2>
+                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
+                    {badge}
+                  </span>
+                </div>
+                {subtitle && (
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close dialog"
+              onClick={onClose}
+              disabled={dismissDisabled}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X size={17} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Close dialog"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cm-border bg-cm-card text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-text focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
-          >
-            <X size={17} />
-          </button>
+
+          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-sky-300" />
+            <span>Internship and probation operations</span>
+            <span className="text-slate-500">/</span>
+            <span>Employee period and performance details</span>
+          </div>
         </header>
-        <form
-          noValidate
-          onSubmit={onSubmit}
-          className="grid grid-cols-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3"
-        >
-          {children}
-        </form>
+        <div className="overflow-y-auto bg-white">{children}</div>
       </section>
     </div>
   );
 }
 
-function FormButtons({ onCancel, isSubmitting, label, variant = "primary" }) {
+function FormButtons({
+  onCancel,
+  isSubmitting,
+  label,
+  variant = "primary",
+}) {
   return (
-    <div className="flex justify-end gap-3 md:col-span-3">
+    <div className="flex flex-col-reverse gap-3 rounded-xl border-t border-cm-border bg-slate-50 p-4 sm:flex-row sm:justify-end md:col-span-3">
       <Button
         type="button"
         variant="outline"
@@ -178,6 +255,7 @@ function FormButtons({ onCancel, isSubmitting, label, variant = "primary" }) {
       >
         Cancel
       </Button>
+
       <Button type="submit" variant={variant} loading={isSubmitting}>
         {label}
       </Button>
@@ -186,15 +264,16 @@ function FormButtons({ onCancel, isSubmitting, label, variant = "primary" }) {
 }
 
 // ---------------------------------------------------------------------------
-// Start Internship / Probation
+// Start internship or probation
 // ---------------------------------------------------------------------------
 
 function StartForm({ onDone, onCancel }) {
   const [employee, setEmployee] = useState(null);
   const [employeeError, setEmployeeError] = useState("");
-  // Once HR types an end date themselves, stop auto-suggesting it
   const [endTouched, setEndTouched] = useState(false);
+
   const start = today();
+
   const {
     register,
     handleSubmit,
@@ -217,6 +296,7 @@ function StartForm({ onDone, onCancel }) {
 
   const suggestEnd = (type, startDate) => {
     if (endTouched || !startDate) return;
+
     setValue("endDate", addMonths(startDate, DEFAULT_MONTHS[type]), {
       shouldValidate: true,
     });
@@ -227,19 +307,20 @@ function StartForm({ onDone, onCancel }) {
       setEmployeeError("Select an employee from the suggestions");
       return;
     }
+
     try {
       const res = await createPeriod({
         userUuid: employee.uuid,
         periodType: values.periodType,
         startDate: values.startDate,
         endDate: values.endDate,
-        // Stipend is only for internships; empty box → no stipend
         stipend:
           values.periodType === "Internship" && values.stipend !== ""
             ? Number(values.stipend)
             : null,
         notes: values.notes,
       });
+
       showToast.success(`${res.message}.`);
       onDone();
     } catch (error) {
@@ -249,27 +330,36 @@ function StartForm({ onDone, onCancel }) {
   };
 
   return (
-    <FormCard
+    <InternshipModal
       title="Start Internship / Probation"
-      subtitle="The employee's employment type is updated automatically."
-      onSubmit={handleSubmit(onSubmit)}
-      onCancel={onCancel}
+      subtitle="Select an employee and define the employment period."
+      icon={Plus}
+      badge="NEW PERIOD"
+      onClose={onCancel}
+      dismissDisabled={isSubmitting}
     >
-      <EmployeeAutocomplete
-        label="Employee"
-        required
-        selected={employee}
-        onSelect={(picked) => {
-          setEmployee(picked);
-          if (picked) setEmployeeError("");
-        }}
-        searchFn={searchSalaryEmployees}
-        error={employeeError}
-        placeholder="Start typing a name…"
-      />
+      <form
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-3"
+      >
+      <div className="md:col-span-3">
+        <EmployeeAutocomplete
+          label="Employee"
+          required
+          selected={employee}
+          onSelect={(picked) => {
+            setEmployee(picked);
+            if (picked) setEmployeeError("");
+          }}
+          searchFn={searchSalaryEmployees}
+          error={employeeError}
+          placeholder="Search employee by name..."
+        />
+      </div>
 
       <Select
-        label="Type"
+        label="Employment Period"
         required
         options={["Internship", "Probation"].map((type) => ({
           value: type,
@@ -285,14 +375,17 @@ function StartForm({ onDone, onCancel }) {
 
       {periodType === "Internship" ? (
         <Input
-          label="Monthly Stipend (₹, optional)"
+          label="Monthly Stipend (₹)"
           type="number"
           min="0"
           step="0.01"
+          placeholder="e.g. 12000"
           error={errors.stipend?.message}
           {...register("stipend", {
             validate: (value) =>
-              value === "" || Number(value) >= 0 || "Stipend can't be negative",
+              value === "" ||
+              Number(value) >= 0 ||
+              "Stipend can't be negative",
           })}
         />
       ) : (
@@ -315,7 +408,7 @@ function StartForm({ onDone, onCancel }) {
         label="End Date"
         type="date"
         required
-        helperText={`Suggested: ${DEFAULT_MONTHS[periodType]} months from start`}
+        helperText={`Suggested duration: ${DEFAULT_MONTHS[periodType]} months`}
         error={errors.endDate?.message}
         {...register("endDate", {
           required: "End date is required",
@@ -326,30 +419,37 @@ function StartForm({ onDone, onCancel }) {
         })}
       />
 
-      <Input
-        label="Notes (optional)"
-        placeholder="e.g. Frontend intern, reports to Project Lead"
-        error={errors.notes?.message}
-        {...register("notes", {
-          maxLength: { value: 1000, message: "Max 1000 characters" },
-        })}
-      />
+      <div className="md:col-span-2">
+        <Input
+          label="Notes (optional)"
+          placeholder="Role, reporting manager, or other details"
+          error={errors.notes?.message}
+          {...register("notes", {
+            maxLength: {
+              value: 1000,
+              message: "Max 1000 characters",
+            },
+          })}
+        />
+      </div>
 
       <FormButtons
         onCancel={onCancel}
         isSubmitting={isSubmitting}
-        label="Start"
+        label="Start Period"
       />
-    </FormCard>
+      </form>
+    </InternshipModal>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Review: performance / notes / stipend
+// Performance review
 // ---------------------------------------------------------------------------
 
 function ReviewForm({ record, onDone, onCancel }) {
   const isInternship = record.periodType === "Internship";
+
   const {
     register,
     handleSubmit,
@@ -364,13 +464,19 @@ function ReviewForm({ record, onDone, onCancel }) {
   });
 
   const onSubmit = async (values) => {
-    const payload = { performance: values.performance, notes: values.notes };
-    // Internship: empty box clears the stipend; probation never sends it
-    if (isInternship)
-      payload.stipend = values.stipend === "" ? null : Number(values.stipend);
+    const payload = {
+      performance: values.performance,
+      notes: values.notes,
+    };
+
+    if (isInternship) {
+      payload.stipend =
+        values.stipend === "" ? null : Number(values.stipend);
+    }
 
     try {
       await reviewPeriod(record.uuid, payload);
+
       showToast.success(`Review saved for ${record.employee.fullName}.`);
       onDone();
     } catch (error) {
@@ -380,18 +486,30 @@ function ReviewForm({ record, onDone, onCancel }) {
   };
 
   return (
-    <FormCard
-      title={`Review — ${record.employee.fullName}`}
-      subtitle={`${record.periodType} · ${formatDate(record.startDate)} → ${formatDate(record.endDate)}`}
-      onSubmit={handleSubmit(onSubmit)}
-      onCancel={onCancel}
+    <InternshipModal
+      title={`Performance Review: ${record.employee.fullName}`}
+      subtitle={`${record.periodType} · ${formatDate(record.startDate)} to ${formatDate(record.endDate)}`}
+      icon={ClipboardCheck}
+      badge="PERFORMANCE REVIEW"
+      onClose={onCancel}
+      dismissDisabled={isSubmitting}
     >
+      <form
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-3"
+      >
       <Select
-        label="Performance"
+        label="Performance Rating"
         required
-        options={PERFORMANCE.map((value) => ({ value, label: value }))}
+        options={PERFORMANCE.map((value) => ({
+          value,
+          label: value,
+        }))}
         error={errors.performance?.message}
-        {...register("performance", { required: "Performance is required" })}
+        {...register("performance", {
+          required: "Performance is required",
+        })}
       />
 
       {isInternship ? (
@@ -404,7 +522,9 @@ function ReviewForm({ record, onDone, onCancel }) {
           error={errors.stipend?.message}
           {...register("stipend", {
             validate: (value) =>
-              value === "" || Number(value) >= 0 || "Stipend can't be negative",
+              value === "" ||
+              Number(value) >= 0 ||
+              "Stipend can't be negative",
           })}
         />
       ) : (
@@ -412,11 +532,14 @@ function ReviewForm({ record, onDone, onCancel }) {
       )}
 
       <Input
-        label="Notes"
-        placeholder="Review notes"
+        label="Review Notes"
+        placeholder="Summarize progress and areas to improve"
         error={errors.notes?.message}
         {...register("notes", {
-          maxLength: { value: 1000, message: "Max 1000 characters" },
+          maxLength: {
+            value: 1000,
+            message: "Max 1000 characters",
+          },
         })}
       />
 
@@ -425,16 +548,18 @@ function ReviewForm({ record, onDone, onCancel }) {
         isSubmitting={isSubmitting}
         label="Save Review"
       />
-    </FormCard>
+      </form>
+    </InternshipModal>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Extend the end date
+// Extend period
 // ---------------------------------------------------------------------------
 
 function ExtendForm({ record, onDone, onCancel }) {
   const minDate = addDays(record.endDate, 1);
+
   const {
     register,
     handleSubmit,
@@ -442,7 +567,10 @@ function ExtendForm({ record, onDone, onCancel }) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm({
-    defaultValues: { newEndDate: addMonths(record.endDate, 1), notes: "" },
+    defaultValues: {
+      newEndDate: addMonths(record.endDate, 1),
+      notes: "",
+    },
   });
 
   const onSubmit = async (values) => {
@@ -451,9 +579,11 @@ function ExtendForm({ record, onDone, onCancel }) {
         newEndDate: values.newEndDate,
         notes: values.notes,
       });
+
       showToast.success(
-        `${record.employee.fullName}'s ${record.periodType.toLowerCase()} extended to ${formatDate(values.newEndDate)}.`,
+        `${record.employee.fullName}'s ${record.periodType.toLowerCase()} extended to ${formatDate(values.newEndDate)}.`
       );
+
       onDone();
     } catch (error) {
       applyServerErrors(error, setError);
@@ -462,13 +592,20 @@ function ExtendForm({ record, onDone, onCancel }) {
   };
 
   return (
-    <FormCard
-      title={`Extend ${record.periodType} — ${record.employee.fullName}`}
-      subtitle={`Currently ends ${formatDate(record.endDate)}${record.extensionCount ? ` (extended ${record.extensionCount}× already)` : ""}.`}
-      onSubmit={handleSubmit(onSubmit)}
-      onCancel={onCancel}
+    <InternshipModal
+      title={`Extend ${record.periodType}: ${record.employee.fullName}`}
+      subtitle={`Current end date: ${formatDate(record.endDate)}${record.extensionCount ? ` · Extended ${record.extensionCount} time(s)` : ""}`}
+      icon={CalendarClock}
+      badge="PERIOD EXTENSION"
+      onClose={onCancel}
+      dismissDisabled={isSubmitting}
     >
-      <div className="flex flex-col gap-2">
+      <form
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-3"
+      >
+      <div className="flex flex-col gap-3">
         <Input
           label="New End Date"
           type="date"
@@ -478,20 +615,24 @@ function ExtendForm({ record, onDone, onCancel }) {
           {...register("newEndDate", {
             required: "New end date is required",
             validate: (value) =>
-              value >= minDate || "Must be after the current end date",
+              value >= minDate ||
+              "Must be after the current end date",
           })}
         />
-        <div className="flex gap-2">
+
+        <div className="flex flex-wrap gap-2">
           {[1, 3].map((months) => (
             <Button
               key={months}
               type="button"
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() =>
-                setValue("newEndDate", addMonths(record.endDate, months), {
-                  shouldValidate: true,
-                })
+                setValue(
+                  "newEndDate",
+                  addMonths(record.endDate, months),
+                  { shouldValidate: true }
+                )
               }
             >
               +{months} month{months > 1 ? "s" : ""}
@@ -500,27 +641,32 @@ function ExtendForm({ record, onDone, onCancel }) {
         </div>
       </div>
 
-      <Input
-        label="Reason (optional)"
-        placeholder="e.g. Needs more time on core skills"
-        containerClassName="md:col-span-2"
-        error={errors.notes?.message}
-        {...register("notes", {
-          maxLength: { value: 1000, message: "Max 1000 characters" },
-        })}
-      />
+      <div className="md:col-span-2">
+        <Input
+          label="Reason for Extension (optional)"
+          placeholder="Explain why additional time is required"
+          error={errors.notes?.message}
+          {...register("notes", {
+            maxLength: {
+              value: 1000,
+              message: "Max 1000 characters",
+            },
+          })}
+        />
+      </div>
 
       <FormButtons
         onCancel={onCancel}
         isSubmitting={isSubmitting}
-        label="Extend"
+        label="Extend Period"
       />
-    </FormCard>
+      </form>
+    </InternshipModal>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Close with an outcome
+// Close period with outcome
 // ---------------------------------------------------------------------------
 
 function closeOptions(periodType) {
@@ -563,12 +709,18 @@ function CloseForm({ record, onDone, onCancel }) {
   const isExit = outcome === "Ended" || outcome === "Terminated";
 
   const onSubmit = async (values) => {
-    const payload = { outcome: values.outcome, notes: values.notes };
-    if (values.outcome === "Converted")
+    const payload = {
+      outcome: values.outcome,
+      notes: values.notes,
+    };
+
+    if (values.outcome === "Converted") {
       payload.probationEndDate = values.probationEndDate;
+    }
 
     try {
       const res = await closePeriod(record.uuid, payload);
+
       showToast.success(`${record.employee.fullName}: ${res.message}.`);
       onDone();
     } catch (error) {
@@ -578,19 +730,28 @@ function CloseForm({ record, onDone, onCancel }) {
   };
 
   return (
-    <FormCard
-      title={`Close ${record.periodType} — ${record.employee.fullName}`}
-      subtitle={`${formatDate(record.startDate)} → ${formatDate(record.endDate)} · Performance: ${record.performance}`}
-      onSubmit={handleSubmit(onSubmit)}
-      onCancel={onCancel}
+    <InternshipModal
+      title={`Close ${record.periodType}: ${record.employee.fullName}`}
+      subtitle={`${formatDate(record.startDate)} to ${formatDate(record.endDate)} · Performance: ${record.performance}`}
+      icon={CheckCircle2}
+      badge="PERIOD CLOSURE"
+      onClose={onCancel}
+      dismissDisabled={isSubmitting}
     >
+      <form
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-3"
+      >
       <Select
         label="Outcome"
         required
         options={closeOptions(record.periodType)}
         helperText={OUTCOME_HELP[outcome]}
         error={errors.outcome?.message}
-        {...register("outcome", { required: "Outcome is required" })}
+        {...register("outcome", {
+          required: "Outcome is required",
+        })}
       />
 
       {outcome === "Converted" ? (
@@ -599,11 +760,12 @@ function CloseForm({ record, onDone, onCancel }) {
           type="date"
           required
           min={addDays(today(), 1)}
-          helperText="Probation starts today."
+          helperText="The probation period starts today."
           error={errors.probationEndDate?.message}
           {...register("probationEndDate", {
             required: "Probation end date is required",
-            validate: (value) => value > today() || "Must be after today",
+            validate: (value) =>
+              value > today() || "Must be after today",
           })}
         />
       ) : (
@@ -611,78 +773,104 @@ function CloseForm({ record, onDone, onCancel }) {
       )}
 
       <Input
-        label="Notes (optional)"
-        placeholder="e.g. Passed review"
+        label="Closure Notes (optional)"
+        placeholder="Record the reason or outcome"
         error={errors.notes?.message}
         {...register("notes", {
-          maxLength: { value: 1000, message: "Max 1000 characters" },
+          maxLength: {
+            value: 1000,
+            message: "Max 1000 characters",
+          },
         })}
       />
 
       {isExit && (
-        <div className="flex items-start gap-2 rounded-lg border border-cm-danger-600/30 bg-cm-danger-100 p-3 text-sm text-cm-danger-600 md:col-span-3">
+        <div className="flex items-start gap-3 rounded-xl border border-cm-danger-600/30 bg-cm-danger-100 p-4 text-sm text-cm-danger-600 md:col-span-3">
           <AlertTriangle
-            className="mt-0.5 h-4 w-4 shrink-0"
+            className="mt-0.5 h-5 w-5 shrink-0"
             aria-hidden="true"
           />
-          This can't be undone here — {record.employee.fullName} will be marked
-          as Exited.
+          <div>
+            <p className="font-semibold">Employee exit warning</p>
+            <p className="mt-1 leading-5">
+              This action marks {record.employee.fullName} as Exited. Verify
+              the selected outcome before submitting.
+            </p>
+          </div>
         </div>
       )}
 
       <FormButtons
         onCancel={onCancel}
         isSubmitting={isSubmitting}
-        label={isExit ? "Close & Mark Exited" : "Close"}
+        label={isExit ? "Close and Mark Exited" : "Confirm Outcome"}
         variant={isExit ? "danger" : "primary"}
       />
-    </FormCard>
+      </form>
+    </InternshipModal>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Page
+// Dashboard components
 // ---------------------------------------------------------------------------
 
-function SummaryCard({ icon: Icon, label, value, tone }) {
+function SummaryCard({ icon: Icon, label, value, tone, description }) {
   const tones = {
-    info: "text-cm-blue-700 bg-cm-blue-100",
-    warning: "text-cm-warning-600 bg-cm-warning-100",
-    danger: "text-cm-danger-600 bg-cm-danger-100",
+    info: "bg-cm-blue-100 text-cm-blue-700",
+    warning: "bg-cm-warning-100 text-cm-warning-600",
+    danger: "bg-cm-danger-100 text-cm-danger-600",
+    success: "bg-emerald-500/10 text-emerald-600",
   };
+
   return (
-    <div className="flex items-center gap-3 rounded-cm-lg border border-cm-border bg-cm-card p-4 shadow-sm">
-      <span
-        className={`flex h-10 w-10 items-center justify-center rounded-full ${tones[tone]}`}
-      >
-        <Icon className="h-5 w-5" aria-hidden="true" />
-      </span>
-      <div>
-        <p className="text-2xl font-bold text-cm-text">{value}</p>
-        <p className="text-xs text-cm-text-muted">{label}</p>
+    <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-cm-text-muted">{label}</p>
+          <p className="mt-3 text-3xl font-bold tracking-tight text-cm-text">
+            {value}
+          </p>
+          {description && (
+            <p className="mt-2 text-xs leading-5 text-cm-text-muted">
+              {description}
+            </p>
+          )}
+        </div>
+
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tones[tone] || tones.info}`}
+        >
+          <Icon size={21} aria-hidden="true" />
+        </div>
       </div>
     </div>
   );
 }
 
-// "12 days left" / "Ends today" / "Overdue by 4 days"
 function TimeLeft({ record }) {
   if (record.status !== "Active") {
     return (
-      <Badge tone={STATUS_TONE[record.status]}>
-        {STATUS_LABEL[record.status]}
+      <Badge tone={STATUS_TONE[record.status] || "neutral"}>
+        {STATUS_LABEL[record.status] || record.status}
       </Badge>
     );
   }
+
   if (record.isOverdue) {
     const days = Math.abs(record.daysLeft);
+
     return (
       <Badge tone="danger">
         Overdue by {days} day{days === 1 ? "" : "s"}
       </Badge>
     );
   }
-  if (record.daysLeft === 0) return <Badge tone="warning">Ends today</Badge>;
+
+  if (record.daysLeft === 0) {
+    return <Badge tone="warning">Ends today</Badge>;
+  }
+
   return (
     <Badge tone={record.isDueSoon ? "warning" : "neutral"}>
       {record.daysLeft} day{record.daysLeft === 1 ? "" : "s"} left
@@ -691,11 +879,16 @@ function TimeLeft({ record }) {
 }
 
 const TYPE_FILTERS = ["All", "Internship", "Probation"];
+
 const STATUS_FILTERS = [
-  { value: "Active", label: "Active" },
-  { value: "Closed", label: "Closed" },
-  { value: "All", label: "All" },
+  { value: "Active", label: "Active periods" },
+  { value: "Closed", label: "Closed periods" },
+  { value: "All", label: "All records" },
 ];
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 function InternshipProbation() {
   const [records, setRecords] = useState([]);
@@ -704,25 +897,31 @@ function InternshipProbation() {
   const [reloadKey, setReloadKey] = useState(0);
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("Active");
-  // Form: null (closed) | { mode: "start" } | { mode: "review"|"extend"|"close", record }
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState(null);
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
-    let ignore = false; // page closed before the answer arrived → drop it
+    let ignore = false;
+
     getPeriods()
       .then((list) => {
         if (ignore) return;
+
         setRecords(list);
         setLoadError(null);
       })
       .catch((error) => {
-        if (!ignore)
-          setLoadError(getErrorMessage(error, "Couldn't load records."));
+        if (!ignore) {
+          setLoadError(
+            getErrorMessage(error, "Couldn't load records.")
+          );
+        }
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
       });
+
     return () => {
       ignore = true;
     };
@@ -736,7 +935,8 @@ function InternshipProbation() {
 
   const openForm = (next) => {
     setForm(next);
-    setFormKey((key) => key + 1); // fresh form with the right defaults
+    setFormKey((key) => key + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDone = () => {
@@ -744,118 +944,201 @@ function InternshipProbation() {
     reload();
   };
 
-  // Dashboard numbers — active periods only
   const summary = useMemo(() => {
-    const active = records.filter((record) => record.status === "Active");
+    const active = records.filter(
+      (record) => record.status === "Active"
+    );
+
     return {
-      interns: active.filter((record) => record.periodType === "Internship")
-        .length,
-      probation: active.filter((record) => record.periodType === "Probation")
-        .length,
+      interns: active.filter(
+        (record) => record.periodType === "Internship"
+      ).length,
+      probation: active.filter(
+        (record) => record.periodType === "Probation"
+      ).length,
       dueSoon: active.filter((record) => record.isDueSoon).length,
       overdue: active.filter((record) => record.isOverdue).length,
+      totalActive: active.length,
+      closed: records.filter(
+        (record) => record.status !== "Active"
+      ).length,
     };
   }, [records]);
 
-  const visible = useMemo(
-    () =>
-      records.filter((record) => {
-        if (typeFilter !== "All" && record.periodType !== typeFilter)
-          return false;
-        if (statusFilter === "Active") return record.status === "Active";
-        if (statusFilter === "Closed") return record.status !== "Active";
-        return true;
-      }),
-    [records, typeFilter, statusFilter],
-  );
+  const visible = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return records.filter((record) => {
+      if (
+        typeFilter !== "All" &&
+        record.periodType !== typeFilter
+      ) {
+        return false;
+      }
+
+      if (statusFilter === "Active" && record.status !== "Active") {
+        return false;
+      }
+
+      if (
+        statusFilter === "Closed" &&
+        record.status === "Active"
+      ) {
+        return false;
+      }
+
+      if (!query) return true;
+
+      const searchable = [
+        record.employee?.fullName,
+        record.employee?.email,
+        record.periodType,
+        record.performance,
+        record.status,
+        STATUS_LABEL[record.status],
+        record.startDate,
+        record.endDate,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(query);
+    });
+  }, [records, typeFilter, statusFilter, search]);
 
   const columns = [
     {
       key: "employee",
-      header: "Employee",
+      header: "EMPLOYEE",
       render: (row) => (
-        <div>
-          <div className="font-medium text-cm-text">
-            {row.employee.fullName}
+        <div className="flex min-w-[190px] items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-bg text-cm-text-muted">
+            <UserRound size={19} />
           </div>
-          <div className="text-xs text-cm-text-muted">{row.employee.email}</div>
+
+          <div className="min-w-0">
+            <p className="font-semibold text-cm-text">
+              {row.employee.fullName}
+            </p>
+            <p className="mt-1 max-w-[220px] truncate text-xs text-cm-text-muted">
+              {row.employee.email}
+            </p>
+          </div>
         </div>
       ),
     },
     {
       key: "type",
-      header: "Type",
+      header: "PERIOD TYPE",
       render: (row) => (
-        <Badge tone={row.periodType === "Internship" ? "info" : "warning"}>
+        <Badge
+          tone={row.periodType === "Internship" ? "info" : "warning"}
+        >
           {row.periodType}
         </Badge>
       ),
     },
     {
       key: "period",
-      header: "Period",
+      header: "EMPLOYMENT PERIOD",
       render: (row) => (
-        <div>
-          <div className="text-cm-text">
-            {formatDate(row.startDate)} → {formatDate(row.endDate)}
+        <div className="min-w-[180px]">
+          <div className="flex items-center gap-2 text-sm text-cm-text">
+            <CalendarDays
+              size={15}
+              className="shrink-0 text-cm-text-muted"
+            />
+            <span>
+              {formatDate(row.startDate)} to {formatDate(row.endDate)}
+            </span>
           </div>
+
           {row.extensionCount > 0 && (
-            <div className="text-xs text-cm-text-muted">
-              Extended {row.extensionCount}× (was{" "}
-              {formatDate(row.originalEndDate)})
-            </div>
+            <p className="mt-1.5 text-xs text-cm-text-muted">
+              Extended {row.extensionCount} time(s)
+              {row.originalEndDate
+                ? ` · Original end: ${formatDate(row.originalEndDate)}`
+                : ""}
+            </p>
           )}
         </div>
       ),
     },
     {
       key: "time",
-      header: "Status",
+      header: "DEADLINE",
       render: (row) => <TimeLeft record={row} />,
     },
     {
       key: "stipend",
-      header: "Stipend",
-      render: (row) =>
-        row.stipend === null ? "—" : `${formatMoney(row.stipend)}/mo`,
+      header: "MONTHLY STIPEND",
+      render: (row) => (
+        <div className="min-w-[110px]">
+          {row.stipend == null ? (
+            <span className="text-sm text-cm-text-muted">Not set</span>
+          ) : (
+            <>
+              <p className="font-semibold text-cm-text">
+                {formatMoney(row.stipend)}
+              </p>
+              <p className="mt-0.5 text-xs text-cm-text-muted">per month</p>
+            </>
+          )}
+        </div>
+      ),
     },
     {
       key: "performance",
-      header: "Performance",
+      header: "PERFORMANCE",
       render: (row) => (
-        <Badge tone={PERFORMANCE_TONE[row.performance]}>
-          {row.performance}
+        <Badge
+          tone={PERFORMANCE_TONE[row.performance] || "neutral"}
+        >
+          {row.performance || "Pending"}
         </Badge>
       ),
     },
     {
       key: "actions",
-      header: "",
+      header: "ACTIONS",
       render: (row) =>
         row.status === "Active" ? (
-          <div className="flex justify-end gap-2">
+          <div className="flex min-w-[230px] flex-wrap justify-end gap-2">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => openForm({ mode: "review", record: row })}
+              onClick={() =>
+                openForm({ mode: "review", record: row })
+              }
             >
               Review
             </Button>
+
             <Button
               size="sm"
               variant="outline"
-              onClick={() => openForm({ mode: "extend", record: row })}
+              onClick={() =>
+                openForm({ mode: "extend", record: row })
+              }
             >
               Extend
             </Button>
+
             <Button
               size="sm"
-              onClick={() => openForm({ mode: "close", record: row })}
+              onClick={() =>
+                openForm({ mode: "close", record: row })
+              }
             >
               Close
             </Button>
           </div>
-        ) : null,
+        ) : (
+          <span className="text-xs text-cm-text-muted">
+            No actions available
+          </span>
+        ),
     },
   ];
 
@@ -866,126 +1149,387 @@ function InternshipProbation() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">
-            Internship / Probation
-          </h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Track internship and probation periods, performance and intern
-            stipend.
-          </p>
+    <div className="flex flex-col gap-6 pb-6">
+      {/* PAGE HEADER */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-card text-cm-text shadow-sm">
+            <GraduationCap size={24} />
+          </div>
+
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-cm-text">
+                Internship & Probation
+              </h1>
+
+              <Badge tone="neutral">HR Management</Badge>
+            </div>
+
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-cm-text-muted">
+              Manage employment periods, performance reviews, stipends,
+              extensions, and confirmation outcomes.
+            </p>
+          </div>
         </div>
-        <Button
-          onClick={() =>
-            form?.mode === "start" ? setForm(null) : openForm({ mode: "start" })
-          }
-        >
-          {form?.mode === "start" ? "Close" : "Start Internship / Probation"}
-        </Button>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            disabled={isLoading}
+            onClick={reload}
+          >
+            <span className="inline-flex items-center gap-2">
+              <RefreshCw
+                size={15}
+                className={isLoading ? "animate-spin" : ""}
+              />
+              Refresh
+            </span>
+          </Button>
+
+          <Button
+            onClick={() =>
+              form?.mode === "start"
+                ? setForm(null)
+                : openForm({ mode: "start" })
+            }
+          >
+            <span className="inline-flex items-center gap-2">
+              {form?.mode === "start" ? (
+                <X size={16} />
+              ) : (
+                <Plus size={16} />
+              )}
+              {form?.mode === "start"
+                ? "Close Form"
+                : "Start Period"}
+            </span>
+          </Button>
+        </div>
       </div>
 
-      {/* Dashboard */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* SUMMARY */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           icon={GraduationCap}
-          label="Active interns"
+          label="Active Interns"
           value={summary.interns}
           tone="info"
+          description="Currently in an internship"
         />
+
         <SummaryCard
           icon={UserCheck}
-          label="On probation"
+          label="On Probation"
           value={summary.probation}
-          tone="info"
+          tone="success"
+          description="Currently in a probation period"
         />
+
         <SummaryCard
           icon={Clock}
-          label="Ending in 14 days"
+          label="Ending in 14 Days"
           value={summary.dueSoon}
           tone="warning"
+          description="Periods requiring an upcoming review"
         />
+
         <SummaryCard
           icon={AlertTriangle}
-          label="Overdue — action needed"
+          label="Overdue Periods"
           value={summary.overdue}
           tone="danger"
+          description="Active periods past their end date"
         />
       </div>
 
-      {/* Action form (one at a time) */}
-      {form?.mode === "start" && <StartForm {...formProps} />}
+      {/* PERIOD COUNTS */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-cm-lg border border-cm-border bg-cm-card p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cm-bg text-cm-text-muted">
+            <UserCheck size={19} />
+          </div>
+          <div>
+            <p className="text-xs text-cm-text-muted">All Active Periods</p>
+            <p className="mt-1 text-xl font-bold text-cm-text">
+              {summary.totalActive}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-cm-lg border border-cm-border bg-cm-card p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cm-bg text-cm-text-muted">
+            <CheckCircle2 size={19} />
+          </div>
+          <div>
+            <p className="text-xs text-cm-text-muted">Closed Records</p>
+            <p className="mt-1 text-xl font-bold text-cm-text">
+              {summary.closed}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-cm-lg border border-cm-border bg-cm-card p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cm-bg text-cm-text-muted">
+            <CircleDollarSign size={19} />
+          </div>
+          <div>
+            <p className="text-xs text-cm-text-muted">
+              Active Internship Stipends
+            </p>
+            <p className="mt-1 text-xl font-bold text-cm-text">
+              {records
+                .filter(
+                  (record) =>
+                    record.status === "Active" &&
+                    record.periodType === "Internship" &&
+                    record.stipend != null
+                )
+                .length}
+            </p>
+            <p className="mt-1 text-xs text-cm-text-muted">
+              Intern records with a stipend set
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ACTION FORM */}
+      {form?.mode === "start" && (
+        <StartForm {...formProps} />
+      )}
+
       {form?.mode === "review" && (
         <ReviewForm record={form.record} {...formProps} />
       )}
+
       {form?.mode === "extend" && (
         <ExtendForm record={form.record} {...formProps} />
       )}
+
       {form?.mode === "close" && (
         <CloseForm record={form.record} {...formProps} />
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filter by type"
-        >
-          {TYPE_FILTERS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="tab"
-              aria-selected={typeFilter === option}
-              onClick={() => setTypeFilter(option)}
-              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                typeFilter === option
-                  ? "border-[#000052] bg-[#000052] text-white"
-                  : "border-cm-border bg-cm-card text-cm-text hover:border-[#000052]/30"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        {/* Plain <select>: the shared Select is built for forms (uncontrolled) */}
-        <select
-          aria-label="Filter by status"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className="h-10 w-40 rounded-cm-md border border-cm-border bg-white px-3 text-sm text-cm-text focus:border-cm-blue-500 focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
-        >
-          {STATUS_FILTERS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* RECORDS PANEL */}
+      <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
+        <div className="flex flex-col justify-between gap-4 border-b border-cm-border p-5 sm:flex-row sm:items-center sm:px-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold text-cm-text">
+                Employment Periods
+              </h2>
 
-      {loadError ? (
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState
-            title="Couldn't load records"
-            description={loadError}
-            onRetry={reload}
-          />
+              <Badge tone="neutral">{visible.length} Records</Badge>
+            </div>
+
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Review deadlines, employee performance, and current period status.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="info">{summary.totalActive} Active</Badge>
+            <Badge tone="neutral">{summary.closed} Closed</Badge>
+          </div>
         </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={visible.map((record) => ({ ...record, id: record.uuid }))}
-          isLoading={isLoading}
-          emptyMessage={
-            statusFilter === "Active"
-              ? "No one is on internship or probation right now."
-              : "No records found."
-          }
-        />
-      )}
+
+        {/* FILTERS */}
+        <div className="flex flex-col gap-4 border-b border-cm-border px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filter by period type"
+            >
+              {TYPE_FILTERS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="tab"
+                  aria-selected={typeFilter === option}
+                  onClick={() => setTypeFilter(option)}
+                  className={`rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${
+                    typeFilter === option
+                      ? "border-[#000052] bg-[#000052] text-white"
+                      : "border-cm-border bg-cm-card text-cm-text hover:bg-cm-bg"
+                  }`}
+                >
+                  {option === "All" ? "All Types" : option}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full lg:max-w-xs">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-cm-text-muted"
+              />
+
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search employee or period..."
+                aria-label="Search internship and probation records"
+                className="h-10 w-full rounded-lg border border-cm-border bg-cm-bg pl-9 pr-9 text-sm text-cm-text outline-none transition focus:border-cm-blue-500 focus:ring-2 focus:ring-cm-blue-500/10"
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-cm-text-muted hover:text-cm-text"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <label
+              htmlFor="period-status-filter"
+              className="text-xs font-medium text-cm-text-muted"
+            >
+              Employment status
+            </label>
+
+            <select
+              id="period-status-filter"
+              aria-label="Filter by employment status"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="h-10 w-full rounded-lg border border-cm-border bg-cm-card px-3 text-sm text-cm-text outline-none focus:border-cm-blue-500 focus:ring-2 focus:ring-cm-blue-500/10 sm:w-48"
+            >
+              {STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-cm-text-muted">
+            <span>
+              Showing{" "}
+              <strong className="text-cm-text">{visible.length}</strong> of{" "}
+              <strong className="text-cm-text">{records.length}</strong>{" "}
+              records
+            </span>
+
+            {(search || typeFilter !== "All" || statusFilter !== "Active") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setTypeFilter("All");
+                  setStatusFilter("Active");
+                }}
+                className="inline-flex items-center gap-1 font-medium text-cm-text underline underline-offset-2"
+              >
+                <X size={13} />
+                Reset filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* TABLE / STATES */}
+        <div className="p-4 sm:p-6">
+          {loadError ? (
+            <div className="rounded-xl border border-cm-border p-4">
+              <ErrorState
+                title="Couldn't load records"
+                description={loadError}
+                onRetry={reload}
+              />
+            </div>
+          ) : isLoading ? (
+            <div className="flex min-h-[240px] flex-col items-center justify-center gap-3">
+              <RefreshCw
+                size={23}
+                className="animate-spin text-cm-text-muted"
+              />
+              <p className="text-sm text-cm-text-muted">
+                Loading employment periods...
+              </p>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cm-bg text-cm-text-muted">
+                {search ? <Search size={25} /> : <FileText size={25} />}
+              </div>
+
+              <h3 className="mt-4 font-semibold text-cm-text">
+                {search
+                  ? "No matching records"
+                  : statusFilter === "Active"
+                    ? "No active internship or probation periods"
+                    : "No employment records found"}
+              </h3>
+
+              <p className="mt-1 max-w-md text-sm leading-6 text-cm-text-muted">
+                {search
+                  ? "Try a different employee name, email, period type, or performance rating."
+                  : statusFilter === "Active"
+                    ? "There are no active periods for the selected filters."
+                    : "No records match the selected period and status filters."}
+              </p>
+
+              {search || typeFilter !== "All" || statusFilter !== "Active" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearch("");
+                    setTypeFilter("All");
+                    setStatusFilter("Active");
+                  }}
+                >
+                  Reset Filters
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => openForm({ mode: "start" })}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Plus size={15} />
+                    Start First Period
+                  </span>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={visible.map((record) => ({
+                ...record,
+                id: record.uuid,
+              }))}
+              isLoading={isLoading}
+              emptyMessage="No records found."
+            />
+          )}
+        </div>
+
+        {!isLoading && !loadError && records.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-cm-border bg-cm-bg/50 px-5 py-3 text-xs text-cm-text-muted sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {visible.length} matching{" "}
+              {visible.length === 1 ? "record" : "records"}
+            </span>
+
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 size={14} />
+              Data loaded from the internship/probation service
+            </span>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
