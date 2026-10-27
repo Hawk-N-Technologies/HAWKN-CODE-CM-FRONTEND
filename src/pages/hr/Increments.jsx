@@ -174,6 +174,93 @@ function SectionHeader({ icon: Icon, title, description, action }) {
   );
 }
 
+function CompensationModal({
+  title,
+  description,
+  icon: Icon,
+  badge,
+  onClose,
+  children,
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="compensation-modal-title"
+        className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+      >
+        <header className="relative isolate shrink-0 overflow-hidden border-b border-white/10 bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-5 text-white sm:px-7">
+          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/[0.07]" />
+          <div className="pointer-events-none absolute -right-1 -top-10 h-36 w-36 rounded-full border border-white/[0.07]" />
+
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
+                <Icon size={19} />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="compensation-modal-title"
+                    className="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                  >
+                    {title}
+                  </h2>
+                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
+                    {badge}
+                  </span>
+                </div>
+                {description && (
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
+                    {description}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close dialog"
+              onClick={onClose}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+            >
+              <X size={17} />
+            </button>
+          </div>
+
+          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-sky-300" />
+            <span>Compensation operations</span>
+            <span className="text-slate-500">/</span>
+            <span>Employee salary and payment details</span>
+          </div>
+        </header>
+        <div className="overflow-y-auto bg-white">{children}</div>
+      </section>
+    </div>
+  );
+}
+
 function EmptyState({ title, description, action }) {
   return (
     <div className="flex min-h-[220px] flex-col items-center justify-center px-4 py-8 text-center">
@@ -412,17 +499,17 @@ function BonusForm({ onSaved, onCancel }) {
   };
 
   return (
-    <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-      <SectionHeader
-        icon={Plus}
-        title="Add Bonus"
-        description="Create a one-time employee bonus for a specific payroll month."
-      />
-
+    <CompensationModal
+      icon={Plus}
+      title="Add Bonus"
+      description="Create a one-time employee bonus for a specific payroll month."
+      badge="Bonus"
+      onClose={onCancel}
+    >
       <form
         noValidate
         onSubmit={handleSubmit(onSubmit)}
-        className="grid grid-cols-1 gap-5 p-5 sm:p-6 md:grid-cols-3"
+        className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-3"
       >
         <EmployeeAutocomplete
           label="Employee"
@@ -489,7 +576,7 @@ function BonusForm({ onSaved, onCancel }) {
           />
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t border-cm-border pt-4 sm:flex-row sm:justify-end md:col-span-3">
+        <div className="flex flex-col-reverse gap-3 rounded-xl border-t border-cm-border bg-slate-50 p-4 sm:flex-row sm:justify-end md:col-span-3">
           <Button
             type="button"
             variant="outline"
@@ -507,7 +594,7 @@ function BonusForm({ onSaved, onCancel }) {
           </Button>
         </div>
       </form>
-    </section>
+    </CompensationModal>
   );
 }
 
@@ -895,21 +982,21 @@ function IncrementForm({ editing, onSaved, onCancel }) {
   };
 
   return (
-    <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-      <SectionHeader
-        icon={TrendingUp}
-        title={isEdit ? "Edit Salary Increment" : "Apply Salary Increment"}
-        description={
-          isEdit
-            ? "Update the latest increment. Employee and previous salary are fixed."
-            : "Select an employee and define their new monthly salary."
-        }
-      />
-
+    <CompensationModal
+      icon={TrendingUp}
+      title={isEdit ? "Edit Salary Increment" : "Apply Salary Increment"}
+      description={
+        isEdit
+          ? "Update the latest increment. Employee and previous salary are fixed."
+          : "Select an employee and define their new monthly salary."
+      }
+      badge="Increment"
+      onClose={onCancel}
+    >
       <form
         noValidate
         onSubmit={handleSubmit(onSubmit)}
-        className="grid grid-cols-1 gap-5 p-5 sm:p-6 md:grid-cols-3"
+        className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-3"
       >
         {isEdit ? (
           <Input
@@ -1062,7 +1149,7 @@ function IncrementForm({ editing, onSaved, onCancel }) {
           </div>
         )}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-cm-border pt-4 sm:flex-row sm:justify-end md:col-span-3">
+        <div className="flex flex-col-reverse gap-3 rounded-xl border-t border-cm-border bg-slate-50 p-4 sm:flex-row sm:justify-end md:col-span-3">
           <Button
             type="button"
             variant="outline"
@@ -1084,7 +1171,7 @@ function IncrementForm({ editing, onSaved, onCancel }) {
           </Button>
         </div>
       </form>
-    </section>
+    </CompensationModal>
   );
 }
 

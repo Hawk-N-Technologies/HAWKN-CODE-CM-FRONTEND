@@ -103,6 +103,95 @@ function SummaryCard({
   );
 }
 
+function HolidayModal({
+  title,
+  subtitle,
+  onClose,
+  dismissDisabled = false,
+  children,
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !dismissDisabled) onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [dismissDisabled, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !dismissDisabled) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="holiday-modal-title"
+        className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+      >
+        <header className="relative isolate shrink-0 overflow-hidden border-b border-white/10 bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-5 text-white sm:px-7">
+          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/[0.07]" />
+          <div className="pointer-events-none absolute -right-1 -top-10 h-36 w-36 rounded-full border border-white/[0.07]" />
+
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
+                <Plus size={19} />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="holiday-modal-title"
+                    className="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                  >
+                    {title}
+                  </h2>
+                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
+                    COMPANY HOLIDAYS
+                  </span>
+                </div>
+                {subtitle && (
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close dialog"
+              onClick={onClose}
+              disabled={dismissDisabled}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X size={17} />
+            </button>
+          </div>
+
+          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-sky-300" />
+            <span>Company calendar operations</span>
+            <span className="text-slate-500">/</span>
+            <span>Shared holiday date and payment details</span>
+          </div>
+        </header>
+        <div className="overflow-y-auto bg-white">{children}</div>
+      </section>
+    </div>
+  );
+}
+
 function Holiday() {
   const [holidays, setHolidays] = useState([]);
   const [search, setSearch] = useState("");
@@ -526,23 +615,13 @@ function Holiday() {
 
       {/* ADD HOLIDAY FORM */}
       {showForm && (
-        <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-          <div className="flex items-start gap-3 border-b border-cm-border px-5 py-4 sm:px-6">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
-              <Plus size={20} />
-            </div>
-
-            <div>
-              <h2 className="font-semibold text-cm-text">
-                Add Company Holiday
-              </h2>
-              <p className="mt-1 text-sm text-cm-text-muted">
-                Add a date to the shared company holiday calendar.
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={addHoliday} className="space-y-5 p-5 sm:p-6">
+        <HolidayModal
+          title="Add Company Holiday"
+          subtitle="Add a date to the shared company holiday calendar."
+          onClose={closeForm}
+          dismissDisabled={submitting}
+        >
+          <form onSubmit={addHoliday} className="space-y-5 p-5 sm:p-7">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <Input
                 label="Holiday Date"
@@ -589,7 +668,7 @@ function Holiday() {
               </span>
             </label>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-cm-border pt-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 rounded-xl border-t border-cm-border bg-slate-50 p-4 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -611,7 +690,7 @@ function Holiday() {
               </Button>
             </div>
           </form>
-        </section>
+        </HolidayModal>
       )}
 
       {/* HOLIDAY CALENDAR TABLE */}

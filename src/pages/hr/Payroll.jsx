@@ -171,31 +171,47 @@ function PayrollModal({ title, description, onClose, children }) {
         aria-labelledby="payroll-modal-title"
         className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-              Payroll management
-            </p>
-            <h2
-              id="payroll-modal-title"
-              className="mt-1 text-xl font-semibold tracking-tight text-slate-900"
+        <header className="relative isolate shrink-0 overflow-hidden border-b border-white/10 bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-5 text-white sm:px-7">
+          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/[0.07]" />
+          <div className="pointer-events-none absolute -right-1 -top-10 h-36 w-36 rounded-full border border-white/[0.07]" />
+
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
+                <Wallet size={19} />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 id="payroll-modal-title" className="text-lg font-semibold tracking-tight text-white sm:text-xl">
+                    {title}
+                  </h2>
+                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
+                    Payroll
+                  </span>
+                </div>
+                {description && (
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
+                    {description}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close dialog"
+              onClick={onClose}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
             >
-              {title}
-            </h2>
-            {description && (
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-                {description}
-              </p>
-            )}
+              <X size={17} />
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="Close dialog"
-            onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-          >
-            <X size={18} />
-          </button>
+
+          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-sky-300" />
+            <span>Payroll operations</span>
+            <span className="text-slate-500">/</span>
+            <span>Employee salary and payment details</span>
+          </div>
         </header>
         <div className="overflow-y-auto p-5 sm:p-7">{children}</div>
       </section>
