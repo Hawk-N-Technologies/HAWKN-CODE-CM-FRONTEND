@@ -159,6 +159,7 @@ const HR_NAV_SECTIONS = [
       { label: "Leave & LOP", path: "/hr/leave-lop", icon: ICONS.leave },
       { label: "Holiday", path: "/hr/holiday", icon: ICONS.holiday },
       { label: "Payroll", path: "/hr/payroll", icon: ICONS.payroll },
+      { label: "Manual Attendance", path: "/hr/manual-attendance", icon: ICONS.attendance },
       {
         label: "Bonuses & Increments",
         path: "/hr/bonuses-increments",
