@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { CalendarDays, Search, X } from "lucide-react";
+import {
+  CalendarDays,
+  Search,
+  X,
+  Wallet,
+  Users,
+  Clock3,
+  CheckCircle2,
+  Plus,
+  ArrowRight,
+  Calculator,
+  CreditCard,
+} from "lucide-react";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
@@ -25,7 +37,6 @@ import axios from "axios";
 
 const PAYMENT_METHODS = ["Bank Transfer", "UPI", "Cheque", "Cash"];
 
-// This month as "YYYY-MM" in the user's local time
 const currentMonth = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -36,24 +47,18 @@ const formatMoney = (value) =>
     maximumFractionDigits: 2,
   })}`;
 
-// "2026-09" → "September 2026"
 const formatMonth = (yyyyMm) => {
   if (!yyyyMm) return "—";
-
   const [year, month] = yyyyMm.split("-").map(Number);
-
   return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
     month: "long",
     year: "numeric",
   });
 };
 
-// "2026-08-31" → "31 Aug 2026"
 const formatDate = (yyyyMmDd) => {
   if (!yyyyMmDd) return "—";
-
   const [year, month, day] = yyyyMmDd.split("-").map(Number);
-
   return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -61,7 +66,6 @@ const formatDate = (yyyyMmDd) => {
   });
 };
 
-// Empty number box → 0 instead of NaN
 const toNumber = (value) =>
   value === "" || value === null ? 0 : Number(value);
 
@@ -78,6 +82,126 @@ const FORM_DEFAULTS = () => ({
   bonus: 0,
   paymentMethod: "Bank Transfer",
 });
+
+// ---------------------------------------------------------------------------
+// Reusable UI
+// ---------------------------------------------------------------------------
+
+function SectionHeading({ eyebrow, title, description, action }) {
+  return (
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div>
+        {eyebrow && (
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+            {eyebrow}
+          </p>
+        )}
+        <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
+          {title}
+        </h2>
+        {description && (
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            {description}
+          </p>
+        )}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, detail, icon: Icon, tone }) {
+  const tones = {
+    navy: "bg-slate-900 text-white",
+    blue: "bg-blue-50 text-blue-700 ring-blue-100",
+    amber: "bg-amber-50 text-amber-700 ring-amber-100",
+    green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  };
+
+  return (
+    <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-3 break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {value}
+          </p>
+        </div>
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+            tone === "navy"
+              ? tones.navy
+              : `ring-1 ${tones[tone] || tones.blue}`
+          }`}
+        >
+          <Icon size={20} />
+        </span>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
+    </article>
+  );
+}
+
+function PayrollModal({ title, description, onClose, children }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payroll-modal-title"
+        className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+              Payroll management
+            </p>
+            <h2
+              id="payroll-modal-title"
+              className="mt-1 text-xl font-semibold tracking-tight text-slate-900"
+            >
+              {title}
+            </h2>
+            {description && (
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                {description}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          >
+            <X size={18} />
+          </button>
+        </header>
+        <div className="overflow-y-auto p-5 sm:p-7">{children}</div>
+      </section>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Create Payroll form
@@ -98,18 +222,12 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     setValue,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm({
-    defaultValues: FORM_DEFAULTS(),
-  });
+  } = useForm({ defaultValues: FORM_DEFAULTS() });
 
   const [baseSalary, lopDeduction, bonus, payPeriod] = useWatch({
     control,
     name: ["baseSalary", "lopDeduction", "bonus", "payPeriod"],
   });
-
-  // -------------------------------------------------------------------------
-  // Calculate payroll directly from API
-  // -------------------------------------------------------------------------
 
   const calculatePayroll = async (pickedEmployee, selectedPayPeriod) => {
     if (!pickedEmployee?.uuid) return;
@@ -124,50 +242,29 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       });
 
       const data = response.data?.data ?? response.data;
-
-      /*
-       * API response structure:
-       *
-       * data.salary.salary
-       * data.calculation.lopDeduction
-       * data.calculation.bonus
-       * data.calculation.netSalary
-       * data.calculation.dailySalary
-       * data.calculation.paidUnits
-       * data.calculation.lopUnits
-       * data.calculation.workingDays
-       * data.calculation.breakdown
-       */
-
       const salary = data.salary?.salary ?? 0;
       const calculationData = data.calculation ?? {};
 
       setCalculation(calculationData);
 
-      // Backend decides the actual pay period.
       setValue(
         "payPeriod",
         data.payPeriod
           ? data.payPeriod.substring(0, 7)
           : selectedPayPeriod || currentMonth(),
-        {
-          shouldValidate: true,
-        },
+        { shouldValidate: true },
       );
 
-      // Base salary comes from salary.salary
       setValue("baseSalary", salary, {
         shouldValidate: true,
         shouldDirty: false,
       });
 
-      // LOP comes from calculation.lopDeduction
       setValue("lopDeduction", calculationData.lopDeduction ?? 0, {
         shouldValidate: true,
         shouldDirty: false,
       });
 
-      // Bonus comes from calculation.bonus
       setValue("bonus", calculationData.bonus ?? 0, {
         shouldValidate: true,
         shouldDirty: false,
@@ -180,16 +277,11 @@ function CreatePayrollForm({ onCreated, onCancel }) {
 
       setCalculationError(message);
       setCalculation(null);
-
       showToast.error(message);
     } finally {
       setIsCalculating(false);
     }
   };
-
-  // -------------------------------------------------------------------------
-  // Employee selected
-  // -------------------------------------------------------------------------
 
   const handleEmployeeSelect = (picked) => {
     setEmployee(picked);
@@ -204,13 +296,8 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       return;
     }
 
-    // Calculate immediately for selected employee
     calculatePayroll(picked, payPeriod || currentMonth());
   };
-
-  // -------------------------------------------------------------------------
-  // Pay period changed
-  // -------------------------------------------------------------------------
 
   const handlePayPeriodChange = (event) => {
     const selectedMonth = event.target.value;
@@ -220,15 +307,10 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       shouldDirty: true,
     });
 
-    // Recalculate whenever employee + month are available
     if (employee?.uuid && selectedMonth) {
       calculatePayroll(employee, selectedMonth);
     }
   };
-
-  // -------------------------------------------------------------------------
-  // Submit
-  // -------------------------------------------------------------------------
 
   const onSubmit = async (values) => {
     if (!employee) {
@@ -237,8 +319,6 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     }
 
     try {
-      // netSalary is NOT sent.
-      // Backend calculates it again when payroll is created.
       const record = await createPayroll({
         userUuid: employee.uuid,
         payPeriod: values.payPeriod,
@@ -258,7 +338,6 @@ function CreatePayrollForm({ onCreated, onCancel }) {
       setEmployee(null);
       setCalculation(null);
       setCalculationError("");
-
       onCreated(record);
     } catch (error) {
       const fieldErrors = getFieldErrors(error);
@@ -268,10 +347,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
           if (field === "userUuid") {
             setEmployeeError(message);
           } else {
-            setError(field, {
-              type: "server",
-              message,
-            });
+            setError(field, { type: "server", message });
           }
         });
       }
@@ -280,173 +356,198 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     }
   };
 
+  const netSalary = calculation?.netSalary ??
+    Math.max(
+      0,
+      toNumber(baseSalary) - toNumber(lopDeduction) + toNumber(bonus),
+    );
+
   return (
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="grid grid-cols-1 gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm md:grid-cols-3"
+      className="space-y-6"
     >
-      {/* Employee */}
-      <div className="flex flex-col gap-1">
-        <EmployeeAutocomplete
-          label="Employee"
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-2">
+          <EmployeeAutocomplete
+            label="Employee"
+            required
+            selected={employee}
+            onSelect={handleEmployeeSelect}
+            error={employeeError}
+            placeholder="Start typing a name..."
+          />
+          {isCalculating && (
+            <p className="text-xs text-blue-700">
+              Calculating from salary, attendance and leave records...
+            </p>
+          )}
+          {calculationError && (
+            <p className="text-xs text-rose-600">{calculationError}</p>
+          )}
+          {employee && !isCalculating && !calculationError && (
+            <p className="text-xs text-slate-500">
+              Salary values are populated from the calculation API.
+            </p>
+          )}
+        </div>
+
+        <Input
+          label="Pay Month"
+          type="month"
           required
-          selected={employee}
-          onSelect={handleEmployeeSelect}
-          error={employeeError}
-          placeholder="Start typing a name…"
+          error={errors.payPeriod?.message}
+          {...register("payPeriod", {
+            required: "Month is required",
+          })}
+          onChange={handlePayPeriodChange}
         />
 
-        {isCalculating && (
-          <p className="text-xs text-cm-text-muted">
-            Calculating payroll from salary, attendance and leave records…
-          </p>
-        )}
+        <Input
+          label="Base Salary (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          required
+          error={errors.baseSalary?.message}
+          {...register("baseSalary", {
+            required: "Base salary is required",
+            validate: (value) =>
+              toNumber(value) > 0 || "Base salary must be more than 0",
+          })}
+        />
 
-        {calculationError && (
-          <p className="text-xs text-cm-danger-600">{calculationError}</p>
-        )}
+        <Input
+          label="LOP Deduction (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          error={errors.lopDeduction?.message}
+          {...register("lopDeduction", {
+            validate: {
+              notNegative: (value) =>
+                toNumber(value) >= 0 || "Can't be negative",
+              withinBase: (value) =>
+                toNumber(value) <= toNumber(baseSalary) ||
+                "LOP deduction can't exceed the base salary",
+            },
+          })}
+        />
 
-        {employee && !isCalculating && !calculationError && (
-          <p className="text-xs text-cm-text-muted">
-            Salary and LOP calculated from the payroll calculation API.
-          </p>
-        )}
+        <Input
+          label="Bonus (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          error={errors.bonus?.message}
+          {...register("bonus", {
+            validate: (value) =>
+              toNumber(value) >= 0 || "Can't be negative",
+          })}
+        />
+
+        <Select
+          label="Payment Method"
+          required
+          options={PAYMENT_METHODS.map((method) => ({
+            value: method,
+            label: method,
+          }))}
+          error={errors.paymentMethod?.message}
+          {...register("paymentMethod", {
+            required: "Payment method is required",
+          })}
+        />
       </div>
 
-      {/* Pay Period */}
-      <Input
-        label="Month"
-        type="month"
-        required
-        error={errors.payPeriod?.message}
-        {...register("payPeriod", {
-          required: "Month is required",
-        })}
-        onChange={handlePayPeriodChange}
-      />
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <Calculator size={19} />
+            </span>
+            <div>
+              <h3 className="font-semibold text-slate-900">
+                Salary calculation
+              </h3>
+              <p className="text-xs text-slate-500">
+                Review the calculated payroll breakdown.
+              </p>
+            </div>
+          </div>
+          {isCalculating && (
+            <Badge tone="info">Calculating...</Badge>
+          )}
+        </div>
 
-      {/* Base Salary */}
-      <Input
-        label="Base Salary (₹)"
-        type="number"
-        min="0"
-        step="0.01"
-        required
-        error={errors.baseSalary?.message}
-        {...register("baseSalary", {
-          required: "Base salary is required",
-          validate: (value) =>
-            toNumber(value) > 0 || "Base salary must be more than 0",
-        })}
-      />
+        <div className="p-5">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm text-slate-500">Net salary payable</p>
+              <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+                {formatMoney(netSalary)}
+              </p>
+            </div>
+            <Badge tone="success">Estimated amount</Badge>
+          </div>
 
-      {/* LOP */}
-      <Input
-        label="LOP Deduction (₹)"
-        type="number"
-        min="0"
-        step="0.01"
-        error={errors.lopDeduction?.message}
-        {...register("lopDeduction", {
-          validate: {
-            notNegative: (value) => toNumber(value) >= 0 || "Can't be negative",
-
-            withinBase: (value) =>
-              toNumber(value) <= toNumber(baseSalary) ||
-              "LOP deduction can't be more than the base salary",
-          },
-        })}
-      />
-
-      {/* Bonus */}
-      <Input
-        label="Bonus (₹)"
-        type="number"
-        min="0"
-        step="0.01"
-        error={errors.bonus?.message}
-        {...register("bonus", {
-          validate: (value) => toNumber(value) >= 0 || "Can't be negative",
-        })}
-      />
-
-      {/* Payment Method */}
-      <Select
-        label="Payment Method"
-        required
-        options={PAYMENT_METHODS.map((method) => ({
-          value: method,
-          label: method,
-        }))}
-        error={errors.paymentMethod?.message}
-        {...register("paymentMethod", {
-          required: "Payment method is required",
-        })}
-      />
-
-      {/* ------------------------------------------------------------------- */}
-      {/* Calculation summary */}
-      {/* ------------------------------------------------------------------- */}
-
-      <div className="rounded-lg border border-cm-border p-4 text-sm text-cm-text md:col-span-3">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>Calculated Net Salary</span>
-
-            <strong className="text-lg">
-              {formatMoney(
-                calculation?.netSalary ??
-                  Math.max(
-                    0,
-                    toNumber(baseSalary) -
-                      toNumber(lopDeduction) +
-                      toNumber(bonus),
-                  ),
-              )}
-            </strong>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              {
+                label: "Base salary",
+                value: formatMoney(baseSalary),
+              },
+              {
+                label: "LOP deduction",
+                value: formatMoney(lopDeduction),
+              },
+              {
+                label: "Bonus",
+                value: formatMoney(bonus),
+              },
+              {
+                label: "Daily salary",
+                value: formatMoney(calculation?.dailySalary),
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl border border-slate-200 bg-white p-3"
+              >
+                <p className="text-xs text-slate-500">{item.label}</p>
+                <p className="mt-2 break-words text-sm font-semibold text-slate-800">
+                  {item.value}
+                </p>
+              </div>
+            ))}
           </div>
 
           {calculation && (
-            <div className="grid grid-cols-2 gap-3 border-t border-cm-border pt-3 text-xs text-cm-text-muted sm:grid-cols-4">
-              <div>
-                <div>Daily Salary</div>
-                <strong className="text-cm-text">
-                  {formatMoney(calculation.dailySalary)}
-                </strong>
-              </div>
-
-              <div>
-                <div>Paid Units</div>
-                <strong className="text-cm-text">
-                  {calculation.paidUnits ?? 0}
-                </strong>
-              </div>
-
-              <div>
-                <div>LOP Units</div>
-                <strong className="text-cm-text">
-                  {calculation.lopUnits ?? 0}
-                </strong>
-              </div>
-
-              <div>
-                <div>Working Days</div>
-                <strong className="text-cm-text">
-                  {calculation.workingDays ?? 0}
-                </strong>
-              </div>
+            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-200 pt-4">
+              {[
+                ["Paid units", calculation.paidUnits ?? 0],
+                ["LOP units", calculation.lopUnits ?? 0],
+                ["Working days", calculation.workingDays ?? 0],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-xs text-slate-500">{label}</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">
+                    {value}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 
-          <span className="text-xs text-cm-text-muted">
-            Base Salary − LOP Deduction + Bonus
-          </span>
+          <p className="mt-4 text-xs leading-5 text-slate-500">
+            Base salary − LOP deduction + bonus. The backend recalculates
+            net salary when the payroll record is created.
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* Buttons */}
-      <div className="flex justify-end gap-3 md:col-span-3">
+      <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
         <Button
           type="button"
           variant="outline"
@@ -455,9 +556,11 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         >
           Cancel
         </Button>
-
         <Button type="submit" loading={isSubmitting} disabled={isCalculating}>
-          Save Payroll
+          <span className="inline-flex items-center gap-2">
+            <Plus size={16} />
+            Save Payroll
+          </span>
         </Button>
       </div>
     </form>
@@ -492,7 +595,6 @@ function PayrollRuns() {
     })
       .then((list) => {
         if (ignore) return;
-
         setRecords(list);
         setLoadError(null);
       })
@@ -513,6 +615,16 @@ function PayrollRuns() {
   const hasActiveFilters = Boolean(
     applied.employee || applied.startDate || applied.endDate,
   );
+
+  const summary = {
+    total: records.length,
+    processed: records.filter((record) => record.status === "Processed").length,
+    pending: records.filter((record) => record.status === "Pending").length,
+    net: records.reduce(
+      (sum, record) => sum + Number(record.netSalary || 0),
+      0,
+    ),
+  };
 
   const runSearch = (event) => {
     event?.preventDefault();
@@ -559,11 +671,11 @@ function PayrollRuns() {
 
     try {
       const updated = await processPayroll(row.uuid);
-
       setRecords((prev) =>
-        prev.map((record) => (record.uuid === updated.uuid ? updated : record)),
+        prev.map((record) =>
+          record.uuid === updated.uuid ? updated : record,
+        ),
       );
-
       showToast.success(`Payroll processed for ${updated.employee.fullName}.`);
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't process payroll."));
@@ -576,12 +688,25 @@ function PayrollRuns() {
     {
       key: "employee",
       header: "Employee",
-      render: (row) => row.employee?.fullName ?? "—",
+      render: (row) => (
+        <div className="min-w-[140px]">
+          <p className="font-semibold text-slate-800">
+            {row.employee?.fullName ?? "—"}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {row.employee?.email ?? ""}
+          </p>
+        </div>
+      ),
     },
     {
       key: "month",
-      header: "Month",
-      render: (row) => formatMonth(row.payPeriod),
+      header: "Pay Month",
+      render: (row) => (
+        <span className="whitespace-nowrap text-slate-600">
+          {formatMonth(row.payPeriod)}
+        </span>
+      ),
     },
     {
       key: "base",
@@ -591,7 +716,11 @@ function PayrollRuns() {
     {
       key: "lop",
       header: "LOP",
-      render: (row) => formatMoney(row.lopDeduction),
+      render: (row) => (
+        <span className={Number(row.lopDeduction) > 0 ? "text-rose-600" : "text-slate-500"}>
+          {formatMoney(row.lopDeduction)}
+        </span>
+      ),
     },
     {
       key: "bonus",
@@ -602,13 +731,19 @@ function PayrollRuns() {
       key: "net",
       header: "Net Salary",
       render: (row) => (
-        <span className="font-semibold">{formatMoney(row.netSalary)}</span>
+        <span className="whitespace-nowrap font-semibold text-slate-900">
+          {formatMoney(row.netSalary)}
+        </span>
       ),
     },
     {
       key: "method",
       header: "Payment Method",
-      render: (row) => row.paymentMethod,
+      render: (row) => (
+        <span className="whitespace-nowrap text-slate-600">
+          {row.paymentMethod}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -621,7 +756,7 @@ function PayrollRuns() {
     },
     {
       key: "actions",
-      header: "",
+      header: "Actions",
       render: (row) =>
         row.status === "Pending" ? (
           <Button
@@ -632,7 +767,9 @@ function PayrollRuns() {
           >
             Process
           </Button>
-        ) : null,
+        ) : (
+          <span className="text-xs text-slate-400">Completed</span>
+        ),
     },
   ];
 
@@ -642,171 +779,224 @@ function PayrollRuns() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-cm-text-muted">
-          Monthly payroll records — create, filter and process.
-        </p>
-
-        <Button onClick={() => setShowForm((value) => !value)}>
-          {showForm ? "Close" : "Create Payroll"}
-        </Button>
-      </div>
-
-      {showForm && (
-        <CreatePayrollForm
-          onCreated={handleCreated}
-          onCancel={() => setShowForm(false)}
+    <div className="min-w-0 space-y-6">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Payroll records"
+          value={summary.total}
+          detail="Records matching current filters"
+          icon={Wallet}
+          tone="navy"
         />
-      )}
+        <MetricCard
+          label="Processed"
+          value={summary.processed}
+          detail="Payroll runs completed"
+          icon={CheckCircle2}
+          tone="green"
+        />
+        <MetricCard
+          label="Pending"
+          value={summary.pending}
+          detail="Awaiting payroll processing"
+          icon={Clock3}
+          tone="amber"
+        />
+        <MetricCard
+          label="Net payroll"
+          value={formatMoney(summary.net)}
+          detail="Total net salary in this result set"
+          icon={CreditCard}
+          tone="blue"
+        />
+      </section>
 
-      {/* Filter bar */}
-      <form
-        onSubmit={runSearch}
-        className="flex flex-col gap-2"
-        role="search"
-        aria-label="Filter payroll"
-      >
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-cm-border bg-white px-3 py-2 shadow-sm lg:flex-nowrap lg:rounded-full">
-          <EmployeeAutocomplete
-            selected={draft.employee}
-            onSelect={(employee) => {
-              setDraft((prev) => ({
-                ...prev,
-                employee,
-              }));
-              setFilterError("");
-            }}
-            onTextChange={setEmployeeText}
-            placeholder="Search employee by name…"
-            className="min-w-[14rem] flex-1"
-            inputClassName="border-transparent focus:ring-0"
-          />
-
-          <span
-            className="hidden h-6 w-px bg-cm-border lg:block"
-            aria-hidden="true"
-          />
-
-          <div className="flex items-center gap-2">
-            <CalendarDays
-              className="h-4 w-4 shrink-0 text-cm-text-muted"
-              aria-hidden="true"
-            />
-
-            <input
-              type="date"
-              aria-label="Start date"
-              value={draft.startDate}
-              max={draft.endDate || undefined}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  startDate: event.target.value,
-                }))
-              }
-              className="h-10 rounded-cm-md px-2 text-sm text-cm-text focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
-            />
-
-            <span className="text-cm-text-muted" aria-hidden="true">
-              –
-            </span>
-
-            <input
-              type="date"
-              aria-label="End date"
-              value={draft.endDate}
-              min={draft.startDate || undefined}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  endDate: event.target.value,
-                }))
-              }
-              className="h-10 rounded-cm-md px-2 text-sm text-cm-text focus:outline-none focus:ring-2 focus:ring-cm-blue-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            aria-label="Search payroll"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#000052] text-white hover:bg-[#00003D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#000052]"
-          >
-            <Search className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        {filterError && (
-          <p className="px-3 text-sm text-cm-danger-600">{filterError}</p>
-        )}
-      </form>
-
-      {/* Active filters */}
-      {hasActiveFilters && !isLoading && !loadError && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-cm-text-muted">
-          <span>
-            Showing {records.length} record
-            {records.length === 1 ? "" : "s"}
-            {applied.employee && (
-              <>
-                {" "}
-                for{" "}
-                <strong className="text-cm-text">
-                  {applied.employee.fullName}
-                </strong>
-              </>
-            )}
-            {applied.startDate && (
-              <>
-                {" "}
-                from{" "}
-                <strong className="text-cm-text">
-                  {formatDate(applied.startDate)}
-                </strong>
-              </>
-            )}
-            {applied.endDate && (
-              <>
-                {" "}
-                to{" "}
-                <strong className="text-cm-text">
-                  {formatDate(applied.endDate)}
-                </strong>
-              </>
-            )}
-          </span>
-
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="inline-flex items-center gap-1 rounded-full border border-cm-border px-2 py-0.5 text-xs text-cm-text hover:bg-cm-bg"
-          >
-            <X className="h-3 w-3" aria-hidden="true" />
-            Clear filters
-          </button>
-        </div>
-      )}
-
-      {loadError ? (
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card">
-          <ErrorState
-            title="Couldn't load payroll"
-            description={loadError}
-            onRetry={retry}
-          />
-        </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          isLoading={isLoading}
-          emptyMessage={
-            hasActiveFilters
-              ? "No payroll records for these filters."
-              : "No payroll records yet."
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+        <SectionHeading
+          eyebrow="Payroll operations"
+          title="Payroll runs"
+          description="Create payroll records, filter results and process pending payments."
+          action={
+            <Button onClick={() => setShowForm(true)}>
+              <span className="inline-flex items-center gap-2">
+                <Plus size={16} />
+                Create Payroll
+              </span>
+            </Button>
           }
         />
+      </section>
+
+      {showForm && (
+        <PayrollModal
+          title="Create payroll"
+          description="Select an employee and review the calculated salary before creating the payroll record."
+          onClose={() => setShowForm(false)}
+        >
+          <CreatePayrollForm
+            onCreated={handleCreated}
+            onCancel={() => setShowForm(false)}
+          />
+        </PayrollModal>
       )}
+
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4">
+          <h3 className="font-semibold text-slate-900">Filter payroll</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Narrow the register by employee and date range.
+          </p>
+        </div>
+
+        <form onSubmit={runSearch} role="search" aria-label="Filter payroll">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1.5fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] lg:items-end">
+            <div className="min-w-0">
+              <EmployeeAutocomplete
+                selected={draft.employee}
+                onSelect={(employee) => {
+                  setDraft((prev) => ({ ...prev, employee }));
+                  setFilterError("");
+                }}
+                onTextChange={setEmployeeText}
+                placeholder="Search employee by name..."
+                className="w-full"
+                inputClassName="border-slate-200 focus:ring-blue-100"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                Start date
+              </label>
+              <div className="relative">
+                <CalendarDays
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  type="date"
+                  aria-label="Start date"
+                  value={draft.startDate}
+                  max={draft.endDate || undefined}
+                  onChange={(event) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      startDate: event.target.value,
+                    }))
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-2 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                End date
+              </label>
+              <div className="relative">
+                <CalendarDays
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  type="date"
+                  aria-label="End date"
+                  value={draft.endDate}
+                  min={draft.startDate || undefined}
+                  onChange={(event) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      endDate: event.target.value,
+                    }))
+                  }
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-2 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="submit">
+                <span className="inline-flex items-center gap-2">
+                  <Search size={15} />
+                  Search
+                </span>
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearFilters}
+                  aria-label="Clear filters"
+                >
+                  <X size={16} />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {filterError && (
+            <p className="mt-3 text-sm text-rose-600">{filterError}</p>
+          )}
+        </form>
+
+        {hasActiveFilters && !isLoading && !loadError && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm text-slate-500">
+            <span>
+              {records.length} matching record{records.length === 1 ? "" : "s"}
+            </span>
+            {applied.employee && (
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                {applied.employee.fullName}
+              </span>
+            )}
+            {applied.startDate && (
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs">
+                From {formatDate(applied.startDate)}
+              </span>
+            )}
+            {applied.endDate && (
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs">
+                To {formatDate(applied.endDate)}
+              </span>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div>
+            <h3 className="font-semibold text-slate-900">Payroll register</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Employee-level payroll and payment status.
+            </p>
+          </div>
+          <Badge tone="neutral">{records.length} records</Badge>
+        </div>
+
+        {loadError ? (
+          <div className="m-4 rounded-xl border border-slate-200 sm:m-5">
+            <ErrorState
+              title="Couldn't load payroll"
+              description={loadError}
+              onRetry={retry}
+            />
+          </div>
+        ) : (
+          <div className="min-w-0 overflow-x-auto px-3 pb-3 sm:px-5">
+            <DataTable
+              columns={columns}
+              rows={rows}
+              isLoading={isLoading}
+              emptyMessage={
+                hasActiveFilters
+                  ? "No payroll records match these filters."
+                  : "No payroll records yet."
+              }
+            />
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -816,59 +1006,76 @@ function PayrollRuns() {
 // ---------------------------------------------------------------------------
 
 const TABS = [
-  {
-    id: "runs",
-    label: "Payroll Runs",
-  },
-  {
-    id: "salaries",
-    label: "Salary Structure",
-  },
+  { id: "runs", label: "Payroll Runs", icon: Wallet },
+  { id: "salaries", label: "Salary Structure", icon: Users },
 ];
 
 function Payroll() {
   const [activeTab, setActiveTab] = useState("runs");
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">Payroll</h1>
+    <div className="min-w-0 space-y-6 pb-6">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/80 p-5 shadow-sm sm:p-7">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full border border-blue-100" />
+        <div className="pointer-events-none absolute -right-3 -top-12 h-40 w-40 rounded-full border border-blue-100/80" />
 
-        <p className="mt-1 text-sm text-cm-text-muted">
-          Payroll based on attendance and LOP, payment methods and people
-          ledger.
-        </p>
-      </div>
+        <div className="relative flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0b1833] text-white shadow-md">
+            <Wallet size={22} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700">
+              Human resources
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+              Payroll Management
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Manage monthly payroll, salary structures, deductions, bonuses
+              and payment processing from one workspace.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <div
-        role="tablist"
-        aria-label="Payroll sections"
-        className="flex gap-1 border-b border-cm-border"
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            id={`payroll-tab-${tab.id}`}
-            aria-selected={activeTab === tab.id}
-            aria-controls={`payroll-panel-${tab.id}`}
-            onClick={() => setActiveTab(tab.id)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "border-[#000052] text-[#000052]"
-                : "border-transparent text-cm-text-muted hover:text-cm-text"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm">
+        <div
+          role="tablist"
+          aria-label="Payroll sections"
+          className="grid grid-cols-2 gap-2"
+        >
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`payroll-tab-${tab.id}`}
+                aria-selected={active}
+                aria-controls={`payroll-panel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  active
+                    ? "bg-[#0b1833] text-white shadow-sm"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <Icon size={17} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div
         role="tabpanel"
         id={`payroll-panel-${activeTab}`}
         aria-labelledby={`payroll-tab-${activeTab}`}
+        className="min-w-0"
       >
         {activeTab === "runs" ? <PayrollRuns /> : <SalaryStructure />}
       </div>
