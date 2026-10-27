@@ -9,6 +9,7 @@ import { showToast } from "../../components/common/Toast";
 
 const TODAY_URL = "/api/attendance/manual/today";
 const MARK_URL = (employeeId) => `/api/attendance/manual/${employeeId}/mark`;
+const EDIT_URL = (employeeId) => `/api/attendance/manual/${employeeId}/edit`;
 
 function getIndiaDate(value) {
   if (!value) return "—";
@@ -119,8 +120,9 @@ export default function ManualAttendance() {
   const [loadingActions, setLoadingActions] = useState({});
   const [error, setError] = useState("");
 
-  // Absence dialog state
-  const [absenceDialog, setAbsenceDialog] = useState(null);
+  // Shared dialog state for marking absent and editing attendance.
+  const [attendanceDialog, setAttendanceDialog] = useState(null);
+  const [editStatus, setEditStatus] = useState("Present");
   const [leaveType, setLeaveType] = useState("SICK");
   const [customReason, setCustomReason] = useState("");
   const [isPaid, setIsPaid] = useState("");
@@ -207,7 +209,10 @@ export default function ManualAttendance() {
       const second = getSession(employee, "SECOND_HALF");
 
       const leaveText = [first.leave, second.leave]
-        .map(getLeaveLabel)
+        .map((leave) => {
+          if (!leave) return "";
+          return `${getLeaveLabel(leave)} ${leave.reason || ""}`;
+        })
         .join(" ");
 
       return [
@@ -248,7 +253,15 @@ export default function ManualAttendance() {
     };
   }, [employees, dayInfo.applicableSessions]);
 
-  // Open the reason dialog when HR chooses Mark Absent.
+  const closeAttendanceDialog = () => {
+    setAttendanceDialog(null);
+    setCustomReason("");
+    setIsPaid("");
+    setEditStatus("Present");
+    setLeaveType("SICK");
+  };
+
+  // Open the dialog for a new absence.
   const openAbsenceDialog = (employee, session) => {
     const item = getSession(employee, session);
 
@@ -256,18 +269,58 @@ export default function ManualAttendance() {
       return;
     }
 
+    setEditStatus("Absent");
     setLeaveType("SICK");
     setCustomReason("");
     setIsPaid("");
-    setAbsenceDialog({ employee, session });
+
+    setAttendanceDialog({
+      employee,
+      session,
+      isEditing: false,
+    });
   };
 
-  const closeAbsenceDialog = () => {
-    setAbsenceDialog(null);
-    setCustomReason("");
-    setIsPaid("");
+  // Open the dialog for an existing Present/Absent record.
+  const openEditDialog = (employee, session) => {
+    const item = getSession(employee, session);
+
+    if (
+      dayInfo.isHoliday ||
+      isSunday ||
+      !item.applicable ||
+      !["PRESENT", "Present", "ABSENT", "Absent"].includes(item.status)
+    ) {
+      return;
+    }
+
+    const currentlyAbsent = ["ABSENT", "Absent"].includes(item.status);
+    const existingLeave = item.leave;
+
+    setEditStatus(currentlyAbsent ? "Absent" : "Present");
+
+    setLeaveType(
+      ["SICK", "CASUAL", "OTHER"].includes(existingLeave?.leaveType)
+        ? existingLeave.leaveType
+        : "SICK",
+    );
+
+    setCustomReason(existingLeave?.reason || "");
+
+    setIsPaid(
+      typeof existingLeave?.isPaid === "boolean"
+        ? String(existingLeave.isPaid)
+        : "",
+    );
+
+    setAttendanceDialog({
+      employee,
+      session,
+      isEditing: true,
+    });
   };
 
+  // Mark a new session Present, or create an absence with leave details.
   const markAttendance = async (
     employee,
     session,
@@ -307,19 +360,17 @@ export default function ManualAttendance() {
       }
 
       showToast.success(
-        response.data.message ||
-          `${session === "FIRST_HALF" ? "First" : "Second"}-half attendance marked ${status.toLowerCase()}.`,
+        response.data.message || "Attendance marked successfully.",
       );
 
       await fetchToday({ refresh: true });
       return true;
     } catch (err) {
-      const message =
+      showToast.error(
         err.response?.data?.message ||
-        err.message ||
-        "Unable to mark attendance.";
-
-      showToast.error(message);
+          err.message ||
+          "Unable to mark attendance.",
+      );
 
       if (err.response?.status === 409) {
         await fetchToday({ refresh: true });
@@ -335,19 +386,15 @@ export default function ManualAttendance() {
     }
   };
 
-  const confirmAbsent = async (event) => {
-    event.preventDefault();
-
-    if (!absenceDialog) return;
-
+  const getAbsenceDetails = () => {
     if (leaveType === "OTHER" && !customReason.trim()) {
       showToast.error("Please enter a custom leave reason.");
-      return;
+      return null;
     }
 
     if (isPaid === "") {
       showToast.error("Please select whether the leave is paid.");
-      return;
+      return null;
     }
 
     const reason =
@@ -357,19 +404,102 @@ export default function ManualAttendance() {
           ? "Casual Leave"
           : customReason.trim();
 
+    return {
+      leaveType,
+      reason,
+      isPaid: isPaid === "true",
+    };
+  };
+
+  const confirmAbsent = async (event) => {
+    event.preventDefault();
+
+    if (!attendanceDialog) return;
+
+    const leaveDetails = getAbsenceDetails();
+    if (!leaveDetails) return;
+
+    const { employee, session } = attendanceDialog;
+
     const success = await markAttendance(
-      absenceDialog.employee,
-      absenceDialog.session,
+      employee,
+      session,
       "Absent",
-      {
-        leaveType,
-        reason,
-        isPaid: isPaid === "true",
-      },
+      leaveDetails,
     );
 
     if (success) {
-      closeAbsenceDialog();
+      closeAttendanceDialog();
+    }
+  };
+
+  // Update an existing attendance record using the PUT endpoint.
+  const confirmEdit = async (event) => {
+    event.preventDefault();
+
+    if (!attendanceDialog) return;
+
+    let leaveDetails = {};
+
+    if (editStatus === "Absent") {
+      leaveDetails = getAbsenceDetails();
+      if (!leaveDetails) return;
+    }
+
+    const { employee, session } = attendanceDialog;
+    const actionKey = `${employee.id}:${session}`;
+
+    if (loadingActions[actionKey]) return;
+
+    setLoadingActions((current) => ({
+      ...current,
+      [actionKey]: true,
+    }));
+
+    try {
+      const payload = {
+        session,
+        status: editStatus,
+      };
+
+      if (editStatus === "Absent") {
+        payload.leaveType = leaveDetails.leaveType;
+        payload.reason = leaveDetails.reason;
+        payload.isPaid = leaveDetails.isPaid;
+      }
+
+      const response = await axios.put(EDIT_URL(employee.id), payload, {
+        withCredentials: true,
+      });
+
+      if (response.status !== 200 || response.data?.success !== true) {
+        throw new Error(
+          response.data?.message || "Unable to update attendance.",
+        );
+      }
+
+      showToast.success(
+        response.data.message || "Attendance updated successfully.",
+      );
+
+      closeAttendanceDialog();
+      await fetchToday({ refresh: true });
+    } catch (err) {
+      showToast.error(
+        err.response?.data?.message ||
+          err.message ||
+          "Unable to update attendance.",
+      );
+
+      if (err.response?.status === 409) {
+        await fetchToday({ refresh: true });
+      }
+    } finally {
+      setLoadingActions((current) => {
+        const next = { ...current };
+        delete next[actionKey];
+        return next;
+      });
     }
   };
 
@@ -378,7 +508,7 @@ export default function ManualAttendance() {
     const actionKey = `${employee.id}:${session}`;
     const actionLoading = Boolean(loadingActions[actionKey]);
 
-    if (dayInfo.isHoliday) {
+    if (dayInfo.isHoliday || item.status === "HOLIDAY") {
       return (
         <Button size="sm" variant="outline" disabled>
           Holiday
@@ -404,17 +534,39 @@ export default function ManualAttendance() {
 
     if (["PRESENT", "Present"].includes(item.status)) {
       return (
-        <Button size="sm" variant="outline" disabled>
-          Present ✓
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" disabled>
+            Present ✓
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={actionLoading}
+            onClick={() => openEditDialog(employee, session)}
+          >
+            Edit
+          </Button>
+        </div>
       );
     }
 
     if (["ABSENT", "Absent"].includes(item.status)) {
       return (
-        <Button size="sm" variant="outline" disabled>
-          Absent ✓
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" disabled>
+            Absent ✓
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={actionLoading}
+            onClick={() => openEditDialog(employee, session)}
+          >
+            Edit
+          </Button>
+        </div>
       );
     }
 
@@ -450,6 +602,14 @@ export default function ManualAttendance() {
     );
   }
 
+  const dialogActionKey = attendanceDialog
+    ? `${attendanceDialog.employee.id}:${attendanceDialog.session}`
+    : null;
+
+  const dialogLoading = dialogActionKey
+    ? Boolean(loadingActions[dialogActionKey])
+    : false;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page heading */}
@@ -464,7 +624,7 @@ export default function ManualAttendance() {
           </h1>
 
           <p className="mt-1 text-sm text-cm-text-muted">
-            Mark employees present or absent for each applicable session.
+            Mark and edit employee attendance for each applicable session.
           </p>
         </div>
 
@@ -529,7 +689,7 @@ export default function ManualAttendance() {
         </div>
       ) : null}
 
-      {/* Summary */}
+      {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           {
@@ -576,7 +736,7 @@ export default function ManualAttendance() {
         ))}
       </div>
 
-      {/* Employee table */}
+      {/* Employee attendance table */}
       <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -606,9 +766,11 @@ export default function ManualAttendance() {
               <tr className="border-b border-cm-border text-xs text-cm-text-muted">
                 <th className="px-3 py-3 font-medium">Employee</th>
                 <th className="px-3 py-3 font-medium">First Half</th>
+
                 {hasSecondHalf && (
                   <th className="px-3 py-3 font-medium">Second Half</th>
                 )}
+
                 <th className="px-3 py-3 font-medium">Leave</th>
               </tr>
             </thead>
@@ -628,6 +790,7 @@ export default function ManualAttendance() {
                       <p className="font-medium text-cm-text">
                         {getEmployeeName(employee)}
                       </p>
+
                       <p className="mt-1 text-xs text-cm-text-muted">
                         {employee.employeeCode ||
                           employee.employee_code ||
@@ -655,7 +818,14 @@ export default function ManualAttendance() {
 
                     <td className="px-3 py-4">
                       {leave ? (
-                        <Badge tone="warning">{getLeaveLabel(leave)}</Badge>
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge tone="warning">{getLeaveLabel(leave)}</Badge>
+                          {leave.reason && (
+                            <span className="max-w-[220px] break-words text-xs text-cm-text-muted">
+                              {leave.reason}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-cm-text-muted">—</span>
                       )}
@@ -683,108 +853,149 @@ export default function ManualAttendance() {
         </div>
       </section>
 
-      {/* Mark Absent dialog */}
-      {absenceDialog && (
+      {/* Mark Absent / Edit Attendance dialog */}
+      {attendanceDialog && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeAbsenceDialog();
+            if (event.target === event.currentTarget && !dialogLoading) {
+              closeAttendanceDialog();
             }
           }}
         >
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="absence-dialog-title"
+            aria-labelledby="attendance-dialog-title"
             className="w-full max-w-md rounded-xl border border-cm-border bg-cm-card p-6 shadow-xl"
           >
             <h2
-              id="absence-dialog-title"
+              id="attendance-dialog-title"
               className="text-lg font-semibold text-cm-text"
             >
-              Mark Employee Absent
+              {attendanceDialog.isEditing
+                ? "Edit Attendance"
+                : "Mark Employee Absent"}
             </h2>
 
             <p className="mt-1 text-sm text-cm-text-muted">
-              {getEmployeeName(absenceDialog.employee)} ·{" "}
-              {absenceDialog.session === "FIRST_HALF"
+              {getEmployeeName(attendanceDialog.employee)} ·{" "}
+              {attendanceDialog.session === "FIRST_HALF"
                 ? "First Half"
                 : "Second Half"}
             </p>
 
-            <form onSubmit={confirmAbsent} className="mt-5 space-y-4">
-              <div>
-                <label
-                  htmlFor="leaveType"
-                  className="mb-1 block text-sm font-medium text-cm-text"
-                >
-                  Absence type
-                </label>
-
-                <select
-                  id="leaveType"
-                  value={leaveType}
-                  onChange={(event) => {
-                    setLeaveType(event.target.value);
-                    setCustomReason("");
-                  }}
-                  className="w-full rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
-                >
-                  <option value="SICK">Sick Leave</option>
-                  <option value="CASUAL">Casual Leave</option>
-                  <option value="OTHER">Custom Leave</option>
-                </select>
-              </div>
-
-              {leaveType === "OTHER" && (
+            <form
+              onSubmit={
+                attendanceDialog.isEditing ? confirmEdit : confirmAbsent
+              }
+              className="mt-5 space-y-4"
+            >
+              {/* Status selector appears only when editing. */}
+              {attendanceDialog.isEditing && (
                 <div>
                   <label
-                    htmlFor="customReason"
+                    htmlFor="editStatus"
                     className="mb-1 block text-sm font-medium text-cm-text"
                   >
-                    Custom reason
+                    Attendance status
                   </label>
 
-                  <textarea
-                    id="customReason"
-                    value={customReason}
-                    onChange={(event) => setCustomReason(event.target.value)}
-                    maxLength={1000}
-                    rows={3}
-                    required
-                    placeholder="Enter the reason for absence"
+                  <select
+                    id="editStatus"
+                    value={editStatus}
+                    onChange={(event) => setEditStatus(event.target.value)}
+                    disabled={dialogLoading}
                     className="w-full rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
-                  />
+                  >
+                    <option value="Present">Present</option>
+                    <option value="Absent">Absent</option>
+                  </select>
                 </div>
               )}
 
-              <div>
-                <label
-                  htmlFor="isPaid"
-                  className="mb-1 block text-sm font-medium text-cm-text"
-                >
-                  Is this leave paid?
-                </label>
+              {/* Leave details are required only for an absence. */}
+              {(!attendanceDialog.isEditing || editStatus === "Absent") && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="leaveType"
+                      className="mb-1 block text-sm font-medium text-cm-text"
+                    >
+                      Absence type
+                    </label>
 
-                <select
-                  id="isPaid"
-                  value={isPaid}
-                  onChange={(event) => setIsPaid(event.target.value)}
-                  required
-                  className="w-full rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
-                >
-                  <option value="">Select payment status</option>
-                  <option value="true">Paid</option>
-                  <option value="false">Unpaid</option>
-                </select>
-              </div>
+                    <select
+                      id="leaveType"
+                      value={leaveType}
+                      disabled={dialogLoading}
+                      onChange={(event) => {
+                        setLeaveType(event.target.value);
+                        setCustomReason("");
+                      }}
+                      className="w-full rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
+                    >
+                      <option value="SICK">Sick Leave</option>
+                      <option value="CASUAL">Casual Leave</option>
+                      <option value="OTHER">Custom Leave</option>
+                    </select>
+                  </div>
+
+                  {leaveType === "OTHER" && (
+                    <div>
+                      <label
+                        htmlFor="customReason"
+                        className="mb-1 block text-sm font-medium text-cm-text"
+                      >
+                        Custom reason
+                      </label>
+
+                      <textarea
+                        id="customReason"
+                        value={customReason}
+                        onChange={(event) =>
+                          setCustomReason(event.target.value)
+                        }
+                        disabled={dialogLoading}
+                        maxLength={1000}
+                        rows={3}
+                        required
+                        placeholder="Enter the reason for absence"
+                        className="w-full rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label
+                      htmlFor="isPaid"
+                      className="mb-1 block text-sm font-medium text-cm-text"
+                    >
+                      Is this leave paid?
+                    </label>
+
+                    <select
+                      id="isPaid"
+                      value={isPaid}
+                      onChange={(event) => setIsPaid(event.target.value)}
+                      disabled={dialogLoading}
+                      required
+                      className="w-full rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text"
+                    >
+                      <option value="">Select payment status</option>
+                      <option value="true">Paid</option>
+                      <option value="false">Unpaid</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={closeAbsenceDialog}
+                  disabled={dialogLoading}
+                  onClick={closeAttendanceDialog}
                 >
                   Cancel
                 </Button>
@@ -792,20 +1003,17 @@ export default function ManualAttendance() {
                 <Button
                   type="submit"
                   disabled={
-                    Boolean(
-                      loadingActions[
-                        `${absenceDialog.employee.id}:${absenceDialog.session}`
-                      ],
-                    ) ||
-                    (leaveType === "OTHER" && !customReason.trim()) ||
-                    isPaid === ""
+                    dialogLoading ||
+                    ((!attendanceDialog.isEditing || editStatus === "Absent") &&
+                      ((leaveType === "OTHER" && !customReason.trim()) ||
+                        isPaid === ""))
                   }
                 >
-                  {loadingActions[
-                    `${absenceDialog.employee.id}:${absenceDialog.session}`
-                  ]
+                  {dialogLoading
                     ? "Saving..."
-                    : "Confirm Absent"}
+                    : attendanceDialog.isEditing
+                      ? "Save Changes"
+                      : "Confirm Absent"}
                 </Button>
               </div>
             </form>
