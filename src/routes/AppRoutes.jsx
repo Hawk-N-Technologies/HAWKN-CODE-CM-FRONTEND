@@ -99,6 +99,7 @@ import BDProjectManagement from "../pages/bd/ProjectManagement";
 import AdminBRDApproval from "../pages/admin/AdminBRDApproval";
 import ProjectLeadRoute from "./ProjectLeadRoute";
 import Bugs from "../pages/projectLead/Bugs";
+import ManualAttendance from "../pages/hr/ManualAttendance";
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -174,6 +175,10 @@ function AppRoutes() {
             <Route path="/hr/employees" element={<HREmployees />} />
             <Route path="/hr/my-attendance" element={<AttendanceMonthly />} />
             <Route path="/hr/leave" element={<LeaveRequest />} />
+            <Route
+              path="/hr/manual-attendance"
+              element={<ManualAttendance />}
+            />
 
             <Route path="/hr/onboarding" element={<HREmployeeOnboarding />} />
             <Route path="/hr/attendance" element={<HRAttendance />} />
