@@ -23,8 +23,12 @@ import { showAlert } from "../../components/common/Alert";
 import axios from "axios";
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) {
+    return "—";
+  }
+
   const [year, month, day] = value.split("-").map(Number);
+
   return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -71,13 +75,7 @@ function getDateDetails(value) {
   };
 }
 
-function SummaryCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  iconClass,
-}) {
+function SummaryCard({ title, value, description, icon: Icon, iconClass }) {
   return (
     <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -195,20 +193,30 @@ function Holiday() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingUuid, setDeletingUuid] = useState(null);
-  const [form, setForm] = useState({ date: "", name: "", paid: true });
+
+  const [form, setForm] = useState({
+    date: "",
+    name: "",
+    paid: true,
+  });
 
   // GET ALL HOLIDAYS
   const getAllHolidays = async () => {
     try {
       setLoading(true);
+
       const res = await axios.get("/api/company/holidays", {
         withCredentials: true,
       });
-      if (res.status === 200) setHolidays(res.data.data || []);
+
+      if (res.status === 200) {
+        setHolidays(res.data.data || []);
+      }
     } catch (error) {
       console.error("Failed to fetch holidays:", error);
+
       showToast.error(
-        error.response?.data?.message || "Failed to load holidays."
+        error.response?.data?.message || "Failed to load holidays.",
       );
     } finally {
       setLoading(false);
@@ -221,11 +229,18 @@ function Holiday() {
 
   // FORM CHANGE
   function handleChange(field, value) {
-    setForm((previous) => ({ ...previous, [field]: value }));
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
   }
 
   function resetForm() {
-    setForm({ date: "", name: "", paid: true });
+    setForm({
+      date: "",
+      name: "",
+      paid: true,
+    });
   }
 
   function closeForm() {
@@ -240,6 +255,7 @@ function Holiday() {
   // CREATE HOLIDAY
   async function addHoliday(event) {
     event.preventDefault();
+
     if (!form.date || !form.name.trim()) {
       showToast.error("Holiday date and name are required.");
       return;
@@ -247,6 +263,7 @@ function Holiday() {
 
     try {
       setSubmitting(true);
+
       const res = await axios.post(
         "/api/company/holidays",
         {
@@ -256,18 +273,22 @@ function Holiday() {
         },
         {
           withCredentials: true,
-        }
+        },
       );
+
       if (res.status === 201 || res.status === 200) {
         showToast.success("Holiday added successfully.");
+
         resetForm();
         setShowForm(false);
+
         await getAllHolidays();
       }
     } catch (error) {
       console.error("Failed to create holiday:", error);
+
       showToast.error(
-        error.response?.data?.message || "Failed to add holiday."
+        error.response?.data?.message || "Failed to add holiday.",
       );
     } finally {
       setSubmitting(false);
@@ -282,23 +303,30 @@ function Holiday() {
       confirmButtonText: "Yes, delete it",
       cancelButtonText: "Cancel",
     });
-    if (!result.isConfirmed) return;
+
+    if (!result.isConfirmed) {
+      return;
+    }
 
     try {
       setDeletingUuid(uuid);
+
       const res = await axios.delete(`/api/company/holidays/${uuid}`, {
         withCredentials: true,
       });
+
       if (res.status === 200) {
         setHolidays((previous) =>
-          previous.filter((holiday) => holiday.uuid !== uuid)
+          previous.filter((holiday) => holiday.uuid !== uuid),
         );
+
         showToast.success("Holiday removed successfully.");
       }
     } catch (error) {
       console.error("Failed to delete holiday:", error);
+
       showToast.error(
-        error.response?.data?.message || "Failed to remove holiday."
+        error.response?.data?.message || "Failed to remove holiday.",
       );
     } finally {
       setDeletingUuid(null);
@@ -308,9 +336,13 @@ function Holiday() {
   // SEARCH
   const filteredHolidays = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return holidays;
-    return holidays.filter(
-      (holiday) =>
+
+    if (!query) {
+      return holidays;
+    }
+
+    return holidays.filter((holiday) => {
+      return (
         holiday.name?.toLowerCase().includes(query) ||
         holiday.holidayDate?.includes(query) ||
         formatDate(holiday.holidayDate).toLowerCase().includes(query) ||
@@ -332,7 +364,7 @@ function Holiday() {
     });
 
     const upcoming = holidays.filter((holiday) =>
-      isUpcomingHoliday(holiday.holidayDate)
+      isUpcomingHoliday(holiday.holidayDate),
     );
 
     const paid = holidays.filter((holiday) => holiday.isPaid).length;
@@ -342,7 +374,7 @@ function Holiday() {
     const nextHoliday = upcoming
       .slice()
       .sort((a, b) =>
-        getDateKey(a.holidayDate).localeCompare(getDateKey(b.holidayDate))
+        getDateKey(a.holidayDate).localeCompare(getDateKey(b.holidayDate)),
       )[0];
 
     return {
@@ -425,6 +457,7 @@ function Holiday() {
       header: "ACTIONS",
       render: (row) => {
         const isDeleting = deletingUuid === row.uuid;
+
         return (
           <Button
             size="sm"
@@ -475,16 +508,9 @@ function Holiday() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="outline"
-            disabled={loading}
-            onClick={getAllHolidays}
-          >
+          <Button variant="outline" disabled={loading} onClick={getAllHolidays}>
             <span className="inline-flex items-center gap-2">
-              <RefreshCw
-                size={15}
-                className={loading ? "animate-spin" : ""}
-              />
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
               Refresh
             </span>
           </Button>
@@ -589,9 +615,7 @@ function Holiday() {
                 type="date"
                 required
                 value={form.date}
-                onChange={(event) =>
-                  handleChange("date", event.target.value)
-                }
+                onChange={(event) => handleChange("date", event.target.value)}
               />
 
               <Input
@@ -599,9 +623,7 @@ function Holiday() {
                 required
                 placeholder="e.g. Diwali, Republic Day"
                 value={form.name}
-                onChange={(event) =>
-                  handleChange("name", event.target.value)
-                }
+                onChange={(event) => handleChange("name", event.target.value)}
               />
             </div>
 
@@ -609,9 +631,7 @@ function Holiday() {
               <input
                 type="checkbox"
                 checked={form.paid}
-                onChange={(event) =>
-                  handleChange("paid", event.target.checked)
-                }
+                onChange={(event) => handleChange("paid", event.target.checked)}
                 className="mt-1 h-4 w-4 accent-[#000052]"
               />
 
@@ -675,13 +695,9 @@ function Holiday() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="success">
-              {summary.paid} Paid
-            </Badge>
+            <Badge tone="success">{summary.paid} Paid</Badge>
 
-            <Badge tone="warning">
-              {summary.unpaid} Unpaid
-            </Badge>
+            <Badge tone="warning">{summary.unpaid} Unpaid</Badge>
           </div>
         </div>
 
@@ -738,11 +754,7 @@ function Holiday() {
           ) : filteredHolidays.length === 0 ? (
             <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cm-bg text-cm-text-muted">
-                {search ? (
-                  <Search size={25} />
-                ) : (
-                  <CalendarX2 size={25} />
-                )}
+                {search ? <Search size={25} /> : <CalendarX2 size={25} />}
               </div>
 
               <h3 className="mt-4 font-semibold text-cm-text">
@@ -764,10 +776,7 @@ function Holiday() {
                   Clear Search
                 </Button>
               ) : (
-                <Button
-                  size="sm"
-                  onClick={() => setShowForm(true)}
-                >
+                <Button size="sm" onClick={() => setShowForm(true)}>
                   <span className="inline-flex items-center gap-2">
                     <Plus size={15} />
                     Add First Holiday
