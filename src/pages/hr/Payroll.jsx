@@ -30,6 +30,7 @@ import {
   processPayroll,
 } from "../../services/payrollService";
 import axios from "axios";
+import PayslipDownloadButton from "../../components/hr/PayslipDownloadButton";
 
 // ---------------------------------------------------------------------------
 // Constants + helpers
@@ -100,9 +101,7 @@ function SectionHeading({ eyebrow, title, description, action }) {
           {title}
         </h2>
         {description && (
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            {description}
-          </p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
         )}
       </div>
       {action}
@@ -129,9 +128,7 @@ function MetricCard({ label, value, detail, icon: Icon, tone }) {
         </div>
         <span
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-            tone === "navy"
-              ? tones.navy
-              : `ring-1 ${tones[tone] || tones.blue}`
+            tone === "navy" ? tones.navy : `ring-1 ${tones[tone] || tones.blue}`
           }`}
         >
           <Icon size={20} />
@@ -182,7 +179,10 @@ function PayrollModal({ title, description, onClose, children }) {
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 id="payroll-modal-title" className="text-lg font-semibold tracking-tight text-white sm:text-xl">
+                  <h2
+                    id="payroll-modal-title"
+                    className="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                  >
                     {title}
                   </h2>
                   <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
@@ -372,18 +372,15 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     }
   };
 
-  const netSalary = calculation?.netSalary ??
+  const netSalary =
+    calculation?.netSalary ??
     Math.max(
       0,
       toNumber(baseSalary) - toNumber(lopDeduction) + toNumber(bonus),
     );
 
   return (
-    <form
-      noValidate
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-6"
-    >
+    <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-2">
           <EmployeeAutocomplete
@@ -458,8 +455,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
           step="0.01"
           error={errors.bonus?.message}
           {...register("bonus", {
-            validate: (value) =>
-              toNumber(value) >= 0 || "Can't be negative",
+            validate: (value) => toNumber(value) >= 0 || "Can't be negative",
           })}
         />
 
@@ -492,9 +488,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
               </p>
             </div>
           </div>
-          {isCalculating && (
-            <Badge tone="info">Calculating...</Badge>
-          )}
+          {isCalculating && <Badge tone="info">Calculating...</Badge>}
         </div>
 
         <div className="p-5">
@@ -557,8 +551,8 @@ function CreatePayrollForm({ onCreated, onCancel }) {
           )}
 
           <p className="mt-4 text-xs leading-5 text-slate-500">
-            Base salary − LOP deduction + bonus. The backend recalculates
-            net salary when the payroll record is created.
+            Base salary − LOP deduction + bonus. The backend recalculates net
+            salary when the payroll record is created.
           </p>
         </div>
       </section>
@@ -697,9 +691,7 @@ function PayrollRuns() {
     try {
       const updated = await processPayroll(row.uuid);
       setRecords((prev) =>
-        prev.map((record) =>
-          record.uuid === updated.uuid ? updated : record,
-        ),
+        prev.map((record) => (record.uuid === updated.uuid ? updated : record)),
       );
       showToast.success(`Payroll processed for ${updated.employee.fullName}.`);
     } catch (error) {
@@ -742,7 +734,11 @@ function PayrollRuns() {
       key: "lop",
       header: "LOP",
       render: (row) => (
-        <span className={Number(row.lopDeduction) > 0 ? "text-rose-600" : "text-slate-500"}>
+        <span
+          className={
+            Number(row.lopDeduction) > 0 ? "text-rose-600" : "text-slate-500"
+          }
+        >
           {formatMoney(row.lopDeduction)}
         </span>
       ),
@@ -792,8 +788,10 @@ function PayrollRuns() {
           >
             Process
           </Button>
+        ) : row.status === "Processed" ? (
+          <PayslipDownloadButton payroll={row} />
         ) : (
-          <span className="text-xs text-slate-400">Completed</span>
+          <span className="text-xs text-slate-400">Not available</span>
         ),
     },
   ];
@@ -1056,8 +1054,8 @@ function Payroll() {
               Payroll Management
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Manage monthly payroll, salary structures, deductions, bonuses
-              and payment processing from one workspace.
+              Manage monthly payroll, salary structures, deductions, bonuses and
+              payment processing from one workspace.
             </p>
           </div>
         </div>
