@@ -10,7 +10,7 @@ import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import AdminCompanyPolicies from "../pages/admin/CompanyPolicies";
 import AdminRolesResponsibilities from "../pages/admin/RolesResponsibilities";
 import AdminPeopleManagement from "../pages/admin/PeopleManagement";
-import AdminSOPManagement from "../pages/admin/SOPManagement";
+import AdminSOPs from "../pages/hr/SOPs";
 
 import AdminHRMS from "../pages/admin/HRMS";
 import AdminClientManagement from "../pages/admin/ClilentManagement";
@@ -31,7 +31,6 @@ import HRLeaveLOP from "../pages/hr/LeaveLOP";
 import HRPayroll from "../pages/hr/Payroll";
 import HRIncrements from "../pages/hr/Increments";
 import HRInternshipProbation from "../pages/hr/InternshipProbation";
-import HRSOPs from "../pages/hr/SOPs";
 import HRNotifications from "../pages/hr/Notifications";
 
 import BDDashboard from "../pages/bd/Dashboard";
@@ -133,6 +132,7 @@ function AppRoutes() {
               path="/admin/company-policies"
               element={<AdminCompanyPolicies />}
             />
+            <Route path="/admin/sops" element={<AdminSOPs />} />
             <Route
               path="/admin/roles-responsibilities"
               element={<AdminRolesResponsibilities />}
@@ -194,7 +194,6 @@ function AppRoutes() {
               path="/hr/employee-heirarchy"
               element={<HREmployeeHierarchy />}
             /> */}
-            <Route path="/hr/sops" element={<HRSOPs />} />
             <Route path="/hr/notifications" element={<HRNotifications />} />
           </Route>
         </Route>
