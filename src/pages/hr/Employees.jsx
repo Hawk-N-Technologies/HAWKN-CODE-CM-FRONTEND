@@ -308,8 +308,8 @@ function Employees() {
         return "";
 
       case "aadhaar":
-        if (fieldValue && !/^\d{4}$/.test(fieldValue)) {
-          return "Aadhaar must contain exactly 4 digits.";
+        if (fieldValue && !/^\d{12}$/.test(fieldValue)) {
+          return "Aadhaar must contain exactly 12 digits.";
         }
         return "";
 
@@ -758,7 +758,7 @@ function Employees() {
                   label="Aadhaar last 4 digits"
                   value={form.aadhaar}
                   error={errors.aadhaar}
-                  maxLength={4}
+                  maxLength={12}
                   onChange={handleChange("aadhaar")}
                 />
                 <Select
