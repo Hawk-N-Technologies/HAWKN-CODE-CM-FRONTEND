@@ -755,7 +755,7 @@ function Employees() {
                   onChange={handleChange("github")}
                 />
                 <Input
-                  label="Aadhaar last 4 digits"
+                  label="Aadhaar 12 digits"
                   value={form.aadhaar}
                   error={errors.aadhaar}
                   maxLength={12}
