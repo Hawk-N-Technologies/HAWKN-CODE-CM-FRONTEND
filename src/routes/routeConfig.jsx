@@ -113,6 +113,7 @@ const ADMIN_NAV_SECTIONS = [
         path: "/admin/brd",
         icon: ICONS.brd,
       },
+      { label: "SOPs", path: "/admin/sops", icon: ICONS.sop },
       {
         label: "Operations",
         path: "/admin/operations",
@@ -175,7 +176,6 @@ const HR_NAV_SECTIONS = [
       //   path: "/hr/employee-heirarchy",
       //   icon: ICONS.hierarchy,
       // },
-      { label: "SOPs", path: "/hr/sops", icon: ICONS.checklist },
       {
         label: "Notifications",
         path: "/hr/notifications",
