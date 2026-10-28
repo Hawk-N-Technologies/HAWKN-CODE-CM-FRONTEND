@@ -436,6 +436,9 @@ function Holiday() {
             <p className="mt-1 text-xs text-cm-text-muted">
               {formatDate(row.holidayDate)}
             </p>
+            <Badge tone={row.isPredefined ? "info" : "neutral"}>
+              {row.isPredefined ? "Predefined holiday" : "Company-added holiday"}
+            </Badge>
           </div>
         </div>
       ),
