@@ -38,6 +38,19 @@ import PayslipDownloadButton from "../../components/hr/PayslipDownloadButton";
 
 const PAYMENT_METHODS = ["Bank Transfer", "UPI", "Cheque", "Cash"];
 
+const PAYMENT_BANKS = [
+  "SBI",
+  "BOB",
+  "Kotak",
+  "HDFC",
+  "ICICI",
+  "Axis",
+  "PNB",
+  "Yes Bank",
+  "IndusInd",
+  "Other",
+];
+
 const currentMonth = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -79,9 +92,11 @@ const EMPTY_FILTERS = {
 const FORM_DEFAULTS = () => ({
   payPeriod: currentMonth(),
   baseSalary: "",
+  lopDays: 0,
   lopDeduction: 0,
   bonus: 0,
   paymentMethod: "Bank Transfer",
+  paymentBank: "SBI",
 });
 
 // ---------------------------------------------------------------------------
@@ -240,10 +255,22 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     formState: { errors, isSubmitting },
   } = useForm({ defaultValues: FORM_DEFAULTS() });
 
-  const [baseSalary, lopDeduction, bonus, payPeriod] = useWatch({
+  const [baseSalary, lopDays, lopDeduction, bonus, payPeriod] = useWatch({
     control,
-    name: ["baseSalary", "lopDeduction", "bonus", "payPeriod"],
+    name: ["baseSalary", "lopDays", "lopDeduction", "bonus", "payPeriod"],
   });
+
+  // Daily rate = current base salary / working days from the calculation.
+  const workingDays = Number(calculation?.workingDays) || 30;
+  const dailySalary = toNumber(baseSalary) / workingDays;
+
+  // LOP deduction is read-only — it always follows the manually entered days.
+  useEffect(() => {
+    const days = Math.max(0, toNumber(lopDays));
+    const deduction = Math.round(days * dailySalary * 100) / 100;
+
+    setValue("lopDeduction", deduction, { shouldValidate: true });
+  }, [lopDays, dailySalary, setValue]);
 
   const calculatePayroll = async (pickedEmployee, selectedPayPeriod) => {
     if (!pickedEmployee?.uuid) return;
@@ -276,7 +303,14 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         shouldDirty: false,
       });
 
-      setValue("lopDeduction", calculationData.lopDeduction ?? 0, {
+      const derivedLopDays =
+        calculationData.lopUnits ??
+        (Number(calculationData.dailySalary) > 0
+          ? Number(calculationData.lopDeduction || 0) /
+            Number(calculationData.dailySalary)
+          : 0);
+
+      setValue("lopDays", Math.round(derivedLopDays * 100) / 100, {
         shouldValidate: true,
         shouldDirty: false,
       });
@@ -307,6 +341,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
 
     if (!picked) {
       setValue("baseSalary", "");
+      setValue("lopDays", 0);
       setValue("lopDeduction", 0);
       setValue("bonus", 0);
       return;
@@ -339,9 +374,10 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         userUuid: employee.uuid,
         payPeriod: values.payPeriod,
         baseSalary: toNumber(values.baseSalary),
-        lopDeduction: toNumber(values.lopDeduction),
+        lopDeduction: toNumber(lopDeduction),
         bonus: toNumber(values.bonus),
         paymentMethod: values.paymentMethod,
+        paymentBank: values.paymentBank,
       });
 
       showToast.success(
@@ -372,12 +408,10 @@ function CreatePayrollForm({ onCreated, onCancel }) {
     }
   };
 
-  const netSalary =
-    calculation?.netSalary ??
-    Math.max(
-      0,
-      toNumber(baseSalary) - toNumber(lopDeduction) + toNumber(bonus),
-    );
+  const netSalary = Math.max(
+    0,
+    toNumber(baseSalary) - toNumber(lopDeduction) + toNumber(bonus),
+  );
 
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -432,21 +466,32 @@ function CreatePayrollForm({ onCreated, onCancel }) {
         />
 
         <Input
-          label="LOP Deduction (₹)"
+          label="LOP Days"
           type="number"
           min="0"
-          step="0.01"
-          error={errors.lopDeduction?.message}
-          {...register("lopDeduction", {
+          step="0.5"
+          error={errors.lopDays?.message}
+          helperText="Enter leave-without-pay days manually"
+          {...register("lopDays", {
             validate: {
               notNegative: (value) =>
                 toNumber(value) >= 0 || "Can't be negative",
-              withinBase: (value) =>
-                toNumber(value) <= toNumber(baseSalary) ||
-                "LOP deduction can't exceed the base salary",
+              withinWorkingDays: (value) =>
+                !calculation?.workingDays ||
+                toNumber(value) <= Number(calculation.workingDays) ||
+                "LOP days can't exceed working days",
             },
           })}
         />
+
+        <Input
+          label="LOP Deduction (₹)"
+          readOnly
+          value={formatMoney(lopDeduction)}
+          helperText="Auto-calculated from LOP days"
+          containerClassName="pointer-events-none"
+        />
+        <input type="hidden" {...register("lopDeduction")} />
 
         <Input
           label="Bonus (₹)"
@@ -470,6 +515,16 @@ function CreatePayrollForm({ onCreated, onCancel }) {
           {...register("paymentMethod", {
             required: "Payment method is required",
           })}
+        />
+
+        <Select
+          label="Payment Bank"
+          options={PAYMENT_BANKS.map((bank) => ({
+            value: bank,
+            label: bank,
+          }))}
+          error={errors.paymentBank?.message}
+          {...register("paymentBank")}
         />
       </div>
 
@@ -518,7 +573,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
               },
               {
                 label: "Daily salary",
-                value: formatMoney(calculation?.dailySalary),
+                value: formatMoney(dailySalary),
               },
             ].map((item) => (
               <div
@@ -537,7 +592,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
             <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-200 pt-4">
               {[
                 ["Paid units", calculation.paidUnits ?? 0],
-                ["LOP units", calculation.lopUnits ?? 0],
+                ["LOP days", toNumber(lopDays)],
                 ["Working days", calculation.workingDays ?? 0],
               ].map(([label, value]) => (
                 <div key={label}>
@@ -759,11 +814,14 @@ function PayrollRuns() {
     },
     {
       key: "method",
-      header: "Payment Method",
+      header: "Payment",
       render: (row) => (
-        <span className="whitespace-nowrap text-slate-600">
-          {row.paymentMethod}
-        </span>
+        <div className="whitespace-nowrap">
+          <span className="text-slate-600">{row.paymentMethod}</span>
+          {row.paymentBank && (
+            <p className="text-xs text-slate-400">{row.paymentBank}</p>
+          )}
+        </div>
       ),
     },
     {
