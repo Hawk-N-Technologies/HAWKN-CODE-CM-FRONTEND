@@ -3,6 +3,7 @@ import axios from "axios";
 
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
+import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
@@ -594,6 +595,77 @@ export default function ManualAttendance() {
     );
   };
 
+  const attendanceColumns = [
+    {
+      key: "employee",
+      header: "Employee",
+      render: (employee) => (
+        <>
+          <p className="font-medium text-cm-text">
+            {getEmployeeName(employee)}
+          </p>
+          <p className="mt-1 text-xs text-cm-text-muted">
+            {employee.employeeCode || employee.employee_code || employee.id}
+            {" · "}
+            {employee.email || "—"}
+          </p>
+        </>
+      ),
+    },
+    {
+      key: "firstHalf",
+      header: "First Half",
+      render: (employee) => {
+        const first = getSession(employee, "FIRST_HALF");
+        return (
+          <div className="flex min-w-[200px] flex-col items-start gap-2">
+            <AttendanceStatus status={first.status} />
+            {renderSessionActions(employee, "FIRST_HALF")}
+          </div>
+        );
+      },
+    },
+    ...(hasSecondHalf
+      ? [
+          {
+            key: "secondHalf",
+            header: "Second Half",
+            render: (employee) => {
+              const second = getSession(employee, "SECOND_HALF");
+              return (
+                <div className="flex min-w-[200px] flex-col items-start gap-2">
+                  <AttendanceStatus status={second.status} />
+                  {renderSessionActions(employee, "SECOND_HALF")}
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
+    {
+      key: "leave",
+      header: "Leave",
+      render: (employee) => {
+        const first = getSession(employee, "FIRST_HALF");
+        const second = getSession(employee, "SECOND_HALF");
+        const leave = first.leave || second.leave;
+
+        return leave ? (
+          <div className="flex flex-col items-start gap-1">
+            <Badge tone="warning">{getLeaveLabel(leave)}</Badge>
+            {leave.reason && (
+              <span className="max-w-[220px] break-words text-xs text-cm-text-muted">
+                {leave.reason}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-cm-text-muted">—</span>
+        );
+      },
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -760,96 +832,18 @@ export default function ManualAttendance() {
           />
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-cm-border text-xs text-cm-text-muted">
-                <th className="px-3 py-3 font-medium">Employee</th>
-                <th className="px-3 py-3 font-medium">First Half</th>
-
-                {hasSecondHalf && (
-                  <th className="px-3 py-3 font-medium">Second Half</th>
-                )}
-
-                <th className="px-3 py-3 font-medium">Leave</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredEmployees.map((employee) => {
-                const first = getSession(employee, "FIRST_HALF");
-                const second = getSession(employee, "SECOND_HALF");
-                const leave = first.leave || second.leave;
-
-                return (
-                  <tr
-                    key={employee.id}
-                    className="border-b border-cm-border last:border-0"
-                  >
-                    <td className="px-3 py-4">
-                      <p className="font-medium text-cm-text">
-                        {getEmployeeName(employee)}
-                      </p>
-
-                      <p className="mt-1 text-xs text-cm-text-muted">
-                        {employee.employeeCode ||
-                          employee.employee_code ||
-                          employee.id}
-                        {" · "}
-                        {employee.email || "—"}
-                      </p>
-                    </td>
-
-                    <td className="px-3 py-4">
-                      <div className="flex min-w-[200px] flex-col items-start gap-2">
-                        <AttendanceStatus status={first.status} />
-                        {renderSessionActions(employee, "FIRST_HALF")}
-                      </div>
-                    </td>
-
-                    {hasSecondHalf && (
-                      <td className="px-3 py-4">
-                        <div className="flex min-w-[200px] flex-col items-start gap-2">
-                          <AttendanceStatus status={second.status} />
-                          {renderSessionActions(employee, "SECOND_HALF")}
-                        </div>
-                      </td>
-                    )}
-
-                    <td className="px-3 py-4">
-                      {leave ? (
-                        <div className="flex flex-col items-start gap-1">
-                          <Badge tone="warning">{getLeaveLabel(leave)}</Badge>
-                          {leave.reason && (
-                            <span className="max-w-[220px] break-words text-xs text-cm-text-muted">
-                              {leave.reason}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-cm-text-muted">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {filteredEmployees.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={hasSecondHalf ? 4 : 3}
-                    className="px-3 py-10 text-center text-sm text-cm-text-muted"
-                  >
-                    {error
-                      ? "Unable to display employees until data loads."
-                      : search
-                        ? "No employees match your search."
-                        : "No employees found for this company."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="mt-4">
+          <DataTable
+            columns={attendanceColumns}
+            rows={filteredEmployees}
+            emptyMessage={
+              error
+                ? "Unable to display employees until data loads."
+                : search
+                  ? "No employees match your search."
+                  : "No employees found for this company."
+            }
+          />
         </div>
       </section>
 
