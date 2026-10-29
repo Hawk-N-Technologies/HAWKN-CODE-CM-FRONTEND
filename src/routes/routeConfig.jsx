@@ -156,11 +156,14 @@ const HR_NAV_SECTIONS = [
         path: "/hr/onboarding",
         icon: ICONS.onboarding,
       },
-      { label: "Attendance", path: "/hr/attendance", icon: ICONS.attendance },
       { label: "Leave & LOP", path: "/hr/leave-lop", icon: ICONS.leave },
       { label: "Holiday", path: "/hr/holiday", icon: ICONS.holiday },
       { label: "Payroll", path: "/hr/payroll", icon: ICONS.payroll },
-      { label: "Manual Attendance", path: "/hr/manual-attendance", icon: ICONS.attendance },
+      {
+        label: "Manual Attendance",
+        path: "/hr/manual-attendance",
+        icon: ICONS.attendance,
+      },
       {
         label: "Bonuses & Increments",
         path: "/hr/bonuses-increments",
@@ -192,6 +195,7 @@ const HR_NAV_SECTIONS = [
         path: "/hr/leave",
         icon: ICONS.leave,
       },
+      { label: "History", path: "/hr/attendance", icon: ICONS.attendance },
     ],
   },
 ];
@@ -206,7 +210,11 @@ const BD_NAV_SECTIONS = [
       { label: "Clients", path: "/bd/clients", icon: ICONS.clients },
       { label: "Projects", path: "/bd/projects", icon: ICONS.projects },
       { label: "BRD", path: "/bd/brd", icon: ICONS.brd },
-      { label: "Notifications", path: "/bd/notifications", icon: ICONS.notifications },
+      {
+        label: "Notifications",
+        path: "/bd/notifications",
+        icon: ICONS.notifications,
+      },
       {
         label: "My Attendance",
         path: "/bd/my-attendance",
