@@ -32,12 +32,20 @@ function PhoneField({
   code,
   value,
   error,
+  required = false,
   onCodeChange,
   onChange,
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <label className="text-sm font-medium text-cm-text">{label}</label>
+      <label className="text-sm font-medium text-cm-text">
+        {label}
+        {required && (
+          <span className="ml-0.5 text-cm-danger-600" aria-hidden="true">
+            *
+          </span>
+        )}
+      </label>
       <div className="flex min-w-0 gap-2">
         <select
           value={code}
@@ -55,6 +63,7 @@ function PhoneField({
           type="tel"
           inputMode="numeric"
           value={value}
+          required={required}
           onChange={onChange}
           aria-invalid={Boolean(error) || undefined}
           className={`h-10 min-w-0 w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30 ${error ? "border-cm-danger-600" : "border-cm-border"}`}
@@ -376,20 +385,24 @@ function Employees() {
       case "phone1":
       case "phone2":
       case "whatsapp":
-        if (fieldValue && !/^[6-9]\d{9}$/.test(fieldValue)) {
+        if (name === "phone1" && !fieldValue.trim()) {
+          return "Phone number is required.";
+        }
+        if (fieldValue.trim() && !/^[6-9]\d{9}$/.test(fieldValue.trim())) {
           return "Enter a valid 10-digit mobile number.";
         }
         return "";
 
       case "aadhaar":
-        if (fieldValue && !/^\d{4}$/.test(fieldValue)) {
+        if (!fieldValue.trim()) return "Aadhaar is required.";
+        if (!/^\d{4}$/.test(fieldValue.trim())) {
           return "Aadhaar must contain exactly 4 digits.";
         }
         return "";
 
       case "linkedin":
+        if (!fieldValue.trim()) return "LinkedIn is required.";
         if (
-          fieldValue &&
           !/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(fieldValue.trim())
         ) {
           return "Enter a valid LinkedIn URL.";
@@ -397,12 +410,16 @@ function Employees() {
         return "";
 
       case "github":
+        if (!fieldValue.trim()) return "GitHub is required.";
         if (
-          fieldValue &&
           !/^https?:\/\/(www\.)?github\.com\/.+$/i.test(fieldValue.trim())
         ) {
           return "Enter a valid GitHub URL.";
         }
+        return "";
+
+      case "dob":
+        if (!fieldValue.trim()) return "Date of birth is required.";
         return "";
 
       case "role":
@@ -430,6 +447,7 @@ function Employees() {
       "aadhaar",
       "linkedin",
       "github",
+      "dob",
       "role",
       "type",
       "status",
@@ -825,6 +843,7 @@ function Employees() {
                   code={form.phone1CountryCode}
                   value={form.phone1}
                   error={errors.phone1}
+                  required
                   onCodeChange={handleChange("phone1CountryCode")}
                   onChange={handleChange("phone1")}
                 />
@@ -853,23 +872,28 @@ function Employees() {
                 <Input
                   label="Date of birth"
                   type="date"
+                  required
                   value={form.dob}
+                  error={errors.dob}
                   onChange={handleChange("dob")}
                 />
                 <Input
                   label="LinkedIn URL"
+                  required
                   value={form.linkedin}
                   error={errors.linkedin}
                   onChange={handleChange("linkedin")}
                 />
                 <Input
                   label="GitHub URL"
+                  required
                   value={form.github}
                   error={errors.github}
                   onChange={handleChange("github")}
                 />
                 <Input
                   label="Aadhaar last 4 digits"
+                  required
                   value={form.aadhaar}
                   error={errors.aadhaar}
                   maxLength={4}

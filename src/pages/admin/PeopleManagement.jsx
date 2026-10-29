@@ -32,12 +32,20 @@ function PhoneField({
   code,
   value,
   error,
+  required = false,
   onCodeChange,
   onChange,
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <label className="text-sm font-medium text-cm-text">{label}</label>
+      <label className="text-sm font-medium text-cm-text">
+        {label}
+        {required && (
+          <span className="ml-0.5 text-cm-danger-600" aria-hidden="true">
+            *
+          </span>
+        )}
+      </label>
       <div className="flex min-w-0 gap-2">
         <select
           value={code}
@@ -55,6 +63,7 @@ function PhoneField({
           type="tel"
           inputMode="numeric"
           value={value}
+          required={required}
           onChange={onChange}
           aria-invalid={Boolean(error) || undefined}
           className={`h-10 min-w-0 w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30 ${error ? "border-cm-danger-600" : "border-cm-border"}`}
@@ -504,43 +513,51 @@ function PeopleManagement() {
       case "phone1":
       case "phone2":
       case "whatsapp":
-        if (!formValue) return "";
+        if (name === "phone1" && !formValue.trim()) {
+          return "Phone number is required.";
+        }
 
-        if (!/^[6-9]\d{9}$/.test(formValue)) {
+        if (!formValue.trim()) return "";
+
+        if (!/^[6-9]\d{9}$/.test(formValue.trim())) {
           return "Enter a valid 10-digit mobile number.";
         }
 
         return "";
 
       case "aadhaarLast4":
-        if (!formValue) return "";
+        if (!formValue.trim()) return "Aadhaar is required.";
 
-        if (!/^\d{4}$/.test(formValue)) {
+        if (!/^\d{4}$/.test(formValue.trim())) {
           return "aadhaarLast4 must contain exactly 4 digits.";
         }
 
         return "";
 
       case "linkendinUrl":
-        if (!formValue) return "";
+        if (!formValue.trim()) return "LinkedIn is required.";
 
         if (
-          !/^https?:\/\/(www\.)?linkendinUrl\.com\/.+$/i.test(formValue.trim())
+          !/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(formValue.trim())
         ) {
-          return "Enter a valid linkendinUrl URL.";
+          return "Enter a valid LinkedIn URL.";
         }
 
         return "";
 
       case "githubUrl":
-        if (!formValue) return "";
+        if (!formValue.trim()) return "GitHub is required.";
 
         if (
-          !/^https?:\/\/(www\.)?githubUrl\.com\/.+$/i.test(formValue.trim())
+          !/^https?:\/\/(www\.)?github\.com\/.+$/i.test(formValue.trim())
         ) {
-          return "Enter a valid githubUrl URL.";
+          return "Enter a valid GitHub URL.";
         }
 
+        return "";
+
+      case "dateOfBirth":
+        if (!formValue.trim()) return "Date of birth is required.";
         return "";
 
       case "role":
@@ -579,6 +596,7 @@ function PeopleManagement() {
       "aadhaarLast4",
       "linkendinUrl",
       "githubUrl",
+      "dateOfBirth",
       "role",
       "type",
       "employmentStatus",
@@ -1168,6 +1186,7 @@ function PeopleManagement() {
                   code={form.phone1CountryCode}
                   value={form.phone1}
                   error={errors.phone1}
+                  required
                   onCodeChange={handleChange("phone1CountryCode")}
                   onChange={handleChange("phone1")}
                 />
@@ -1201,6 +1220,7 @@ function PeopleManagement() {
                 <Input
                   label="Date of Birth"
                   type="date"
+                  required
                   value={form.dateOfBirth}
                   error={errors.dateOfBirth}
                   onChange={handleChange("dateOfBirth")}
@@ -1208,6 +1228,7 @@ function PeopleManagement() {
 
                 <Input
                   label="linkendinUrl"
+                  required
                   value={form.linkendinUrl}
                   error={errors.linkendinUrl}
                   onChange={handleChange("linkendinUrl")}
@@ -1215,6 +1236,7 @@ function PeopleManagement() {
 
                 <Input
                   label="githubUrl"
+                  required
                   value={form.githubUrl}
                   error={errors.githubUrl}
                   onChange={handleChange("githubUrl")}
@@ -1222,6 +1244,7 @@ function PeopleManagement() {
 
                 <Input
                   label="Aadhaar Last 4"
+                  required
                   value={form.aadhaarLast4}
                   error={errors.aadhaarLast4}
                   maxLength={4}
