@@ -18,6 +18,53 @@ import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
 import { showToast } from "../../components/common/Toast";
 
+const DEFAULT_DIAL_CODE = "+91";
+const COUNTRY_DIAL_CODES = [
+  { value: "+91", label: "India (+91)" },
+  { value: "+1", label: "United States (+1)" },
+  { value: "+44", label: "United Kingdom (+44)" },
+  { value: "+61", label: "Australia (+61)" },
+  { value: "+971", label: "United Arab Emirates (+971)" },
+];
+
+function PhoneField({
+  label,
+  code,
+  value,
+  error,
+  onCodeChange,
+  onChange,
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label className="text-sm font-medium text-cm-text">{label}</label>
+      <div className="flex min-w-0 gap-2">
+        <select
+          value={code}
+          onChange={onCodeChange}
+          aria-label={`${label} country dialing code`}
+          className="h-10 w-[7.5rem] shrink-0 rounded-cm-md border border-cm-border bg-white px-2 text-xs text-cm-text focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30"
+        >
+          {COUNTRY_DIAL_CODES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="tel"
+          inputMode="numeric"
+          value={value}
+          onChange={onChange}
+          aria-invalid={Boolean(error) || undefined}
+          className={`h-10 min-w-0 w-full rounded-cm-md border bg-white px-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30 ${error ? "border-cm-danger-600" : "border-cm-border"}`}
+        />
+      </div>
+      {error && <p className="text-sm text-cm-danger-600">{error}</p>}
+    </div>
+  );
+}
+
 const EMPTY_FORM = {
   id: null,
   uuid: null,
@@ -28,8 +75,14 @@ const EMPTY_FORM = {
   password: "",
   confirmPassword: "",
   phone1: "",
+  phone1CountryCode: DEFAULT_DIAL_CODE,
   phone2: "",
+  phone2CountryCode: DEFAULT_DIAL_CODE,
   whatsapp: "",
+  whatsappCountryCode: DEFAULT_DIAL_CODE,
+  address: "",
+  city: "",
+  country: "",
   joiningDate: "",
   dob: "",
   linkedin: "",
@@ -91,8 +144,29 @@ const mapEmployeeFromApi = (employee) => {
     email: user.email || employee.email || "",
     companyEmail: employee.companyEmail || user.companyEmail || "",
     phone1: employee.phone1 || user.phone1 || "",
+    phone1CountryCode:
+      employee.phone1CountryCode ||
+      user.phone1CountryCode ||
+      employee.phone1DialCode ||
+      user.phone1DialCode ||
+      DEFAULT_DIAL_CODE,
     phone2: employee.phone2 || user.phone2 || "",
+    phone2CountryCode:
+      employee.phone2CountryCode ||
+      user.phone2CountryCode ||
+      employee.phone2DialCode ||
+      user.phone2DialCode ||
+      DEFAULT_DIAL_CODE,
     whatsapp: employee.whatsapp || user.whatsapp || "",
+    whatsappCountryCode:
+      employee.whatsappCountryCode ||
+      user.whatsappCountryCode ||
+      employee.whatsappDialCode ||
+      user.whatsappDialCode ||
+      DEFAULT_DIAL_CODE,
+    address: employee.address || user.address || "",
+    city: employee.city || user.city || "",
+    country: employee.country || user.country || "",
     joiningDate: toDateInput(employee.joiningDate || user.joiningDate),
     dob: toDateInput(
       employee.dateOfBirth || employee.dob || user.dateOfBirth || user.dob,
@@ -416,6 +490,17 @@ function Employees() {
       lastName: employee.lastName || "",
       email: employee.email || "",
       companyEmail: employee.companyEmail || "",
+      phone1CountryCode:
+        employee.phone1CountryCode || employee.phone1DialCode || DEFAULT_DIAL_CODE,
+      phone2CountryCode:
+        employee.phone2CountryCode || employee.phone2DialCode || DEFAULT_DIAL_CODE,
+      whatsappCountryCode:
+        employee.whatsappCountryCode ||
+        employee.whatsappDialCode ||
+        DEFAULT_DIAL_CODE,
+      address: employee.address || "",
+      city: employee.city || "",
+      country: employee.country || "",
       joiningDate: employee.joiningDate || "",
       dob: employee.dob || "",
       linkedin: employee.linkedin || "",
@@ -474,8 +559,14 @@ function Employees() {
       email: form.email.trim(),
       companyEmail: form.companyEmail.trim() || null,
       phone1: form.phone1 || null,
+      phone1CountryCode: form.phone1 ? form.phone1CountryCode : null,
       phone2: form.phone2 || null,
+      phone2CountryCode: form.phone2 ? form.phone2CountryCode : null,
       whatsapp: form.whatsapp || null,
+      whatsappCountryCode: form.whatsapp ? form.whatsappCountryCode : null,
+      address: form.address.trim() || null,
+      city: form.city.trim() || null,
+      country: form.country.trim() || null,
       joiningDate: form.joiningDate || null,
       dateOfBirth: form.dob || null,
       linkedinUrl: form.linkedin.trim() || null,
@@ -697,6 +788,23 @@ function Employees() {
                   onChange={handleChange("companyEmail")}
                 />
                 <Input
+                  label="Address"
+                  multiline
+                  rows={3}
+                  value={form.address}
+                  onChange={handleChange("address")}
+                />
+                <Input
+                  label="Place / City"
+                  value={form.city}
+                  onChange={handleChange("city")}
+                />
+                <Input
+                  label="Country"
+                  value={form.country}
+                  onChange={handleChange("country")}
+                />
+                <Input
                   label="Password"
                   type="password"
                   required={!form.id}
@@ -712,22 +820,28 @@ function Employees() {
                   error={errors.confirmPassword}
                   onChange={handleChange("confirmPassword")}
                 />
-                <Input
+                <PhoneField
                   label="Phone 1"
+                  code={form.phone1CountryCode}
                   value={form.phone1}
                   error={errors.phone1}
+                  onCodeChange={handleChange("phone1CountryCode")}
                   onChange={handleChange("phone1")}
                 />
-                <Input
+                <PhoneField
                   label="Phone 2"
+                  code={form.phone2CountryCode}
                   value={form.phone2}
                   error={errors.phone2}
+                  onCodeChange={handleChange("phone2CountryCode")}
                   onChange={handleChange("phone2")}
                 />
-                <Input
+                <PhoneField
                   label="WhatsApp"
+                  code={form.whatsappCountryCode}
                   value={form.whatsapp}
                   error={errors.whatsapp}
+                  onCodeChange={handleChange("whatsappCountryCode")}
                   onChange={handleChange("whatsapp")}
                 />
                 <Input
