@@ -9,9 +9,22 @@ const config = { withCredentials: true };
 
 // ---------- Bonuses ----------
 
-export async function getBonuses(userUuid) {
-  const res = await axios.get("/api/bonuses", { ...config, params: userUuid ? { userUuid } : {} });
-  return res.data.data;
+export async function getBonuses(filters = {}) {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    ),
+  );
+
+  const res = await axios.get("/api/bonuses", {
+    ...config,
+    params,
+  });
+
+  return {
+    data: res.data.data,
+    pagination: res.data.pagination,
+  };
 }
 
 export async function createBonus(payload) {
@@ -25,15 +38,31 @@ export async function deleteBonus(uuid) {
 
 // Total bonus for one employee + month → { total, count } (payroll auto-fill)
 export async function getBonusTotal(userUuid, payPeriod) {
-  const res = await axios.get("/api/bonuses/total", { ...config, params: { userUuid, payPeriod } });
+  const res = await axios.get("/api/bonuses/total", {
+    ...config,
+    params: { userUuid, payPeriod },
+  });
   return res.data.data;
 }
 
 // ---------- Increments ----------
 
-export async function getIncrements(userUuid) {
-  const res = await axios.get("/api/increments", { ...config, params: userUuid ? { userUuid } : {} });
-  return res.data.data;
+export async function getIncrements(filters = {}) {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    ),
+  );
+
+  const res = await axios.get("/api/increments", {
+    ...config,
+    params,
+  });
+
+  return {
+    data: res.data.data,
+    pagination: res.data.pagination,
+  };
 }
 
 // Also updates the employee's salary in Salary Structure

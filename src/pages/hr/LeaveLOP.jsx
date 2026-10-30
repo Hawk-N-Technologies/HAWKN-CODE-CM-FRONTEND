@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
-import Loader from "../../components/common/Loader";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 import Input from "../../components/common/Input";
@@ -35,6 +34,21 @@ const LeaveLOP = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("PENDING");
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState("leaveDate");
+  const [sortOrder, setSortOrder] = useState("DESC");
+
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
+
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -51,6 +65,7 @@ const LeaveLOP = () => {
     reason: "",
   });
 
+  // Fetch leaves with server-side pagination, search and sorting
   const fetchLeaves = async () => {
     try {
       setLoading(true);
@@ -58,11 +73,25 @@ const LeaveLOP = () => {
       const response = await axios.get("/api/leave/leaves", {
         params: {
           status: activeTab,
+          search: search.trim() || undefined,
+          page,
+          limit,
+          sortBy,
+          sortOrder,
         },
         withCredentials: true,
       });
 
       setRequests(response.data?.data || []);
+
+      setPagination(
+        response.data?.pagination || {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        },
+      );
     } catch (error) {
       console.error("Failed to fetch leaves:", error);
 
@@ -74,31 +103,19 @@ const LeaveLOP = () => {
     }
   };
 
+  // Debounced search and automatic fetching
   useEffect(() => {
-    fetchLeaves();
-  }, [activeTab]);
+    const timeoutId = setTimeout(
+      () => {
+        fetchLeaves();
+      },
+      search.trim() ? 350 : 0,
+    );
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    return () => clearTimeout(timeoutId);
+  }, [activeTab, search, page, limit, sortBy, sortOrder]);
 
-    if (!query) {
-      return requests;
-    }
-
-    return requests.filter((row) => {
-      const employeeName = `${row.employee?.user?.first_name || ""} ${
-        row.employee?.user?.last_name || ""
-      }`.toLowerCase();
-
-      return (
-        employeeName.includes(query) ||
-        row.leaveType?.toLowerCase().includes(query) ||
-        row.leaveStatus?.toLowerCase().includes(query) ||
-        row.leaveDate?.toLowerCase().includes(query)
-      );
-    });
-  }, [requests, search]);
-
+  // Approve / Reject leave
   const updateStatus = async (uuid, status) => {
     try {
       await axios.patch(
@@ -123,6 +140,7 @@ const LeaveLOP = () => {
     }
   };
 
+  // Start editing
   const startEditing = (row) => {
     setEditingLeave({
       uuid: row.uuid,
@@ -133,10 +151,9 @@ const LeaveLOP = () => {
     });
   };
 
+  // Update leave
   const updateLeave = async () => {
-    if (!editingLeave) {
-      return;
-    }
+    if (!editingLeave) return;
 
     if (!editingLeave.leaveDate) {
       showToast.error("Leave date is required.");
@@ -145,7 +162,7 @@ const LeaveLOP = () => {
 
     try {
       setSavingEdit(true);
-      console.log(editingLeave);
+
       await axios.patch(
         `/api/leave/leaves/${editingLeave.uuid}`,
         {
@@ -175,6 +192,7 @@ const LeaveLOP = () => {
     }
   };
 
+  // Add leave
   const addLeave = async (event) => {
     event.preventDefault();
 
@@ -229,13 +247,14 @@ const LeaveLOP = () => {
     }
   };
 
+  // Table columns
   const columns = [
     {
       key: "employee",
       header: "Employee",
       render: (row) => {
-        const firstName = row.employee?.user?.first_name || "";
-        const lastName = row.employee?.user?.last_name || "";
+        const firstName = row.employee?.user?.firstName || "";
+        const lastName = row.employee?.user?.lastName || "";
 
         return `${firstName} ${lastName}`.trim() || "-";
       },
@@ -283,7 +302,7 @@ const LeaveLOP = () => {
     },
     {
       key: "actions",
-      header: "",
+      header: "Actions",
       render: (row) =>
         activeTab === "PENDING" && row.leaveStatus === "PENDING" ? (
           <div className="flex gap-2">
@@ -321,10 +340,6 @@ const LeaveLOP = () => {
             Manage leave requests, approvals and LOP.
           </p>
         </div>
-        {/* 
-        <Button onClick={() => setShowForm((value) => !value)}>
-          {showForm ? "Close" : "Add Leave"}
-        </Button> */}
       </div>
 
       {/* Add Leave Form */}
@@ -523,6 +538,7 @@ const LeaveLOP = () => {
           onClick={() => {
             setActiveTab("PENDING");
             setSearch("");
+            setPage(1);
             setEditingLeave(null);
           }}
           className={`border-b-2 px-1 pb-3 text-sm font-medium ${
@@ -539,6 +555,7 @@ const LeaveLOP = () => {
           onClick={() => {
             setActiveTab("HISTORY");
             setSearch("");
+            setPage(1);
             setEditingLeave(null);
           }}
           className={`border-b-2 px-1 pb-3 text-sm font-medium ${
@@ -551,27 +568,73 @@ const LeaveLOP = () => {
         </button>
       </div>
 
-      {/* Search */}
-      <TableSearch
-        value={search}
-        onChange={setSearch}
-        placeholder="Search employee, leave type or status…"
-      />
+      {/* Search and sorting */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="w-full sm:max-w-sm">
+          <TableSearch
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+            placeholder="Search employee, leave type or status..."
+          />
+        </div>
 
-      {/* Table */}
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
-          columns={columns}
-          rows={filtered}
-          emptyMessage={
-            activeTab === "PENDING"
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Select
+            name="sortBy"
+            label="Sort by"
+            value={sortBy}
+            onChange={(event) => {
+              setSortBy(event.target.value);
+              setPage(1);
+            }}
+            options={[
+              { value: "leaveDate", label: "Leave date" },
+              { value: "createdAt", label: "Created date" },
+              { value: "updatedAt", label: "Updated date" },
+            ]}
+            containerClassName="w-full sm:w-44"
+          />
+
+          <Select
+            name="sortOrder"
+            label="Order"
+            value={sortOrder}
+            onChange={(event) => {
+              setSortOrder(event.target.value);
+              setPage(1);
+            }}
+            options={[
+              { value: "DESC", label: "Newest first" },
+              { value: "ASC", label: "Oldest first" },
+            ]}
+            containerClassName="w-full sm:w-40"
+          />
+        </div>
+      </section>
+
+      {/* DataTable with server-side pagination */}
+      <DataTable
+        columns={columns}
+        rows={requests}
+        isLoading={loading}
+        emptyMessage={
+          search.trim()
+            ? "No leave requests match your search."
+            : activeTab === "PENDING"
               ? "No pending leave requests."
               : "No leave history."
-          }
-        />
-      )}
+        }
+        pagination={pagination}
+        onPageChange={setPage}
+        onPageSizeChange={(nextLimit) => {
+          setLimit(nextLimit);
+          setPage(1);
+        }}
+        pageSizeOptions={[10, 25, 50, 100]}
+      />
     </div>
   );
 };

@@ -17,17 +17,18 @@ import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import DataTable from "../../components/tables/DataTable";
 import Input from "../../components/common/Input";
-import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
 import { showAlert } from "../../components/common/Alert";
 import axios from "axios";
 
-function formatDate(value) {
-  if (!value) {
-    return "—";
-  }
+// --------------------------------------------------
+// DATE HELPERS
+// --------------------------------------------------
 
-  const [year, month, day] = value.split("-").map(Number);
+function formatDate(value) {
+  if (!value) return "—";
+
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
 
   return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
     day: "numeric",
@@ -37,19 +38,14 @@ function formatDate(value) {
 }
 
 function getDateKey(value) {
-  if (!value) {
-    return "";
-  }
-
+  if (!value) return "";
   return String(value).slice(0, 10);
 }
 
 function isUpcomingHoliday(value) {
   const dateKey = getDateKey(value);
 
-  if (!dateKey) {
-    return false;
-  }
+  if (!dateKey) return false;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -75,15 +71,21 @@ function getDateDetails(value) {
   };
 }
 
+// --------------------------------------------------
+// SUMMARY CARD
+// --------------------------------------------------
+
 function SummaryCard({ title, value, description, icon: Icon, iconClass }) {
   return (
     <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-cm-text-muted">{title}</p>
+
           <p className="mt-3 text-3xl font-bold tracking-tight text-cm-text">
             {value}
           </p>
+
           <p className="mt-2 text-xs text-cm-text-muted">{description}</p>
         </div>
 
@@ -96,6 +98,10 @@ function SummaryCard({ title, value, description, icon: Icon, iconClass }) {
     </div>
   );
 }
+
+// --------------------------------------------------
+// HOLIDAY MODAL
+// --------------------------------------------------
 
 function HolidayModal({
   title,
@@ -111,6 +117,7 @@ function HolidayModal({
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
@@ -143,6 +150,7 @@ function HolidayModal({
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
                 <Plus size={19} />
               </span>
+
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2
@@ -151,10 +159,12 @@ function HolidayModal({
                   >
                     {title}
                   </h2>
+
                   <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
                     COMPANY HOLIDAYS
                   </span>
                 </div>
+
                 {subtitle && (
                   <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
                     {subtitle}
@@ -162,6 +172,7 @@ function HolidayModal({
                 )}
               </div>
             </div>
+
             <button
               type="button"
               aria-label="Close dialog"
@@ -180,19 +191,40 @@ function HolidayModal({
             <span>Shared holiday date and payment details</span>
           </div>
         </header>
+
         <div className="overflow-y-auto bg-white">{children}</div>
       </section>
     </div>
   );
 }
 
+// --------------------------------------------------
+// HOLIDAY PAGE
+// --------------------------------------------------
+
 function Holiday() {
   const [holidays, setHolidays] = useState([]);
   const [search, setSearch] = useState("");
+
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingUuid, setDeletingUuid] = useState(null);
+
+  // Server-side pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Server-side sorting
+  const [sortBy, setSortBy] = useState("holidayDate");
+  const [sortOrder, setSortOrder] = useState("ASC");
+
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
 
   const [form, setForm] = useState({
     date: "",
@@ -200,34 +232,78 @@ function Holiday() {
     paid: true,
   });
 
-  // GET ALL HOLIDAYS
-  const getAllHolidays = async () => {
+  // --------------------------------------------------
+  // GET HOLIDAYS
+  // --------------------------------------------------
+
+  const getAllHolidays = async (signal) => {
     try {
       setLoading(true);
 
       const res = await axios.get("/api/company/holidays", {
         withCredentials: true,
+        signal,
+        params: {
+          search: search.trim() || undefined,
+          page,
+          limit,
+          sortBy,
+          sortOrder,
+        },
       });
 
       if (res.status === 200) {
         setHolidays(res.data.data || []);
+
+        setPagination(
+          res.data.pagination || {
+            total: 0,
+            page: 1,
+            limit,
+            totalPages: 0,
+          },
+        );
       }
     } catch (error) {
+      if (axios.isCancel(error) || error.name === "CanceledError") {
+        return;
+      }
+
       console.error("Failed to fetch holidays:", error);
 
       showToast.error(
         error.response?.data?.message || "Failed to load holidays.",
       );
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
-  useEffect(() => {
-    getAllHolidays();
-  }, []);
+  // --------------------------------------------------
+  // SEARCH / PAGINATION / SORT EFFECT
+  // --------------------------------------------------
 
-  // FORM CHANGE
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const delay = search.trim() ? 350 : 0;
+
+    const timer = setTimeout(() => {
+      getAllHolidays(controller.signal);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [search, page, limit, sortBy, sortOrder]);
+
+  // --------------------------------------------------
+  // FORM HANDLERS
+  // --------------------------------------------------
+
   function handleChange(field, value) {
     setForm((previous) => ({
       ...previous,
@@ -244,15 +320,16 @@ function Holiday() {
   }
 
   function closeForm() {
-    if (submitting) {
-      return;
-    }
+    if (submitting) return;
 
     resetForm();
     setShowForm(false);
   }
 
+  // --------------------------------------------------
   // CREATE HOLIDAY
+  // --------------------------------------------------
+
   async function addHoliday(event) {
     event.preventDefault();
 
@@ -282,7 +359,12 @@ function Holiday() {
         resetForm();
         setShowForm(false);
 
-        await getAllHolidays();
+        // Return to first page after adding a holiday.
+        if (page !== 1) {
+          setPage(1);
+        } else {
+          await getAllHolidays();
+        }
       }
     } catch (error) {
       console.error("Failed to create holiday:", error);
@@ -295,7 +377,10 @@ function Holiday() {
     }
   }
 
+  // --------------------------------------------------
   // DELETE HOLIDAY
+  // --------------------------------------------------
+
   async function deleteHoliday(uuid, holidayName) {
     const result = await showAlert.confirm({
       title: "Delete holiday?",
@@ -304,9 +389,7 @@ function Holiday() {
       cancelButtonText: "Cancel",
     });
 
-    if (!result.isConfirmed) {
-      return;
-    }
+    if (!result.isConfirmed) return;
 
     try {
       setDeletingUuid(uuid);
@@ -316,11 +399,14 @@ function Holiday() {
       });
 
       if (res.status === 200) {
-        setHolidays((previous) =>
-          previous.filter((holiday) => holiday.uuid !== uuid),
-        );
-
         showToast.success("Holiday removed successfully.");
+
+        // If the last row on this page was deleted, go to the previous page.
+        if (holidays.length === 1 && page > 1) {
+          setPage((previous) => previous - 1);
+        } else {
+          await getAllHolidays();
+        }
       }
     } catch (error) {
       console.error("Failed to delete holiday:", error);
@@ -333,31 +419,17 @@ function Holiday() {
     }
   }
 
-  // SEARCH
-  const filteredHolidays = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return holidays;
-    }
-
-    return holidays.filter((holiday) => {
-      return (
-        holiday.name?.toLowerCase().includes(query) ||
-        holiday.holidayDate?.includes(query) ||
-        formatDate(holiday.holidayDate).toLowerCase().includes(query) ||
-        (holiday.isPaid ? "paid holiday" : "unpaid holiday").includes(query)
-      );
-    });
-  }, [holidays, search]);
-
+  // --------------------------------------------------
   // SUMMARY
+  // --------------------------------------------------
+
   const summary = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const currentYear = today.getFullYear();
 
+    // These breakdowns are based on the currently loaded page.
     const yearHolidays = holidays.filter((holiday) => {
       const dateKey = getDateKey(holiday.holidayDate);
       return dateKey.startsWith(String(currentYear));
@@ -368,7 +440,6 @@ function Holiday() {
     );
 
     const paid = holidays.filter((holiday) => holiday.isPaid).length;
-
     const unpaid = holidays.length - paid;
 
     const nextHoliday = upcoming
@@ -378,16 +449,19 @@ function Holiday() {
       )[0];
 
     return {
-      total: holidays.length,
+      total: pagination.total,
       thisYear: yearHolidays.length,
       upcoming: upcoming.length,
       paid,
       unpaid,
       nextHoliday,
     };
-  }, [holidays]);
+  }, [holidays, pagination.total]);
 
-  // TABLE
+  // --------------------------------------------------
+  // TABLE COLUMNS
+  // --------------------------------------------------
+
   const columns = [
     {
       key: "holidayDate",
@@ -401,6 +475,7 @@ function Holiday() {
               <span className="text-lg font-bold leading-5 text-cm-text">
                 {date.day}
               </span>
+
               <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-cm-text-muted">
                 {date.month}
               </span>
@@ -408,6 +483,7 @@ function Holiday() {
 
             <div>
               <p className="font-medium text-cm-text">{date.weekday}</p>
+
               <p className="mt-1 text-xs text-cm-text-muted">
                 {getDateKey(row.holidayDate).slice(0, 4)}
               </p>
@@ -427,11 +503,15 @@ function Holiday() {
 
           <div className="min-w-0">
             <p className="font-semibold text-cm-text">{row.name}</p>
+
             <p className="mt-1 text-xs text-cm-text-muted">
               {formatDate(row.holidayDate)}
             </p>
+
             <Badge tone={row.isPredefined ? "info" : "neutral"}>
-              {row.isPredefined ? "Predefined holiday" : "Company-added holiday"}
+              {row.isPredefined
+                ? "Predefined holiday"
+                : "Company-added holiday"}
             </Badge>
           </div>
         </div>
@@ -485,9 +565,14 @@ function Holiday() {
     },
   ];
 
+  // --------------------------------------------------
+  // RENDER
+  // --------------------------------------------------
+
   return (
     <div className="flex flex-col gap-6 pb-6">
       {/* PAGE HEADER */}
+
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-start gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-card text-cm-text shadow-sm">
@@ -511,7 +596,11 @@ function Holiday() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="outline" disabled={loading} onClick={getAllHolidays}>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() => getAllHolidays()}
+          >
             <span className="inline-flex items-center gap-2">
               <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
               Refresh
@@ -536,6 +625,7 @@ function Holiday() {
       </div>
 
       {/* SUMMARY CARDS */}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           title="Total Holidays"
@@ -548,7 +638,7 @@ function Holiday() {
         <SummaryCard
           title="This Year"
           value={summary.thisYear}
-          description={`Holidays scheduled for ${new Date().getFullYear()}`}
+          description="On the current page"
           icon={CalendarCheck}
           iconClass="bg-violet-500/10 text-violet-600"
         />
@@ -556,7 +646,7 @@ function Holiday() {
         <SummaryCard
           title="Upcoming Holidays"
           value={summary.upcoming}
-          description="Today and future scheduled holidays"
+          description="On the current page"
           icon={CalendarClock}
           iconClass="bg-emerald-500/10 text-emerald-600"
         />
@@ -564,15 +654,14 @@ function Holiday() {
         <SummaryCard
           title="Paid Holidays"
           value={summary.paid}
-          description={`${summary.unpaid} unpaid ${
-            summary.unpaid === 1 ? "holiday" : "holidays"
-          }`}
+          description={`${summary.unpaid} unpaid on this page`}
           icon={CircleDollarSign}
           iconClass="bg-amber-500/10 text-amber-600"
         />
       </div>
 
       {/* NEXT HOLIDAY */}
+
       {!loading && summary.nextHoliday && (
         <div className="flex flex-col justify-between gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm sm:flex-row sm:items-center">
           <div className="flex items-start gap-4">
@@ -604,6 +693,7 @@ function Holiday() {
       )}
 
       {/* ADD HOLIDAY FORM */}
+
       {showForm && (
         <HolidayModal
           title="Add Company Holiday"
@@ -642,6 +732,7 @@ function Holiday() {
                 <span className="block text-sm font-semibold text-cm-text">
                   Paid Holiday
                 </span>
+
                 <span className="mt-1 block text-xs leading-5 text-cm-text-muted">
                   Employees receive their regular holiday pay for this date.
                 </span>
@@ -669,6 +760,7 @@ function Holiday() {
                   ) : (
                     <Plus size={16} />
                   )}
+
                   {submitting ? "Adding Holiday..." : "Save Holiday"}
                 </span>
               </Button>
@@ -678,6 +770,7 @@ function Holiday() {
       )}
 
       {/* HOLIDAY CALENDAR TABLE */}
+
       <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
         <div className="flex flex-col justify-between gap-4 border-b border-cm-border p-5 sm:flex-row sm:items-center sm:px-6">
           <div>
@@ -686,9 +779,9 @@ function Holiday() {
                 Holiday Calendar
               </h2>
 
-              <Badge tone={holidays.length > 0 ? "success" : "neutral"}>
-                {holidays.length}{" "}
-                {holidays.length === 1 ? "Holiday" : "Holidays"}
+              <Badge tone={pagination.total > 0 ? "success" : "neutral"}>
+                {pagination.total}{" "}
+                {pagination.total === 1 ? "Holiday" : "Holidays"}
               </Badge>
             </div>
 
@@ -698,64 +791,113 @@ function Holiday() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="success">{summary.paid} Paid</Badge>
-
-            <Badge tone="warning">{summary.unpaid} Unpaid</Badge>
+            <Badge tone="success">{summary.paid} Paid (page)</Badge>
+            <Badge tone="warning">{summary.unpaid} Unpaid (page)</Badge>
           </div>
         </div>
 
-        {/* SEARCH BAR */}
-        <div className="flex flex-col gap-3 border-b border-cm-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="relative w-full sm:max-w-md">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-cm-text-muted"
-            />
+        {/* SEARCH AND SORT */}
 
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by holiday, date, or payment type..."
-              aria-label="Search company holidays"
-              className="h-10 w-full rounded-lg border border-cm-border bg-cm-bg pl-10 pr-10 text-sm text-cm-text outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
-            />
+        <div className="flex flex-col gap-3 border-b border-cm-border px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-md">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-cm-text-muted"
+              />
 
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                aria-label="Clear holiday search"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-cm-text-muted transition hover:text-cm-text"
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by holiday name..."
+                aria-label="Search company holidays"
+                className="h-10 w-full rounded-lg border border-cm-border bg-cm-bg pl-10 pr-10 text-sm text-cm-text outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  aria-label="Clear holiday search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-cm-text-muted transition hover:text-cm-text"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(event.target.value);
+                  setPage(1);
+                }}
+                className="h-10 rounded-lg border border-cm-border bg-cm-bg px-3 text-sm text-cm-text outline-none focus:border-blue-500"
+                aria-label="Sort holidays by"
               >
-                <X size={15} />
-              </button>
-            )}
+                <option value="holidayDate">Holiday Date</option>
+                <option value="name">Holiday Name</option>
+                <option value="createdAt">Created Date</option>
+                <option value="updatedAt">Updated Date</option>
+              </select>
+
+              <select
+                value={sortOrder}
+                onChange={(event) => {
+                  setSortOrder(event.target.value);
+                  setPage(1);
+                }}
+                className="h-10 rounded-lg border border-cm-border bg-cm-bg px-3 text-sm text-cm-text outline-none focus:border-blue-500"
+                aria-label="Sort direction"
+              >
+                <option value="ASC">Ascending</option>
+                <option value="DESC">Descending</option>
+              </select>
+            </div>
           </div>
 
           <p className="text-xs text-cm-text-muted">
             Showing{" "}
             <span className="font-semibold text-cm-text">
-              {filteredHolidays.length}
+              {holidays.length}
             </span>{" "}
             of{" "}
             <span className="font-semibold text-cm-text">
-              {holidays.length}
+              {pagination.total}
             </span>{" "}
             holidays
           </p>
         </div>
 
+        {/* DATA TABLE */}
+
         <div className="p-4 sm:p-6">
-          {loading ? (
-            <div className="flex min-h-[240px] flex-col items-center justify-center gap-3">
-              <Loader />
-              <p className="text-sm text-cm-text-muted">
-                Loading company holidays...
-              </p>
-            </div>
-          ) : filteredHolidays.length === 0 ? (
-            <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center">
+          <DataTable
+            columns={columns}
+            rows={holidays}
+            isLoading={loading}
+            emptyMessage={
+              search ? "No matching holidays found." : "No holidays added yet."
+            }
+            pagination={pagination}
+            onPageChange={setPage}
+            onPageSizeChange={(newLimit) => {
+              setLimit(newLimit);
+              setPage(1);
+            }}
+            pageSizeOptions={[10, 25, 50, 100]}
+          />
+
+          {!loading && holidays.length === 0 && (
+            <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cm-bg text-cm-text-muted">
                 {search ? <Search size={25} /> : <CalendarX2 size={25} />}
               </div>
@@ -766,7 +908,7 @@ function Holiday() {
 
               <p className="mt-1 max-w-sm text-sm leading-6 text-cm-text-muted">
                 {search
-                  ? "Try another holiday name, date, or payment type."
+                  ? "Try another holiday name."
                   : "Your company holiday calendar is empty. Add a holiday to get started."}
               </p>
 
@@ -774,7 +916,10 @@ function Holiday() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSearch("")}
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
                 >
                   Clear Search
                 </Button>
@@ -787,22 +932,14 @@ function Holiday() {
                 </Button>
               )}
             </div>
-          ) : (
-            <DataTable
-              columns={columns}
-              rows={filteredHolidays}
-              emptyMessage="No holidays found."
-            />
           )}
         </div>
 
         {/* FOOTER */}
-        {!loading && holidays.length > 0 && (
+
+        {!loading && pagination.total > 0 && (
           <div className="flex flex-col gap-2 border-t border-cm-border bg-cm-bg/50 px-5 py-3 text-xs text-cm-text-muted sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              {filteredHolidays.length} matching{" "}
-              {filteredHolidays.length === 1 ? "record" : "records"}
-            </span>
+            <span>{holidays.length} records on this page</span>
 
             <span className="inline-flex items-center gap-1.5">
               <CheckCircle2 size={14} />
