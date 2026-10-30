@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
 import Badge from "../../components/common/Badge";
@@ -71,7 +71,6 @@ const LeaveLOP = () => {
       setLoading(true);
 
       const response = await axios.get("/api/leave/leaves", {
-<<<<<<< HEAD
         params: {
           status: activeTab,
           search: search.trim() || undefined,
@@ -80,9 +79,6 @@ const LeaveLOP = () => {
           sortBy,
           sortOrder,
         },
-=======
-        params: { status: activeTab },
->>>>>>> feat/HR-update
         withCredentials: true,
       });
 
@@ -115,10 +111,8 @@ const LeaveLOP = () => {
       search.trim() ? 350 : 0,
     );
 
-<<<<<<< HEAD
     return () => clearTimeout(timeoutId);
   }, [activeTab, search, page, limit, sortBy, sortOrder]);
-=======
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -137,7 +131,6 @@ const LeaveLOP = () => {
       );
     });
   }, [requests, search]);
->>>>>>> feat/HR-update
 
   // Approve / Reject leave
   const updateStatus = async (uuid, status) => {
@@ -400,9 +393,7 @@ const LeaveLOP = () => {
               label="Employee ID"
               required
               value={form.employee}
-              onChange={(e) =>
-                setForm({ ...form, employee: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, employee: e.target.value })}
             />
 
             <Select
@@ -445,9 +436,7 @@ const LeaveLOP = () => {
               <input
                 type="checkbox"
                 checked={form.isPaid}
-                onChange={(e) =>
-                  setForm({ ...form, isPaid: e.target.checked })
-                }
+                onChange={(e) => setForm({ ...form, isPaid: e.target.checked })}
               />
               <span className="text-sm text-cm-text">Paid Leave</span>
             </div>
@@ -586,10 +575,7 @@ const LeaveLOP = () => {
             </div>
 
             <div className="mt-5 flex justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => setEditingLeave(null)}
-              >
+              <Button variant="secondary" onClick={() => setEditingLeave(null)}>
                 Cancel
               </Button>
               <Button onClick={updateLeave} disabled={savingEdit}>
