@@ -17,6 +17,7 @@ import TableSearch from "../../components/tables/TableSearch";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
 import { showToast } from "../../components/common/Toast";
+import { getSalaries, setSalary } from "../../services/payrollService";
 
 const DEFAULT_DIAL_CODE = "+91";
 const COUNTRY_DIAL_CODES = [
@@ -101,6 +102,7 @@ const EMPTY_FORM = {
   joiningDate: "",
   dateOfBirth: "",
   aadhaarLast4: "",
+  salary: "",
   isActive: true,
 };
 
@@ -575,6 +577,18 @@ function PeopleManagement() {
         if (!formValue) return "Please select employment status.";
         return "";
 
+      case "salary":
+        if (!formValue) return "";
+
+        if (
+          !Number.isInteger(Number(formValue)) ||
+          Number(formValue) <= 0
+        ) {
+          return "Salary must be a positive whole number.";
+        }
+
+        return "";
+
       default:
         return "";
     }
@@ -600,6 +614,7 @@ function PeopleManagement() {
       "role",
       "type",
       "employmentStatus",
+      "salary",
     ];
 
     fields.forEach((field) => {
@@ -704,15 +719,32 @@ function PeopleManagement() {
    * OPEN EDIT
    * -------------------------------------------------------
    */
-  const openEdit = (person) => {
+  const openEdit = async (person) => {
     if (isSubmitting) {
       return;
     }
+
+    const userUuid = person.userUuid || person.uuid;
+    let salary = person.salary ?? person.employee?.salary ?? "";
+
+    if (userUuid) {
+      try {
+        const salaries = await getSalaries(userUuid);
+        const salaryRecord = Array.isArray(salaries) ? salaries[0] : salaries;
+        salary = salaryRecord?.salary ?? salaryRecord?.data?.salary ?? salary;
+      } catch (error) {
+        console.error("Get employee salary error:", error);
+        showToast.error(
+          error.response?.data?.message || "Failed to load employee salary.",
+        );
+      }
+    }
+
     setForm({
       ...EMPTY_FORM,
 
       id: person.id,
-      uuid: person.userUuid || person.uuid,
+      uuid: userUuid,
       employeeId: person.employeeId,
       employeeUuid: person.employeeUuid,
 
@@ -745,6 +777,7 @@ function PeopleManagement() {
       githubUrl: person.githubUrl || "",
 
       aadhaarLast4: person.aadhaarLast4 || "",
+      salary,
 
       password: "",
       confirmPassword: "",
@@ -880,6 +913,9 @@ function PeopleManagement() {
       employmentStatus: form.employmentStatus,
     };
 
+    const hasSalary = form.salary.trim() !== "";
+    const salaryValue = Number(form.salary);
+
     /**
      * Password:
      *
@@ -913,11 +949,31 @@ function PeopleManagement() {
           },
         );
 
+        if (hasSalary) {
+          await setSalary(form.uuid, salaryValue);
+        }
+
         showToast.success(res.data?.message || "User updated successfully.");
       } else {
         res = await axios.post("/api/employees/create", employeePayload, {
           withCredentials: true,
         });
+
+        if (hasSalary) {
+          const createdUser = res.data?.data ?? res.data;
+          const createdUserUuid =
+            createdUser?.userUuid ||
+            createdUser?.uuid ||
+            createdUser?.user?.uuid ||
+            createdUser?.employee?.userUuid ||
+            createdUser?.employee?.user?.uuid;
+
+          if (!createdUserUuid) {
+            throw new Error("Created employee UUID was not returned.");
+          }
+
+          await setSalary(createdUserUuid, salaryValue);
+        }
 
         showToast.success(res.data?.message || "User created successfully.");
       }
@@ -1139,6 +1195,16 @@ function PeopleManagement() {
                   value={form.companyEmail}
                   error={errors.companyEmail}
                   onChange={handleChange("companyEmail")}
+                />
+
+                <Input
+                  label="Salary"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.salary}
+                  error={errors.salary}
+                  onChange={handleChange("salary")}
                 />
 
                 <Input
