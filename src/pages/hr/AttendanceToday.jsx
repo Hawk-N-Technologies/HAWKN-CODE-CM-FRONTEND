@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
@@ -210,7 +211,9 @@ function AttendanceToday() {
       header: "Employee",
       render: (row) => (
         <div className="min-w-[180px]">
-          <p className="font-medium text-cm-text">{getEmployeeName(row)}</p>
+          <p className="font-semibold text-cm-text">
+            {getEmployeeName(row)}
+          </p>
 
           <p className="mt-1 text-xs text-cm-text-muted">
             {getEmployeeEmail(row)}
@@ -254,25 +257,55 @@ function AttendanceToday() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-cm-border bg-cm-card">
         <Loader />
       </div>
     );
   }
 
+  const todayLabel = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date());
+
+  const statCards = [
+    {
+      label: "Attendance Records",
+      value: statistics.total,
+      description: "Today's entries",
+      valueClass: "text-cm-text",
+    },
+    {
+      label: "Employees Present",
+      value: statistics.uniqueEmployees,
+      description: "Employees with attendance",
+      valueClass: "text-green-600",
+    },
+    {
+      label: "First Half",
+      value: statistics.firstHalf,
+      description: "Check-ins",
+      valueClass: "text-cm-text",
+    },
+    {
+      label: "Second Half",
+      value: statistics.secondHalf,
+      description: "Check-ins",
+      valueClass: "text-cm-text",
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Date and Refresh */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium text-cm-text-muted">
-            {new Intl.DateTimeFormat("en-IN", {
-              timeZone: "Asia/Kolkata",
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            }).format(new Date())}{" "}
-            · India
-          </p>
+        <div className="flex items-center gap-2 rounded-lg border border-cm-border bg-cm-card px-3 py-2">
+          <span className="text-sm font-medium text-cm-text">
+            {todayLabel}
+          </span>
+          <span className="text-xs text-cm-text-muted">India</span>
         </div>
 
         <Button
@@ -284,8 +317,9 @@ function AttendanceToday() {
         </Button>
       </div>
 
+      {/* Error State */}
       {error && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-cm-lg border border-red-200 bg-red-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
           <div>
             <p className="text-sm font-semibold text-red-700">
               Unable to load attendance
@@ -305,53 +339,31 @@ function AttendanceToday() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Attendance Records</p>
+      {/* Statistics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="rounded-xl border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <p className="text-xs font-medium text-cm-text-muted">
+              {card.label}
+            </p>
 
-          <p className="mt-2 text-2xl font-bold text-cm-text">
-            {statistics.total}
-          </p>
+            <p className={`mt-3 text-3xl font-bold ${card.valueClass}`}>
+              {card.value}
+            </p>
 
-          <p className="mt-1 text-xs text-cm-text-muted">Today's entries</p>
-        </div>
+            <p className="mt-2 text-xs text-cm-text-muted">
+              {card.description}
+            </p>
+          </div>
+        ))}
 
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Employees Present</p>
+        <div className="rounded-xl border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow hover:shadow-md">
+          <p className="text-xs font-medium text-cm-text-muted">Status</p>
 
-          <p className="mt-2 text-2xl font-bold text-green-600">
-            {statistics.uniqueEmployees}
-          </p>
-
-          <p className="mt-1 text-xs text-cm-text-muted">
-            Employees with attendance
-          </p>
-        </div>
-
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">First Half</p>
-
-          <p className="mt-2 text-2xl font-bold text-cm-text">
-            {statistics.firstHalf}
-          </p>
-
-          <p className="mt-1 text-xs text-cm-text-muted">Check-ins</p>
-        </div>
-
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Second Half</p>
-
-          <p className="mt-2 text-2xl font-bold text-cm-text">
-            {statistics.secondHalf}
-          </p>
-
-          <p className="mt-1 text-xs text-cm-text-muted">Check-ins</p>
-        </div>
-
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Status</p>
-
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge tone="success">{statistics.present} Present</Badge>
 
             {statistics.absent > 0 && (
@@ -359,18 +371,21 @@ function AttendanceToday() {
             )}
           </div>
 
-          <p className="mt-2 text-xs text-cm-text-muted">Today's attendance</p>
+          <p className="mt-3 text-xs text-cm-text-muted">
+            Today's attendance
+          </p>
         </div>
       </div>
 
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Attendance Records */}
+      <section className="overflow-hidden rounded-xl border border-cm-border bg-cm-card shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-cm-border p-5">
           <div>
-            <h2 className="text-sm font-semibold text-cm-text">
+            <h2 className="text-base font-semibold text-cm-text">
               Today's Attendance
             </h2>
 
-            <p className="mt-1 text-xs text-cm-text-muted">
+            <p className="mt-1 text-sm text-cm-text-muted">
               {filteredRecords.length} record
               {filteredRecords.length === 1 ? "" : "s"} found
             </p>
@@ -381,15 +396,15 @@ function AttendanceToday() {
           </Badge>
         </div>
 
-        <div className="mt-5">
-          <TableSearch
-            value={search}
-            onChange={setSearch}
-            placeholder="Search employee, email, session or status…"
-          />
-        </div>
+        <div className="p-5">
+          <div className="mb-4 max-w-md">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search employee, email, session or status…"
+            />
+          </div>
 
-        <div className="mt-4">
           <DataTable
             columns={columns}
             rows={filteredRecords}
