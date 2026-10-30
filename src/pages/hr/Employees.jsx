@@ -81,6 +81,7 @@ const EMPTY_FORM = {
   lastName: "",
   email: "",
   companyEmail: "",
+  salary: "",
   password: "",
   confirmPassword: "",
   phone1: "",
@@ -152,6 +153,7 @@ const mapEmployeeFromApi = (employee) => {
       "Unnamed Employee",
     email: user.email || employee.email || "",
     companyEmail: employee.companyEmail || user.companyEmail || "",
+    salary: employee.salary || "",
     phone1: employee.phone1 || user.phone1 || "",
     phone1CountryCode:
       employee.phone1CountryCode ||
@@ -288,6 +290,7 @@ function Employees() {
           employee.lastName,
           employee.email,
           employee.companyEmail,
+          employee.salary,
           employee.roleName,
           employee.type,
           employee.status,
@@ -365,6 +368,11 @@ function Employees() {
           return "Enter a valid company email address.";
         }
         return "";
+      case "salary":
+        if (typeof fieldValue !== "number" || !Number.isInteger(fieldValue)) {
+          return "Salary must be a whole number without decimals.";
+        }
+        return "";
 
       case "password":
         if (!currentForm.id && !fieldValue) return "Password is required.";
@@ -411,9 +419,7 @@ function Employees() {
 
       case "github":
         if (!fieldValue.trim()) return "GitHub is required.";
-        if (
-          !/^https?:\/\/(www\.)?github\.com\/.+$/i.test(fieldValue.trim())
-        ) {
+        if (!/^https?:\/\/(www\.)?github\.com\/.+$/i.test(fieldValue.trim())) {
           return "Enter a valid GitHub URL.";
         }
         return "";
@@ -507,11 +513,16 @@ function Employees() {
       firstName: employee.firstName || "",
       lastName: employee.lastName || "",
       email: employee.email || "",
+      salary: employee.salary || 0,
       companyEmail: employee.companyEmail || "",
       phone1CountryCode:
-        employee.phone1CountryCode || employee.phone1DialCode || DEFAULT_DIAL_CODE,
+        employee.phone1CountryCode ||
+        employee.phone1DialCode ||
+        DEFAULT_DIAL_CODE,
       phone2CountryCode:
-        employee.phone2CountryCode || employee.phone2DialCode || DEFAULT_DIAL_CODE,
+        employee.phone2CountryCode ||
+        employee.phone2DialCode ||
+        DEFAULT_DIAL_CODE,
       whatsappCountryCode:
         employee.whatsappCountryCode ||
         employee.whatsappDialCode ||
@@ -576,6 +587,7 @@ function Employees() {
       lastName: form.lastName.trim(),
       email: form.email.trim(),
       companyEmail: form.companyEmail.trim() || null,
+      salary: form.salary.trim() || null,
       phone1: form.phone1 || null,
       phone1CountryCode: form.phone1 ? form.phone1CountryCode : null,
       phone2: form.phone2 || null,
@@ -611,9 +623,12 @@ function Employees() {
         });
         showToast.success("Employee updated successfully.");
       } else {
+        console.log(payload);
+        return;
         await axios.post("/api/employees", payload, {
           withCredentials: true,
         });
+
         showToast.success("Employee created successfully.");
       }
 
@@ -804,6 +819,13 @@ function Employees() {
                   value={form.companyEmail}
                   error={errors.companyEmail}
                   onChange={handleChange("companyEmail")}
+                />
+                <Input
+                  label="Salary"
+                  type="number"
+                  value={form.salary}
+                  error={errors.salary}
+                  onChange={handleChange("salary")}
                 />
                 <Input
                   label="Address"
@@ -1005,6 +1027,7 @@ function Employees() {
                 ["Last name", selected.lastName],
                 ["Email address", selected.email],
                 ["Company email", selected.companyEmail],
+                ["salary", selected.salary],
                 ["Role", selected.roleName || rolesMap[selected.role]?.name],
                 ["Employment type", selected.type],
                 ["Employment status", selected.status],
