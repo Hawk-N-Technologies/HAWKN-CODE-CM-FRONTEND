@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
@@ -266,16 +267,18 @@ function AttendanceHistory() {
       present: records.filter(
         (record) => getOverallStatus(record) === "Present",
       ).length,
-      absent: records.filter((record) => getOverallStatus(record) === "Absent")
-        .length,
+      absent: records.filter(
+        (record) => getOverallStatus(record) === "Absent",
+      ).length,
       holiday: records.filter(
         (record) => getOverallStatus(record) === "Holiday",
       ).length,
       halfDay: records.filter(
         (record) => getOverallStatus(record) === "Half Day",
       ).length,
-      leave: records.filter((record) => getOverallStatus(record) === "Leave")
-        .length,
+      leave: records.filter(
+        (record) => getOverallStatus(record) === "Leave",
+      ).length,
     };
   }, [records, total]);
 
@@ -285,7 +288,7 @@ function AttendanceHistory() {
       header: "Employee",
       render: (row) => (
         <div className="min-w-[180px]">
-          <p className="font-medium text-cm-text">
+          <p className="font-semibold text-cm-text">
             {row.employeeName || "Unknown Employee"}
           </p>
 
@@ -299,7 +302,7 @@ function AttendanceHistory() {
       key: "date",
       header: "Date",
       render: (row) => (
-        <span className="whitespace-nowrap font-medium">
+        <span className="whitespace-nowrap font-medium text-cm-text">
           {formatDate(row.attendanceDate)}
         </span>
       ),
@@ -345,7 +348,9 @@ function AttendanceHistory() {
         const overallStatus = getOverallStatus(row);
 
         return (
-          <Badge tone={getStatusTone(overallStatus)}>{overallStatus}</Badge>
+          <Badge tone={getStatusTone(overallStatus)}>
+            {overallStatus}
+          </Badge>
         );
       },
     },
@@ -362,122 +367,167 @@ function AttendanceHistory() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-cm-border bg-cm-card shadow-sm">
         <Loader />
       </div>
     );
   }
 
+  const statCards = [
+    {
+      label: "Total Records",
+      value: statistics.total,
+      color: "text-cm-text",
+      accent: "bg-slate-500",
+    },
+    {
+      label: "Present",
+      value: statistics.present,
+      color: "text-emerald-600",
+      accent: "bg-emerald-500",
+    },
+    {
+      label: "Half Day",
+      value: statistics.halfDay,
+      color: "text-amber-600",
+      accent: "bg-amber-500",
+    },
+    {
+      label: "Absent",
+      value: statistics.absent,
+      color: "text-red-600",
+      accent: "bg-red-500",
+    },
+    {
+      label: "Holidays",
+      value: statistics.holiday,
+      color: "text-blue-600",
+      accent: "bg-blue-500",
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-cm-text">
-              Attendance History
-            </h2>
+      {/* Attendance History Filters */}
+      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+        <div className="relative isolate overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5">
+          <div className="pointer-events-none absolute -right-8 -top-16 h-44 w-44 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-8 top-5 h-28 w-28 rounded-full border border-white/10" />
 
-            <p className="mt-1 text-xs text-cm-text-muted">
-              View employee attendance between selected dates.
-            </p>
-          </div>
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-semibold text-white">
+                Attendance History
+              </h2>
+              <p className="mt-1 text-sm text-blue-100/75">
+                Review and filter employee attendance records.
+              </p>
+            </div>
 
-          <Button
-            variant="outline"
-            onClick={() => getHistory(true)}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Input
-            label="From Date"
-            type="date"
-            value={from}
-            onChange={(event) => {
-              setFrom(event.target.value);
-              setPage(1);
-            }}
-          />
-
-          <Input
-            label="To Date"
-            type="date"
-            value={to}
-            onChange={(event) => {
-              setTo(event.target.value);
-              setPage(1);
-            }}
-          />
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-cm-text">
-              Employee
-            </label>
-
-            <select
-              value={employee}
-              onChange={(event) => {
-                setEmployee(event.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-cm-md border border-cm-border bg-cm-card px-3 py-2.5 text-sm text-cm-text outline-none focus:border-[#000052]"
+            <Button
+              variant="outline"
+              onClick={() => getHistory(true)}
+              disabled={isRefreshing}
             >
-              <option value="ALL">All Employees</option>
-
-              {employees.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-cm-text">
-              Status
-            </label>
-
-            <select
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-cm-md border border-cm-border bg-cm-card px-3 py-2.5 text-sm text-cm-text outline-none focus:border-[#000052]"
-            >
-              <option value="ALL">All Status</option>
-              <option value="Present">Present</option>
-              <option value="Half Day">Half Day</option>
-              <option value="Absent">Absent</option>
-              <option value="Holiday">Holiday</option>
-              <option value="Leave">Leave</option>
-            </select>
+              {isRefreshing ? "Refreshing..." : "Refresh"}
+            </Button>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
-          <TableSearch
-            value={search}
-            onChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
-            placeholder="Search employee or email…"
-          />
+        <div className="p-5 md:p-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <Input
+              label="From Date"
+              type="date"
+              value={from}
+              onChange={(event) => {
+                setFrom(event.target.value);
+                setPage(1);
+              }}
+            />
 
-          <div className="flex gap-3">
-            <Button type="button" variant="outline" onClick={resetFilters}>
-              Reset
+            <Input
+              label="To Date"
+              type="date"
+              value={to}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setPage(1);
+              }}
+            />
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-cm-text">
+                Employee
+              </label>
+
+              <select
+                value={employee}
+                onChange={(event) => {
+                  setEmployee(event.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-cm-md border border-cm-border bg-cm-card px-3 py-2.5 text-sm text-cm-text outline-none transition focus:border-[#1c4168] focus:ring-2 focus:ring-blue-900/10"
+              >
+                <option value="ALL">All Employees</option>
+
+                {employees.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-cm-text">
+                Attendance Status
+              </label>
+
+              <select
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-cm-md border border-cm-border bg-cm-card px-3 py-2.5 text-sm text-cm-text outline-none transition focus:border-[#1c4168] focus:ring-2 focus:ring-blue-900/10"
+              >
+                <option value="ALL">All Status</option>
+                <option value="Present">Present</option>
+                <option value="Half Day">Half Day</option>
+                <option value="Absent">Absent</option>
+                <option value="Holiday">Holiday</option>
+                <option value="Leave">Leave</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-cm-border pt-5">
+            <div className="w-full sm:max-w-sm">
+              <TableSearch
+                value={search}
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+                placeholder="Search employee or email..."
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetFilters}
+            >
+              Reset Filters
             </Button>
           </div>
         </div>
       </section>
 
+      {/* Error State */}
       {error && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-cm-lg border border-red-200 bg-red-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
           <div>
             <p className="text-sm font-semibold text-red-700">
               Unable to load attendance history
@@ -497,52 +547,40 @@ function AttendanceHistory() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Total Records</p>
-          <p className="mt-2 text-2xl font-bold text-cm-text">
-            {statistics.total}
-          </p>
-        </div>
+      {/* Attendance Statistics */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="relative overflow-hidden rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div
+              className={`absolute left-0 top-0 h-full w-1 ${card.accent}`}
+            />
 
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Present</p>
-          <p className="mt-2 text-2xl font-bold text-green-600">
-            {statistics.present}
-          </p>
-        </div>
+            <p className="text-sm font-medium text-cm-text-muted">
+              {card.label}
+            </p>
 
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Half Day</p>
-          <p className="mt-2 text-2xl font-bold text-yellow-600">
-            {statistics.halfDay}
-          </p>
-        </div>
+            <p
+              className={`mt-3 text-3xl font-bold tracking-tight ${card.color}`}
+            >
+              {card.value}
+            </p>
+          </div>
+        ))}
+      </section>
 
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Absent</p>
-          <p className="mt-2 text-2xl font-bold text-red-600">
-            {statistics.absent}
-          </p>
-        </div>
-
-        <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-          <p className="text-xs text-cm-text-muted">Holidays</p>
-          <p className="mt-2 text-2xl font-bold text-blue-600">
-            {statistics.holiday}
-          </p>
-        </div>
-      </div>
-
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Attendance Records */}
+      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-cm-border px-5 py-5 md:px-6">
           <div>
-            <h2 className="text-sm font-semibold text-cm-text">
+            <h2 className="text-base font-semibold text-cm-text">
               Attendance Records
             </h2>
 
-            <p className="mt-1 text-xs text-cm-text-muted">
-              {total} record{total === 1 ? "" : "s"} found
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Employee-wise attendance details for the selected period.
             </p>
           </div>
 
@@ -551,22 +589,22 @@ function AttendanceHistory() {
           </Badge>
         </div>
 
-        <div className="mt-4">
+        <div className="p-4 md:p-5">
           <DataTable
             columns={columns}
             rows={records}
             isLoading={isRefreshing}
             emptyMessage="No attendance records found."
           />
-        </div>
 
-        <div className="mt-4">
-          <TablePagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={setPage}
-          />
+          <div className="mt-5 border-t border-cm-border pt-4">
+            <TablePagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+            />
+          </div>
         </div>
       </section>
     </div>

@@ -3,250 +3,251 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLE_LABEL } from "../../constants/roles";
 import { showToast } from "../common/Toast";
+import {
+  Bell,
+  Search,
+  ChevronDown,
+  LogOut,
+  UserRound,
+  Menu,
+  Command,
+} from "lucide-react";
 
-/**
- * Shared top navbar for role dashboards.
- * Admin and HR can access their own notification inboxes.
- */
 function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const searchRef = useRef(null);
 
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsMenuOpen(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    const handleKeys = (event) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+        searchRef.current?.blur();
+      }
 
-    function handleEscape(event) {
-      if (event.key === "Escape") setIsMenuOpen(false);
-    }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
 
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKeys);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKeys);
     };
   }, []);
 
   const handleLogout = async () => {
     setIsMenuOpen(false);
-    await logout();
-    showToast.info("You've been signed out.");
-    navigate("/login", { replace: true });
+
+    try {
+      await logout();
+      showToast.info("You've been signed out.");
+      navigate("/login", { replace: true });
+    } catch {
+      showToast.error("Unable to sign out. Please try again.");
+    }
   };
 
-  const initials = (user?.firstName ?? "?")
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const fullName =
+    `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Guest";
 
-  const userRole = String(
-    user?.role?.name ?? user?.role ?? "",
-  ).toLowerCase();
+  const initials =
+    fullName === "Guest"
+      ? "?"
+      : fullName
+          .split(/\s+/)
+          .map((part) => part[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase();
+
+  const roleName = String(user?.role?.name ?? user?.role ?? "").toLowerCase();
+
+  const roleLabel =
+    ROLE_LABEL[user?.role?.name] ?? ROLE_LABEL[roleName] ?? "Employee";
 
   const notificationPath = {
     admin: "/admin/notifications",
     hr: "/hr/notifications",
     bde: "/bd/notifications",
-  }[userRole];
+  }[roleName];
+
+  const unreadCount = Math.max(0, Number(notificationCount) || 0);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4 border-b border-cm-border bg-cm-card px-4 shadow-cm-sm sm:px-6">
-      <button
-        type="button"
-        onClick={onMenuClick}
-        className="flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus lg:hidden"
-        aria-label="Open menu"
-      >
-        <svg
-          className="h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden="true"
-        >
-          <path
-            d="M4 6h16M4 12h16M4 18h16"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-
-      {/* Search */}
-      <div className="relative hidden max-w-md flex-1 sm:block">
-        <svg
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cm-text-muted"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden="true"
-        >
-          <circle
-            cx="11"
-            cy="11"
-            r="7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="m20 20-3.5-3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-
-        <input
-          type="search"
-          placeholder="Search…"
-          aria-label="Search"
-          className="h-9 w-full rounded-cm-md border border-cm-border bg-cm-bg pl-9 pr-3 text-sm text-cm-text placeholder:text-cm-text-muted focus:border-cm-focus focus:outline-none focus:ring-2 focus:ring-cm-focus/30"
-        />
-      </div>
-
-      <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {/* Notifications: Admin and HR */}
-        {notificationPath && (
+    <header className="sticky top-0 z-40 h-[74px] shrink-0 border-b border-slate-200/70 bg-white">
+      <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        {/* LEFT SECTION */}
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          {/* Mobile Menu */}
           <button
             type="button"
-            onClick={() => {
-              if (notificationPath) navigate(notificationPath);
-            }}
-            className="relative flex h-9 w-9 items-center justify-center rounded-cm-md text-cm-text-muted hover:bg-cm-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus"
-            aria-label={`Notifications${
-              notificationCount > 0
-                ? `, ${notificationCount} unread`
-                : ""
-            }`}
-            title="Notifications"
+            onClick={onMenuClick}
+            aria-label="Open menu"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-cm-navy-950 lg:hidden"
           >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <path
-                d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M13.73 21a2 2 0 0 1-3.46 0"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-
-            {notificationCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-cm-danger-600 px-1 text-[10px] font-semibold text-white">
-                {notificationCount > 9 ? "9+" : notificationCount}
-              </span>
-            )}
-          </button>
-        )}
-
-        {/* Profile dropdown */}
-        <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-cm-md py-1 pl-1 pr-2 hover:bg-cm-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cm-focus"
-            aria-haspopup="menu"
-            aria-expanded={isMenuOpen}
-            aria-controls="profile-menu"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cm-blue-100 text-xs font-semibold text-cm-blue-700">
-              {initials}
-            </span>
-
-            <span className="hidden text-left sm:block">
-              <span className="block text-sm font-medium leading-tight text-cm-text">
-                {user ? `${user.firstName} ${user.lastName}` : "Guest"}
-              </span>
-
-              <span className="block text-xs leading-tight text-cm-text-muted">
-                {user?.role?.name ? ROLE_LABEL[user.role.name] : ""}
-              </span>
-            </span>
-
-            <svg
-              className="h-4 w-4 text-cm-text-muted"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <path
-                d="m6 9 6 6 6-6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Menu size={21} strokeWidth={1.8} />
           </button>
 
-          {isMenuOpen && (
-            <div
-              role="menu"
-              id="profile-menu"
-              className="absolute right-0 top-full mt-2 w-48 rounded-cm-md border border-cm-border bg-cm-card py-1 shadow-cm-md"
+          {/* Search */}
+          <div className="group relative w-full max-w-[440px]">
+            <Search
+              size={17}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition group-focus-within:text-cm-navy-950"
+            />
+
+            <input
+              ref={searchRef}
+              type="search"
+              placeholder="Search anything..."
+              aria-label="Search dashboard"
+              className="h-[42px] w-full rounded-xl border border-transparent bg-[#f4f6f9] pl-10 pr-20 text-[13px] font-medium text-slate-700 outline-none transition-all placeholder:font-normal placeholder:text-slate-400 hover:bg-[#f0f3f7] focus:border-slate-200 focus:bg-white focus:ring-[3px] focus:ring-cm-navy-950/5"
+            />
+
+            <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-medium text-slate-400 shadow-sm">
+              <Command size={11} />K
+            </span>
+          </div>
+        </div>
+
+        {/* RIGHT SECTION */}
+        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
+          {/* Notifications */}
+          {notificationPath && (
+            <button
+              type="button"
+              onClick={() => navigate(notificationPath)}
+              aria-label={`Notifications${
+                unreadCount > 0 ? `, ${unreadCount} unread` : ""
+              }`}
+              title="Notifications"
+              className="group relative grid h-10 w-10 place-items-center rounded-full text-slate-500 transition hover:bg-blue-50 hover:text-cm-navy-950"
             >
-              <div className="border-b border-cm-border px-3 py-2 sm:hidden">
-                <p className="text-sm font-medium text-cm-text">
-                  {user ? `${user.firstName} ${user.lastName}` : "Guest"}
-                </p>
+              <Bell size={20} strokeWidth={1.8} />
 
-                <p className="text-xs text-cm-text-muted">
-                  {user?.role?.name
-                    ? ROLE_LABEL[user.role.name]
-                    : ""}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={handleLogout}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-cm-danger-600 hover:bg-cm-danger-100"
-              >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="m16 17 5-5-5-5M21 12H9"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-
-                Logout
-              </button>
-            </div>
+              {unreadCount > 0 && (
+                <>
+                  <span className="absolute right-[7px] top-[6px] h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white" />
+                  <span className="absolute -right-2 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-cm-navy-950 px-1 text-[9px] font-bold text-white ring-2 ring-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                </>
+              )}
+            </button>
           )}
+
+          {/* Divider */}
+          <div className="h-9 w-px bg-slate-200" />
+
+          {/* Profile */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
+              aria-controls="profile-menu"
+              className={`group flex items-center gap-3 rounded-xl py-1.5 pl-1.5 pr-2 transition-all ${
+                isMenuOpen ? "bg-slate-100" : "hover:bg-slate-50"
+              }`}
+            >
+              {/* Avatar */}
+              <span className="relative grid h-[39px] w-[39px] shrink-0 place-items-center rounded-xl bg-cm-navy-950 text-[12px] font-bold tracking-wide text-white shadow-sm">
+                {initials}
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+              </span>
+
+              {/* Name */}
+              <span className="hidden text-left sm:block">
+                <span className="block max-w-[140px] truncate text-[12px] font-bold leading-5 text-slate-800">
+                  {fullName}
+                </span>
+                <span className="block text-[10px] font-medium text-slate-400">
+                  {roleLabel}
+                </span>
+              </span>
+
+              <ChevronDown
+                size={15}
+                className={`hidden text-slate-400 transition-transform duration-200 sm:block ${
+                  isMenuOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Dropdown */}
+            {isMenuOpen && (
+              <div
+                id="profile-menu"
+                role="menu"
+                className="absolute right-0 top-[calc(100%+13px)] z-50 w-[265px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.13)]"
+              >
+                {/* Profile Details */}
+                <div className="bg-[#f7f9fc] p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-cm-navy-950 text-xs font-bold text-white">
+                      {initials}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-bold text-slate-800">
+                        {fullName}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        {roleLabel}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="p-2">
+                  <div className="px-3 pb-2 pt-1 text-[9px] font-bold uppercase tracking-[1.3px] text-slate-400">
+                    Account
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-500">
+                    <UserRound size={16} />
+                    <span className="text-xs font-medium text-slate-600">
+                      {fullName}
+                    </span>
+                  </div>
+
+                  <div className="my-1 border-t border-slate-100" />
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    <LogOut size={16} />
+                    Sign out
+                  </button>
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-slate-100 px-4 py-3">
+                  <p className="text-[10px] font-medium tracking-wide text-slate-400">
+                    HAWK'N TECHNOLOGIES
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
