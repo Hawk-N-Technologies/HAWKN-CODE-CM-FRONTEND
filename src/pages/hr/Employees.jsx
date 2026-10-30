@@ -81,6 +81,7 @@ const EMPTY_FORM = {
   lastName: "",
   email: "",
   companyEmail: "",
+  salary: "",
   password: "",
   confirmPassword: "",
   phone1: "",
@@ -119,6 +120,7 @@ const toDateInput = (value) => {
 
 const mapEmployeeFromApi = (employee) => {
   const user = employee?.user || {};
+  const salary = employee?.salaryDetails;
   const roleRecord =
     user?.role && typeof user.role === "object"
       ? user.role
@@ -152,6 +154,7 @@ const mapEmployeeFromApi = (employee) => {
       "Unnamed Employee",
     email: user.email || employee.email || "",
     companyEmail: employee.companyEmail || user.companyEmail || "",
+    salary: Number(salary?.salary) || "",
     phone1: employee.phone1 || user.phone1 || "",
     phone1CountryCode:
       employee.phone1CountryCode ||
@@ -288,6 +291,7 @@ function Employees() {
           employee.lastName,
           employee.email,
           employee.companyEmail,
+          employee.salary,
           employee.roleName,
           employee.type,
           employee.status,
@@ -366,6 +370,21 @@ function Employees() {
         }
         return "";
 
+      case "salary":
+        if (
+          fieldValue === "" ||
+          fieldValue === null ||
+          fieldValue === undefined
+        ) {
+          return "Salary is required.";
+        }
+
+        if (!/^\d+$/.test(String(fieldValue).trim())) {
+          return "Salary must contain numbers only without decimals.";
+        }
+
+        return "";
+
       case "password":
         if (!currentForm.id && !fieldValue) return "Password is required.";
         if (fieldValue && fieldValue.length < 8) {
@@ -395,9 +414,11 @@ function Employees() {
 
       case "aadhaar":
         if (!fieldValue.trim()) return "Aadhaar is required.";
-        if (!/^\d{4}$/.test(fieldValue.trim())) {
-          return "Aadhaar must contain exactly 4 digits.";
+
+        if (!/^\d{12}$/.test(fieldValue.trim())) {
+          return "Aadhaar must contain exactly 12 digits.";
         }
+
         return "";
 
       case "linkedin":
@@ -411,9 +432,7 @@ function Employees() {
 
       case "github":
         if (!fieldValue.trim()) return "GitHub is required.";
-        if (
-          !/^https?:\/\/(www\.)?github\.com\/.+$/i.test(fieldValue.trim())
-        ) {
+        if (!/^https?:\/\/(www\.)?github\.com\/.+$/i.test(fieldValue.trim())) {
           return "Enter a valid GitHub URL.";
         }
         return "";
@@ -507,11 +526,16 @@ function Employees() {
       firstName: employee.firstName || "",
       lastName: employee.lastName || "",
       email: employee.email || "",
+      salary: employee.salary || 0,
       companyEmail: employee.companyEmail || "",
       phone1CountryCode:
-        employee.phone1CountryCode || employee.phone1DialCode || DEFAULT_DIAL_CODE,
+        employee.phone1CountryCode ||
+        employee.phone1DialCode ||
+        DEFAULT_DIAL_CODE,
       phone2CountryCode:
-        employee.phone2CountryCode || employee.phone2DialCode || DEFAULT_DIAL_CODE,
+        employee.phone2CountryCode ||
+        employee.phone2DialCode ||
+        DEFAULT_DIAL_CODE,
       whatsappCountryCode:
         employee.whatsappCountryCode ||
         employee.whatsappDialCode ||
@@ -576,6 +600,7 @@ function Employees() {
       lastName: form.lastName.trim(),
       email: form.email.trim(),
       companyEmail: form.companyEmail.trim() || null,
+      salary: form.salary || null,
       phone1: form.phone1 || null,
       phone1CountryCode: form.phone1 ? form.phone1CountryCode : null,
       phone2: form.phone2 || null,
@@ -614,6 +639,7 @@ function Employees() {
         await axios.post("/api/employees", payload, {
           withCredentials: true,
         });
+
         showToast.success("Employee created successfully.");
       }
 
@@ -806,6 +832,13 @@ function Employees() {
                   onChange={handleChange("companyEmail")}
                 />
                 <Input
+                  label="Salary"
+                  type="number"
+                  value={form.salary}
+                  error={errors.salary}
+                  onChange={handleChange("salary")}
+                />
+                <Input
                   label="Address"
                   multiline
                   rows={3}
@@ -892,13 +925,15 @@ function Employees() {
                   onChange={handleChange("github")}
                 />
                 <Input
-                  label="Aadhaar last 4 digits"
+                  label="Aadhaar number"
                   required
+                  inputMode="numeric"
                   value={form.aadhaar}
                   error={errors.aadhaar}
                   maxLength={12}
                   onChange={handleChange("aadhaar")}
                 />
+
                 <Select
                   label="Role"
                   value={form.role}
@@ -1005,6 +1040,7 @@ function Employees() {
                 ["Last name", selected.lastName],
                 ["Email address", selected.email],
                 ["Company email", selected.companyEmail],
+                ["salary", selected.salary],
                 ["Role", selected.roleName || rolesMap[selected.role]?.name],
                 ["Employment type", selected.type],
                 ["Employment status", selected.status],
