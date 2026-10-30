@@ -636,7 +636,7 @@ function CreatePayrollForm({ onCreated, onCancel }) {
 // Payroll Runs tab
 // ---------------------------------------------------------------------------
 
-function PayrollRuns() {
+export default function PayrollRuns() {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -648,34 +648,79 @@ function PayrollRuns() {
   const [filterError, setFilterError] = useState("");
 
   const [applied, setApplied] = useState(EMPTY_FILTERS);
+
+  // Server-side filters
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Server-side pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Server-side sorting
+  const [sortBy, setSortBy] = useState("payPeriod");
+  const [sortOrder, setSortOrder] = useState("DESC");
+
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
+
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!showForm) return undefined;
+
     const handleKeyDown = (event) => {
       if (event.key === "Escape") setShowForm(false);
     };
+
     window.addEventListener("keydown", handleKeyDown);
+
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showForm]);
+
+  // --------------------------------------------------
+  // FETCH PAYROLL
+  // --------------------------------------------------
 
   useEffect(() => {
     let ignore = false;
 
+    setIsLoading(true);
+    setLoadError(null);
+
     getPayroll({
-      userUuid: applied.employee?.uuid,
-      startDate: applied.startDate,
-      endDate: applied.endDate,
+      userUuid: applied.employee?.uuid || undefined,
+      startDate: applied.startDate || undefined,
+      endDate: applied.endDate || undefined,
+      status: status || undefined,
+      search: search.trim() || undefined,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
     })
-      .then((list) => {
+      .then((response) => {
         if (ignore) return;
-        setRecords(list);
-        setLoadError(null);
+
+        setRecords(response.data || []);
+
+        setPagination(
+          response.pagination || {
+            total: 0,
+            page: 1,
+            limit,
+            totalPages: 0,
+          },
+        );
       })
       .catch((error) => {
-        if (!ignore) {
-          setLoadError(getErrorMessage(error, "Couldn't load payroll."));
-        }
+        if (ignore) return;
+
+        setLoadError(getErrorMessage(error, "Couldn't load payroll."));
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
@@ -684,21 +729,19 @@ function PayrollRuns() {
     return () => {
       ignore = true;
     };
-  }, [applied, reloadKey]);
+  }, [applied, status, search, page, limit, sortBy, sortOrder, reloadKey]);
+
+  // --------------------------------------------------
+  // FILTERS
+  // --------------------------------------------------
 
   const hasActiveFilters = Boolean(
-    applied.employee || applied.startDate || applied.endDate,
+    applied.employee ||
+    applied.startDate ||
+    applied.endDate ||
+    status ||
+    search.trim(),
   );
-
-  const summary = {
-    total: records.length,
-    processed: records.filter((record) => record.status === "Processed").length,
-    pending: records.filter((record) => record.status === "Pending").length,
-    net: records.reduce(
-      (sum, record) => sum + Number(record.netSalary || 0),
-      0,
-    ),
-  };
 
   const runSearch = (event) => {
     event?.preventDefault();
@@ -714,7 +757,7 @@ function PayrollRuns() {
     }
 
     setFilterError("");
-    setIsLoading(true);
+    setPage(1);
     setApplied({ ...draft });
   };
 
@@ -722,32 +765,39 @@ function PayrollRuns() {
     setDraft(EMPTY_FILTERS);
     setEmployeeText("");
     setFilterError("");
-
-    if (hasActiveFilters) {
-      setIsLoading(true);
-      setApplied(EMPTY_FILTERS);
-    }
+    setStatus("");
+    setSearch("");
+    setPage(1);
+    setApplied(EMPTY_FILTERS);
   };
 
   const retry = () => {
-    setIsLoading(true);
     setLoadError(null);
     setReloadKey((key) => key + 1);
   };
 
   const handleCreated = () => {
     setShowForm(false);
+    setPage(1);
     retry();
   };
+
+  // --------------------------------------------------
+  // PROCESS PAYROLL
+  // --------------------------------------------------
 
   const handleProcess = async (row) => {
     setProcessingUuid(row.uuid);
 
     try {
       const updated = await processPayroll(row.uuid);
-      setRecords((prev) =>
-        prev.map((record) => (record.uuid === updated.uuid ? updated : record)),
+
+      setRecords((previous) =>
+        previous.map((record) =>
+          record.uuid === updated.uuid ? updated : record,
+        ),
       );
+
       showToast.success(`Payroll processed for ${updated.employee.fullName}.`);
     } catch (error) {
       showToast.error(getErrorMessage(error, "Couldn't process payroll."));
@@ -755,6 +805,24 @@ function PayrollRuns() {
       setProcessingUuid(null);
     }
   };
+
+  // --------------------------------------------------
+  // SUMMARY
+  // --------------------------------------------------
+
+  const summary = {
+    total: pagination.total,
+    processed: records.filter((record) => record.status === "Processed").length,
+    pending: records.filter((record) => record.status === "Pending").length,
+    net: records.reduce(
+      (sum, record) => sum + Number(record.netSalary || 0),
+      0,
+    ),
+  };
+
+  // --------------------------------------------------
+  // TABLE COLUMNS
+  // --------------------------------------------------
 
   const columns = [
     {
@@ -859,38 +927,49 @@ function PayrollRuns() {
     id: record.uuid,
   }));
 
+  // --------------------------------------------------
+  // RENDER
+  // --------------------------------------------------
+
   return (
     <div className="min-w-0 space-y-6">
+      {/* SUMMARY CARDS */}
+
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Payroll records"
           value={summary.total}
-          detail="Records matching current filters"
+          detail="Total matching records"
           icon={Wallet}
           tone="navy"
         />
+
         <MetricCard
           label="Processed"
           value={summary.processed}
-          detail="Payroll runs completed"
+          detail="Processed on current page"
           icon={CheckCircle2}
           tone="green"
         />
+
         <MetricCard
           label="Pending"
           value={summary.pending}
-          detail="Awaiting payroll processing"
+          detail="Pending on current page"
           icon={Clock3}
           tone="amber"
         />
+
         <MetricCard
           label="Net payroll"
           value={formatMoney(summary.net)}
-          detail="Total net salary in this result set"
+          detail="Net salary on current page"
           icon={CreditCard}
           tone="blue"
         />
       </section>
+
+      {/* PAYROLL HEADER */}
 
       <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
         <SectionHeading
@@ -908,6 +987,8 @@ function PayrollRuns() {
         />
       </section>
 
+      {/* CREATE PAYROLL MODAL */}
+
       {showForm && (
         <PayrollModal
           title="Create payroll"
@@ -921,21 +1002,28 @@ function PayrollRuns() {
         </PayrollModal>
       )}
 
+      {/* FILTERS */}
+
       <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
         <div className="mb-4">
           <h3 className="font-semibold text-slate-900">Filter payroll</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Narrow the register by employee and date range.
+            Search and filter payroll records.
           </p>
         </div>
 
         <form onSubmit={runSearch} role="search" aria-label="Filter payroll">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1.5fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] lg:items-end">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            {/* EMPLOYEE */}
             <div className="min-w-0">
               <EmployeeAutocomplete
+                label={"Search"}
                 selected={draft.employee}
                 onSelect={(employee) => {
-                  setDraft((prev) => ({ ...prev, employee }));
+                  setDraft((prev) => ({
+                    ...prev,
+                    employee,
+                  }));
                   setFilterError("");
                 }}
                 onTextChange={setEmployeeText}
@@ -945,63 +1033,68 @@ function PayrollRuns() {
               />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                Start date
-              </label>
-              <div className="relative">
-                <CalendarDays
-                  size={16}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="date"
-                  aria-label="Start date"
-                  value={draft.startDate}
-                  max={draft.endDate || undefined}
-                  onChange={(event) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      startDate: event.target.value,
-                    }))
-                  }
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-2 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
-                />
-              </div>
-            </div>
+            {/* START DATE */}
+            <Input
+              label="Start date"
+              type="date"
+              name="startDate"
+              value={draft.startDate}
+              max={draft.endDate || undefined}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  startDate: event.target.value,
+                }))
+              }
+              className="h-11"
+            />
 
-            <div>
+            {/* END DATE */}
+            <Input
+              label="End date"
+              type="date"
+              name="endDate"
+              value={draft.endDate}
+              min={draft.startDate || undefined}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  endDate: event.target.value,
+                }))
+              }
+              className="h-11"
+            />
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            {/* STATUS */}
+
+            <div className="min-w-[160px] flex-1">
               <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                End date
+                Payroll status
               </label>
-              <div className="relative">
-                <CalendarDays
-                  size={16}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="date"
-                  aria-label="End date"
-                  value={draft.endDate}
-                  min={draft.startDate || undefined}
-                  onChange={(event) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      endDate: event.target.value,
-                    }))
-                  }
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-2 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
-                />
-              </div>
+              <select
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.target.value);
+                  setPage(1);
+                }}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-300"
+              >
+                <option value="">All statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Processed">Processed</option>
+              </select>
             </div>
 
             <div className="flex gap-2">
               <Button type="submit">
                 <span className="inline-flex items-center gap-2">
                   <Search size={15} />
-                  Search
+                  Apply Filters
                 </span>
               </Button>
+
               {hasActiveFilters && (
                 <Button
                   type="button"
@@ -1020,29 +1113,63 @@ function PayrollRuns() {
           )}
         </form>
 
-        {hasActiveFilters && !isLoading && !loadError && (
+        {/* SEARCH */}
+
+        {/* <div className="mt-4 border-t border-slate-100 pt-4">
+          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+            Search payroll
+          </label>
+          <div className="relative max-w-md">
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search employee name or email..."
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setPage(1);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+        </div> */}
+
+        {/* ACTIVE FILTERS */}
+
+        {hasActiveFilters && (
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm text-slate-500">
-            <span>
-              {records.length} matching record{records.length === 1 ? "" : "s"}
-            </span>
             {applied.employee && (
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                {applied.employee.fullName}
-              </span>
+              <Badge tone="info">{applied.employee.fullName}</Badge>
             )}
             {applied.startDate && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs">
-                From {formatDate(applied.startDate)}
-              </span>
+              <Badge tone="neutral">From {formatDate(applied.startDate)}</Badge>
             )}
             {applied.endDate && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs">
-                To {formatDate(applied.endDate)}
-              </span>
+              <Badge tone="neutral">To {formatDate(applied.endDate)}</Badge>
             )}
+            {status && <Badge tone="neutral">{status}</Badge>}
+            {search && <Badge tone="neutral">Search: {search}</Badge>}
           </div>
         )}
       </section>
+
+      {/* PAYROLL TABLE */}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
@@ -1052,7 +1179,42 @@ function PayrollRuns() {
               Employee-level payroll and payment status.
             </p>
           </div>
-          <Badge tone="neutral">{records.length} records</Badge>
+
+          <Badge tone="neutral">{pagination.total} records</Badge>
+        </div>
+
+        {/* SORTING */}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
+          <p className="text-xs text-slate-500">Sort payroll records</p>
+
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(event) => {
+                setSortBy(event.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="payPeriod">Pay Month</option>
+              <option value="createdAt">Created Date</option>
+              <option value="updatedAt">Updated Date</option>
+              <option value="status">Status</option>
+            </select>
+
+            <select
+              value={sortOrder}
+              onChange={(event) => {
+                setSortOrder(event.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="DESC">Descending</option>
+              <option value="ASC">Ascending</option>
+            </select>
+          </div>
         </div>
 
         {loadError ? (
@@ -1074,6 +1236,13 @@ function PayrollRuns() {
                   ? "No payroll records match these filters."
                   : "No payroll records yet."
               }
+              pagination={pagination}
+              onPageChange={setPage}
+              onPageSizeChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              pageSizeOptions={[10, 25, 50, 100]}
             />
           </div>
         )}
@@ -1081,87 +1250,3 @@ function PayrollRuns() {
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Page: tabs
-// ---------------------------------------------------------------------------
-
-const TABS = [
-  { id: "runs", label: "Payroll Runs", icon: Wallet },
-  { id: "salaries", label: "Salary Structure", icon: Users },
-];
-
-function Payroll() {
-  const [activeTab, setActiveTab] = useState("runs");
-
-  return (
-    <div className="min-w-0 space-y-6 pb-6">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/80 p-5 shadow-sm sm:p-7">
-        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full border border-blue-100" />
-        <div className="pointer-events-none absolute -right-3 -top-12 h-40 w-40 rounded-full border border-blue-100/80" />
-
-        <div className="relative flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0b1833] text-white shadow-md">
-            <Wallet size={22} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700">
-              Human resources
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Payroll Management
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Manage monthly payroll, salary structures, deductions, bonuses and
-              payment processing from one workspace.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm">
-        <div
-          role="tablist"
-          aria-label="Payroll sections"
-          className="grid grid-cols-2 gap-2"
-        >
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                id={`payroll-tab-${tab.id}`}
-                aria-selected={active}
-                aria-controls={`payroll-panel-${tab.id}`}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                  active
-                    ? "bg-[#0b1833] text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <Icon size={17} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div
-        role="tabpanel"
-        id={`payroll-panel-${activeTab}`}
-        aria-labelledby={`payroll-tab-${activeTab}`}
-        className="min-w-0"
-      >
-        {activeTab === "runs" ? <PayrollRuns /> : <SalaryStructure />}
-      </div>
-    </div>
-  );
-}
-
-export default Payroll;

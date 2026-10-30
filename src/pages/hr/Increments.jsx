@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import {
@@ -103,13 +102,7 @@ function Modal({ title, description, onClose, size = "max-w-3xl", children }) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const BONUS_TYPES = [
-  "Performance",
-  "Festival",
-  "Referral",
-  "Joining",
-  "Other",
-];
+const BONUS_TYPES = ["Performance", "Festival", "Referral", "Joining", "Other"];
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", {
@@ -172,13 +165,7 @@ function applyServerErrors(error, setError, setEmployeeError) {
 // Shared UI components
 // ---------------------------------------------------------------------------
 
-function SummaryCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  tone = "blue",
-}) {
+function SummaryCard({ title, value, description, icon: Icon, tone = "blue" }) {
   const tones = {
     blue: "bg-cm-blue-100 text-cm-blue-700",
     green: "bg-emerald-500/10 text-emerald-600",
@@ -423,9 +410,7 @@ function EmployeeFilterBar({
           </Button>
         </div>
 
-        {error && (
-          <p className="px-1 text-sm text-cm-danger-600">{error}</p>
-        )}
+        {error && <p className="px-1 text-sm text-cm-danger-600">{error}</p>}
       </form>
 
       {applied && (
@@ -455,26 +440,46 @@ function EmployeeFilterBar({
 
 function useEmployeeList(fetchFn) {
   const [records, setRecords] = useState([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [applied, setApplied] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   useEffect(() => {
     let ignore = false;
 
-    fetchFn(applied?.uuid)
-      .then((list) => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    fetchFn({
+      userUuid: applied?.uuid,
+      page,
+      limit,
+    })
+      .then((result) => {
         if (ignore) return;
 
-        setRecords(list);
-        setLoadError(null);
+        setRecords(result.data || []);
+        setPagination(
+          result.pagination || {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+          },
+        );
       })
       .catch((error) => {
         if (!ignore) {
-          setLoadError(
-            getErrorMessage(error, "Couldn't load records.")
-          );
+          setLoadError(getErrorMessage(error, "Couldn't load records."));
         }
       })
       .finally(() => {
@@ -484,7 +489,7 @@ function useEmployeeList(fetchFn) {
     return () => {
       ignore = true;
     };
-  }, [fetchFn, applied, reloadKey]);
+  }, [fetchFn, applied, page, limit, reloadKey]);
 
   const reload = () => {
     setIsLoading(true);
@@ -493,21 +498,34 @@ function useEmployeeList(fetchFn) {
   };
 
   const search = (employee) => {
-    setIsLoading(true);
+    setPage(1);
     setApplied(employee);
+  };
+
+  const changePage = (nextPage) => {
+    setPage(nextPage);
+  };
+
+  const changeLimit = (nextLimit) => {
+    setLimit(Number(nextLimit));
+    setPage(1);
   };
 
   return {
     records,
     setRecords,
+    pagination,
+    page,
+    limit,
     isLoading,
     loadError,
     applied,
     reload,
     search,
+    changePage,
+    changeLimit,
   };
 }
-
 // ---------------------------------------------------------------------------
 // Bonuses tab
 // ---------------------------------------------------------------------------
@@ -546,7 +564,7 @@ function BonusForm({ onSaved, onCancel }) {
       });
 
       showToast.success(
-        `Bonus of ${formatMoney(record.amount)} added for ${record.employee.fullName}.`
+        `Bonus of ${formatMoney(record.amount)} added for ${record.employee.fullName}.`,
       );
 
       onSaved();
@@ -663,8 +681,9 @@ function BonusesTab() {
   const [deletingUuid, setDeletingUuid] = useState(null);
 
   const totalBonus = useMemo(
-    () => list.records.reduce((sum, record) => sum + Number(record.amount || 0), 0),
-    [list.records]
+    () =>
+      list.records.reduce((sum, record) => sum + Number(record.amount || 0), 0),
+    [list.records],
   );
 
   const handleDelete = async (row) => {
@@ -679,7 +698,7 @@ function BonusesTab() {
       await deleteBonus(row.uuid);
 
       list.setRecords((previous) =>
-        previous.filter((record) => record.uuid !== row.uuid)
+        previous.filter((record) => record.uuid !== row.uuid),
       );
 
       showToast.success("Bonus deleted.");
@@ -702,7 +721,9 @@ function BonusesTab() {
       header: "PAY MONTH",
       render: (row) => (
         <div className="min-w-[120px]">
-          <p className="font-medium text-cm-text">{formatMonth(row.payPeriod)}</p>
+          <p className="font-medium text-cm-text">
+            {formatMonth(row.payPeriod)}
+          </p>
           <p className="mt-1 text-xs text-cm-text-muted">{row.payPeriod}</p>
         </div>
       ),
@@ -725,9 +746,7 @@ function BonusesTab() {
       key: "reason",
       header: "REASON",
       render: (row) => (
-        <span className="text-sm text-cm-text-muted">
-          {row.reason || "—"}
-        </span>
+        <span className="text-sm text-cm-text-muted">{row.reason || "—"}</span>
       ),
     },
     {
@@ -776,7 +795,7 @@ function BonusesTab() {
 
         <SummaryCard
           title="Bonus Records"
-          value={list.records.length}
+          value={list.pagination.total}
           description={
             list.applied
               ? `Records for ${list.applied.fullName}`
@@ -789,8 +808,8 @@ function BonusesTab() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-2xl text-sm leading-6 text-cm-text-muted">
-          One-time bonuses feed into payroll. Changes may be restricted once
-          the relevant month's payroll has been processed.
+          One-time bonuses feed into payroll. Changes may be restricted once the
+          relevant month's payroll has been processed.
         </p>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -881,12 +900,7 @@ function BonusesTab() {
           icon={Wallet}
           title="Bonus Records"
           description="Review employee bonuses and their assigned payroll months."
-          action={
-            <Badge tone="neutral">
-              {list.records.length}{" "}
-              {list.records.length === 1 ? "Record" : "Records"}
-            </Badge>
-          }
+          action={<Badge tone="neutral">{list.pagination.total} Records</Badge>}
         />
 
         <div className="border-b border-cm-border px-5 py-4 sm:px-6">
@@ -894,7 +908,7 @@ function BonusesTab() {
             searchFn={searchSalaryEmployees}
             onSearch={list.search}
             applied={list.applied}
-            resultCount={list.records.length}
+            resultCount={list.pagination.total}
             label="bonuses"
           />
         </div>
@@ -908,7 +922,10 @@ function BonusesTab() {
             />
           ) : list.isLoading ? (
             <div className="flex min-h-[220px] flex-col items-center justify-center gap-3">
-              <RefreshCw size={22} className="animate-spin text-cm-text-muted" />
+              <RefreshCw
+                size={22}
+                className="animate-spin text-cm-text-muted"
+              />
               <p className="text-sm text-cm-text-muted">Loading bonuses...</p>
             </div>
           ) : list.records.length === 0 ? (
@@ -943,6 +960,10 @@ function BonusesTab() {
               }))}
               isLoading={list.isLoading}
               emptyMessage="No bonuses found."
+              pagination={list.pagination}
+              onPageChange={list.changePage}
+              onPageSizeChange={list.changeLimit}
+              pageSizeOptions={[10, 20, 50, 100]}
             />
           )}
         </div>
@@ -1007,11 +1028,9 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       return;
     }
 
-    setValue(
-      "increasePercent",
-      percentFromSalary(base, Number(value)),
-      { shouldValidate: true }
-    );
+    setValue("increasePercent", percentFromSalary(base, Number(value)), {
+      shouldValidate: true,
+    });
   };
 
   const syncFromPercent = (value) => {
@@ -1020,11 +1039,9 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       return;
     }
 
-    setValue(
-      "newSalary",
-      salaryFromPercent(base, Number(value)),
-      { shouldValidate: true }
-    );
+    setValue("newSalary", salaryFromPercent(base, Number(value)), {
+      shouldValidate: true,
+    });
   };
 
   const handlePick = (picked) => {
@@ -1034,15 +1051,11 @@ function IncrementForm({ editing, onSaved, onCancel }) {
 
     const typed = getValues("newSalary");
 
-    if (
-      picked?.salary != null &&
-      typed !== "" &&
-      Number(typed) > 0
-    ) {
+    if (picked?.salary != null && typed !== "" && Number(typed) > 0) {
       setValue(
         "increasePercent",
         percentFromSalary(Number(picked.salary), Number(typed)),
-        { shouldValidate: true }
+        { shouldValidate: true },
       );
     }
   };
@@ -1068,7 +1081,7 @@ function IncrementForm({ editing, onSaved, onCancel }) {
           });
 
       showToast.success(
-        `${isEdit ? "Increment updated: " : ""}${record.employee.fullName}: ${formatMoney(record.previousSalary)} → ${formatMoney(record.newSalary)} (+${record.increasePercent}%).`
+        `${isEdit ? "Increment updated: " : ""}${record.employee.fullName}: ${formatMoney(record.previousSalary)} → ${formatMoney(record.newSalary)} (+${record.increasePercent}%).`,
       );
 
       onSaved();
@@ -1077,8 +1090,8 @@ function IncrementForm({ editing, onSaved, onCancel }) {
       showToast.error(
         getErrorMessage(
           error,
-          `Couldn't ${isEdit ? "update" : "apply"} increment.`
-        )
+          `Couldn't ${isEdit ? "update" : "apply"} increment.`,
+        ),
       );
     }
   };
@@ -1123,9 +1136,7 @@ function IncrementForm({ editing, onSaved, onCancel }) {
             {employee && (
               <p
                 className={`text-xs leading-5 ${
-                  base === null
-                    ? "text-cm-danger-600"
-                    : "text-cm-text-muted"
+                  base === null ? "text-cm-danger-600" : "text-cm-text-muted"
                 }`}
               >
                 {base === null
@@ -1261,11 +1272,7 @@ function IncrementForm({ editing, onSaved, onCancel }) {
             Cancel
           </Button>
 
-          <Button
-            type="submit"
-            loading={isSubmitting}
-            disabled={base === null}
-          >
+          <Button type="submit" loading={isSubmitting} disabled={base === null}>
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 size={15} />
               {isEdit ? "Update Increment" : "Apply Increment"}
@@ -1303,7 +1310,7 @@ function IncrementsTab() {
       await revertIncrement(row.uuid);
 
       showToast.success(
-        `Increment reverted: ${row.employee.fullName} back to ${formatMoney(row.previousSalary)}.`
+        `Increment reverted: ${row.employee.fullName} back to ${formatMoney(row.previousSalary)}.`,
       );
 
       if (form?.record?.uuid === row.uuid) {
@@ -1312,9 +1319,7 @@ function IncrementsTab() {
 
       list.reload();
     } catch (error) {
-      showToast.error(
-        getErrorMessage(error, "Couldn't revert increment.")
-      );
+      showToast.error(getErrorMessage(error, "Couldn't revert increment."));
     } finally {
       setRevertingUuid(null);
       setConfirmUuid(null);
@@ -1325,9 +1330,9 @@ function IncrementsTab() {
     () =>
       list.records.reduce(
         (sum, record) => sum + Number(record.increaseAmount || 0),
-        0
+        0,
       ),
-    [list.records]
+    [list.records],
   );
 
   const columns = [
@@ -1359,9 +1364,7 @@ function IncrementsTab() {
       header: "INCREASE",
       render: (row) => (
         <div className="flex min-w-[130px] flex-col items-start gap-1">
-          <Badge tone="success">
-            +{formatMoney(row.increaseAmount)}
-          </Badge>
+          <Badge tone="success">+{formatMoney(row.increaseAmount)}</Badge>
           <span className="text-xs font-medium text-emerald-600">
             +{row.increasePercent}%
           </span>
@@ -1381,9 +1384,7 @@ function IncrementsTab() {
       key: "reason",
       header: "REASON",
       render: (row) => (
-        <span className="text-sm text-cm-text-muted">
-          {row.reason || "—"}
-        </span>
+        <span className="text-sm text-cm-text-muted">{row.reason || "—"}</span>
       ),
     },
     {
@@ -1406,9 +1407,7 @@ function IncrementsTab() {
               size="sm"
               variant="outline"
               disabled={revertingUuid !== null}
-              onClick={() =>
-                openForm({ mode: "edit", record: row })
-              }
+              onClick={() => openForm({ mode: "edit", record: row })}
             >
               Edit
             </Button>
@@ -1427,9 +1426,7 @@ function IncrementsTab() {
               size="sm"
               variant="outline"
               loading={revertingUuid === row.uuid}
-              disabled={
-                revertingUuid !== null && revertingUuid !== row.uuid
-              }
+              disabled={revertingUuid !== null && revertingUuid !== row.uuid}
               onClick={() => handleRevert(row)}
             >
               Revert
@@ -1466,8 +1463,8 @@ function IncrementsTab() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-2xl text-sm leading-6 text-cm-text-muted">
-          Salary increments update Salary Structure. Only the latest
-          increment for each employee can be edited or reverted.
+          Salary increments update Salary Structure. Only the latest increment
+          for each employee can be edited or reverted.
         </p>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -1487,9 +1484,7 @@ function IncrementsTab() {
 
           <Button
             onClick={() =>
-              form
-                ? setForm(null)
-                : openForm({ mode: "create" })
+              form ? setForm(null) : openForm({ mode: "create" })
             }
           >
             <span className="inline-flex items-center gap-2">
@@ -1517,12 +1512,7 @@ function IncrementsTab() {
           icon={TrendingUp}
           title="Salary Increment History"
           description="Compare salary changes and manage the latest increment for each employee."
-          action={
-            <Badge tone="neutral">
-              {list.records.length}{" "}
-              {list.records.length === 1 ? "Record" : "Records"}
-            </Badge>
-          }
+          action={<Badge tone="neutral">{list.pagination.total} Records</Badge>}
         />
 
         <div className="border-b border-cm-border px-5 py-4 sm:px-6">
@@ -1530,7 +1520,7 @@ function IncrementsTab() {
             searchFn={searchSalaryEmployees}
             onSearch={list.search}
             applied={list.applied}
-            resultCount={list.records.length}
+            resultCount={list.pagination.total}
             label="increments"
           />
         </div>
@@ -1544,7 +1534,10 @@ function IncrementsTab() {
             />
           ) : list.isLoading ? (
             <div className="flex min-h-[220px] flex-col items-center justify-center gap-3">
-              <RefreshCw size={22} className="animate-spin text-cm-text-muted" />
+              <RefreshCw
+                size={22}
+                className="animate-spin text-cm-text-muted"
+              />
               <p className="text-sm text-cm-text-muted">
                 Loading salary history...
               </p>
@@ -1584,6 +1577,10 @@ function IncrementsTab() {
               }))}
               isLoading={list.isLoading}
               emptyMessage="No increments found."
+              pagination={list.pagination}
+              onPageChange={list.changePage}
+              onPageSizeChange={list.changeLimit}
+              pageSizeOptions={[10, 20, 50, 100]}
             />
           )}
         </div>

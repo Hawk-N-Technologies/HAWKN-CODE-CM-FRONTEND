@@ -21,10 +21,17 @@ export async function searchPayrollEmployees(q, signal) {
 // filters: { startDate?, endDate?, userUuid?, status? } — empty ones are skipped
 export async function getPayroll(filters = {}) {
   const params = Object.fromEntries(
-    Object.entries(filters).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+    Object.entries(filters).filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    ),
   );
+
   const res = await axios.get(BASE, { ...config, params });
-  return res.data.data;
+
+  return {
+    data: res.data.data,
+    pagination: res.data.pagination,
+  };
 }
 
 export async function createPayroll(payload) {
@@ -75,9 +82,14 @@ export async function setSalary(userUuid, salary) {
   return res.data;
 }
 // Any axios error → a message a human can read
-export function getErrorMessage(error, fallback = "Something went wrong. Please try again.") {
-  if (error?.response?.status === 401) return "Your session has expired. Please log in again.";
-  if (error?.response?.status === 403) return "You don't have permission to do this.";
+export function getErrorMessage(
+  error,
+  fallback = "Something went wrong. Please try again.",
+) {
+  if (error?.response?.status === 401)
+    return "Your session has expired. Please log in again.";
+  if (error?.response?.status === 403)
+    return "You don't have permission to do this.";
   return error?.response?.data?.message || fallback;
 }
 
@@ -85,5 +97,7 @@ export function getErrorMessage(error, fallback = "Something went wrong. Please 
 export function getFieldErrors(error) {
   const list = error?.response?.data?.errors;
   if (!Array.isArray(list)) return null;
-  return Object.fromEntries(list.filter((e) => e.field).map((e) => [e.field, e.message]));
+  return Object.fromEntries(
+    list.filter((e) => e.field).map((e) => [e.field, e.message]),
+  );
 }
