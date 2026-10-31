@@ -1004,171 +1004,274 @@ export default function PayrollRuns() {
 
       {/* FILTERS */}
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4">
-          <h3 className="font-semibold text-slate-900">Filter payroll</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Search and filter payroll records.
-          </p>
+      {/* PAYROLL FILTER SECTION */}
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* HEADER */}
+
+        <div className="relative isolate overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5">
+          <div className="pointer-events-none absolute -right-8 -top-16 h-44 w-44 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-8 top-5 h-28 w-28 rounded-full border border-white/10" />
+
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-white">
+                  Filter Payroll
+                </h3>
+                <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+                  Search
+                </span>
+              </div>
+
+              <p className="mt-1 text-sm text-blue-100/75">
+                Find payroll records using employees, date range and payment
+                status.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xl font-bold text-white">
+                  {pagination.total}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-blue-100/60">
+                  Total records
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={runSearch} role="search" aria-label="Filter payroll">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            {/* EMPLOYEE */}
-            <div className="min-w-0">
-              <EmployeeAutocomplete
-                label={"Search"}
-                selected={draft.employee}
-                onSelect={(employee) => {
-                  setDraft((prev) => ({
-                    ...prev,
-                    employee,
-                  }));
-                  setFilterError("");
-                }}
-                onTextChange={setEmployeeText}
-                placeholder="Search employee by name..."
-                className="w-full"
-                inputClassName="border-slate-200 focus:ring-blue-100"
-              />
+        {/* FILTER BODY */}
+
+        <div className="p-5 sm:p-6">
+          <form
+            onSubmit={runSearch}
+            role="search"
+            aria-label="Filter payroll"
+            className="space-y-5"
+          >
+            {/* SEARCH FIELDS */}
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+              {/* EMPLOYEE */}
+
+              <div className="min-w-0 lg:col-span-5">
+                <EmployeeAutocomplete
+                  label="Search"
+                  selected={draft.employee}
+                  onSelect={(employee) => {
+                    setDraft((prev) => ({
+                      ...prev,
+                      employee,
+                    }));
+                    setFilterError("");
+                  }}
+                  onTextChange={(value) => {
+                    setEmployeeText(value);
+                    if (!value.trim()) {
+                      setDraft((prev) => ({
+                        ...prev,
+                        employee: null,
+                      }));
+                    }
+                    setFilterError("");
+                  }}
+                  placeholder="Search employee by name..."
+                  className="w-full"
+                />
+
+                <p className="mt-1.5 text-[11px] text-slate-400">
+                  Search using employee name
+                </p>
+              </div>
+
+              {/* DATE RANGE */}
+
+              <div className="min-w-0 lg:col-span-7">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    label="Start Date"
+                    type="date"
+                    name="startDate"
+                    value={draft.startDate}
+                    max={draft.endDate || undefined}
+                    onChange={(event) => {
+                      setDraft((prev) => ({
+                        ...prev,
+                        startDate: event.target.value,
+                      }));
+                      setFilterError("");
+                    }}
+                    className="h-9"
+                  />
+
+                  <Input
+                    label="End Date"
+                    type="date"
+                    name="endDate"
+                    value={draft.endDate}
+                    min={draft.startDate || undefined}
+                    onChange={(event) => {
+                      setDraft((prev) => ({
+                        ...prev,
+                        endDate: event.target.value,
+                      }));
+                      setFilterError("");
+                    }}
+                    className="h-9"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* START DATE */}
-            <Input
-              label="Start date"
-              type="date"
-              name="startDate"
-              value={draft.startDate}
-              max={draft.endDate || undefined}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  startDate: event.target.value,
-                }))
-              }
-              className="h-11"
-            />
+            {/* STATUS + ACTIONS */}
 
-            {/* END DATE */}
-            <Input
-              label="End date"
-              type="date"
-              name="endDate"
-              value={draft.endDate}
-              min={draft.startDate || undefined}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  endDate: event.target.value,
-                }))
-              }
-              className="h-11"
-            />
-          </div>
+            <div className="flex flex-col justify-between gap-4 border-t border-slate-100 pt-5 xl:flex-row xl:items-end">
+              {/* STATUS */}
 
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            {/* STATUS */}
+              <div className="w-full xl:max-w-md">
+                <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <CreditCard size={15} className="text-blue-600" />
+                  Payroll Status
+                </label>
 
-            <div className="min-w-[160px] flex-1">
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                Payroll status
-              </label>
-              <select
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value);
-                  setPage(1);
-                }}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-300"
-              >
-                <option value="">All statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Processed">Processed</option>
-              </select>
-            </div>
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-100/80 p-1">
+                  {[
+                    { value: "", label: "All", icon: Wallet },
+                    { value: "Pending", label: "Pending", icon: Clock3 },
+                    {
+                      value: "Processed",
+                      label: "Processed",
+                      icon: CheckCircle2,
+                    },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const active = status === item.value;
 
-            <div className="flex gap-2">
-              <Button type="submit">
-                <span className="inline-flex items-center gap-2">
-                  <Search size={15} />
-                  Apply Filters
-                </span>
-              </Button>
+                    return (
+                      <button
+                        key={item.value || "all"}
+                        type="button"
+                        onClick={() => {
+                          setStatus(item.value);
+                          setPage(1);
+                        }}
+                        className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all ${
+                          active
+                            ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-              {hasActiveFilters && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={clearFilters}
-                  aria-label="Clear filters"
-                >
-                  <X size={16} />
+              {/* ACTION BUTTONS */}
+
+              <div className="flex flex-wrap items-center gap-2">
+                {hasActiveFilters && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={clearFilters}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <X size={15} />
+                      Clear all
+                    </span>
+                  </Button>
+                )}
+
+                <Button type="submit">
+                  <span className="inline-flex items-center gap-2">
+                    <Search size={15} />
+                    Apply Filters
+                  </span>
                 </Button>
-              )}
+              </div>
             </div>
-          </div>
 
-          {filterError && (
-            <p className="mt-3 text-sm text-rose-600">{filterError}</p>
-          )}
-        </form>
+            {/* VALIDATION */}
 
-        {/* SEARCH */}
-
-        {/* <div className="mt-4 border-t border-slate-100 pt-4">
-          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-            Search payroll
-          </label>
-          <div className="relative max-w-md">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search employee name or email..."
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  setPage(1);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                aria-label="Clear search"
-              >
+            {filterError && (
+              <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
                 <X size={15} />
-              </button>
+                {filterError}
+              </div>
             )}
-          </div>
-        </div> */}
+          </form>
 
-        {/* ACTIVE FILTERS */}
+          {/* ACTIVE FILTERS */}
 
-        {hasActiveFilters && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-sm text-slate-500">
-            {applied.employee && (
-              <Badge tone="info">{applied.employee.fullName}</Badge>
-            )}
-            {applied.startDate && (
-              <Badge tone="neutral">From {formatDate(applied.startDate)}</Badge>
-            )}
-            {applied.endDate && (
-              <Badge tone="neutral">To {formatDate(applied.endDate)}</Badge>
-            )}
-            {status && <Badge tone="neutral">{status}</Badge>}
-            {search && <Badge tone="neutral">Search: {search}</Badge>}
+          {hasActiveFilters && (
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Active filters
+                </span>
+
+                {applied.employee && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700">
+                    <Users size={12} />
+                    {applied.employee.fullName}
+                  </span>
+                )}
+
+                {applied.startDate && (
+                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                    From: {formatDate(applied.startDate)}
+                  </span>
+                )}
+
+                {applied.endDate && (
+                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                    To: {formatDate(applied.endDate)}
+                  </span>
+                )}
+
+                {status && (
+                  <span
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                      status === "Processed"
+                        ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                        : "border-amber-100 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {status}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* FOOTER */}
+
+          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isLoading ? "animate-pulse bg-blue-500" : "bg-emerald-500"
+                }`}
+              />
+              <span className="text-xs text-slate-500">
+                {isLoading
+                  ? "Loading payroll records..."
+                  : "Ready to view payroll records"}
+              </span>
+            </div>
+
+            <span className="text-xs font-medium text-slate-400">
+              {pagination.total} results
+            </span>
           </div>
-        )}
+        </div>
       </section>
-
       {/* PAYROLL TABLE */}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
