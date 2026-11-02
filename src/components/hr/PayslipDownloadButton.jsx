@@ -3,7 +3,7 @@ import logo from "../../assets/hawkn-logo-2.png";
 
 const COMPANY = {
   name: "Hawk'n Technologies",
-  address: "Surat, Gujarat, India", // <- put your registered address here
+  address: "",
 };
 
 const formatNumber = (value) =>
