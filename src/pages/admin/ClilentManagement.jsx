@@ -18,6 +18,9 @@ const EMPTY_FORM = {
   confirmPassword: "",
   phone: "",
   address: "",
+  type: "",
+  gst: "",
+  domain: "",
 };
 
 function ClientManagement() {
@@ -138,6 +141,9 @@ function ClientManagement() {
         email: form.email.trim(),
         phone: form.phone.trim() || null,
         address: form.address.trim() || null,
+        type: form.type || "",
+        gst: form.gst.trim() || null,
+        domain: form.domain.trim() || "",
       };
 
       if (form.password) {
@@ -342,6 +348,36 @@ function ClientManagement() {
               onChange={(event) =>
                 handleChange("confirmPassword", event.target.value)
               }
+            />
+
+            <Input
+              label="Gst"
+              value={form.gst}
+              onChange={(event) => handleChange("gst", event.target.value)}
+            />
+
+            <Input
+              label="Domain"
+              value={form.domain}
+              onChange={(event) => handleChange("domain", event.target.value)}
+            />
+
+            <Select
+              label="Type"
+              value="lead"
+              options={[
+                {
+                  value: "lead",
+                  label: "Lead",
+                },
+                {
+                  value: "converted",
+                  label: "Convert",
+                },
+              ]}
+              onChange={(e) => {
+                handleChange("type", e.target.value);
+              }}
             />
 
             <Select
