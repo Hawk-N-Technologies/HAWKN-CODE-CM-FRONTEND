@@ -18,7 +18,7 @@ const EMPTY_FORM = {
   confirmPassword: "",
   phone: "",
   address: "",
-  type: "",
+  type: "lead",
   gst: "",
   domain: "",
 };
@@ -87,6 +87,9 @@ function ClientManagement() {
       password: "",
       confirmPassword: "",
       phone: client.phone || "",
+      gst: client.gst || "",
+      type: client.type || "lead",
+      domain: client.domain || "",
       address: client.address || "",
     });
 
@@ -144,6 +147,7 @@ function ClientManagement() {
         type: form.type || "",
         gst: form.gst.trim() || null,
         domain: form.domain.trim() || "",
+        confirmPassword: form.confirmPassword,
       };
 
       if (form.password) {
@@ -364,7 +368,7 @@ function ClientManagement() {
 
             <Select
               label="Type"
-              value="lead"
+              value={form.type}
               options={[
                 {
                   value: "lead",
