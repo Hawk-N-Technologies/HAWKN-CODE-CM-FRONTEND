@@ -247,36 +247,36 @@ const CLIENT_NAV_SECTIONS = [
         path: "/client/project-details",
         icon: ICONS.projects,
       },
-      {
-        label: "Phases",
-        path: "/client/phases",
-        icon: ICONS.checklist,
-      },
-      {
-        label: "Phase Testing",
-        path: "/client/phase-testing",
-        icon: ICONS.testing,
-      },
-      {
-        label: "Bugs",
-        path: "/client/bugs",
-        icon: ICONS.bugs,
-      },
-      {
-        label: "Delivery",
-        path: "/client/delivery",
-        icon: ICONS.delivery,
-      },
+      // {
+      //   label: "Phases",
+      //   path: "/client/phases",
+      //   icon: ICONS.checklist,
+      // },
+      // {
+      //   label: "Phase Testing",
+      //   path: "/client/phase-testing",
+      //   icon: ICONS.testing,
+      // },
+      // {
+      //   label: "Bugs",
+      //   path: "/client/bugs",
+      //   icon: ICONS.bugs,
+      // },
+      // {
+      //   label: "Delivery",
+      //   path: "/client/delivery",
+      //   icon: ICONS.delivery,
+      // },
     ],
   },
   {
     title: "Requirements",
     items: [
-      {
-        label: "BRD",
-        path: "/client/brd",
-        icon: ICONS.brd,
-      },
+      // {
+      //   label: "BRD",
+      //   path: "/client/brd",
+      //   icon: ICONS.brd,
+      // },
       {
         label: "BRD Approval",
         path: "/client/brd-approval",
