@@ -1,12 +1,10 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
-import Loader from "../../components/common/Loader";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 import { showToast } from "../../components/common/Toast";
@@ -24,38 +22,112 @@ const EMPTY_FORM = {
   domain: "",
 };
 
+const INITIAL_PAGINATION = {
+  total: 0,
+  page: 1,
+  limit: 10,
+  totalPages: 0,
+};
+
+const SEARCH_DEBOUNCE_MS = 400;
+
 function ClientManagement() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const [pagination, setPagination] = useState(INITIAL_PAGINATION);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const fetchClients = async () => {
-    try {
-      setLoading(true);
-
-      const response = await axios.get("/api/clients", {
-        withCredentials: true,
-      });
-
-      setClients(response.data?.data || []);
-    } catch (error) {
-      console.error("Failed to fetch clients:", error);
-
-      showToast.error(
-        error.response?.data?.message || "Failed to fetch clients."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // --------------------------------------------------
+  // DEBOUNCED SEARCH
+  // --------------------------------------------------
 
   useEffect(() => {
-    fetchClients();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // --------------------------------------------------
+  // FETCH CLIENTS
+  // --------------------------------------------------
+
+  const fetchClients = useCallback(
+    async (signal) => {
+      try {
+        setLoading(true);
+
+        const response = await axios.get("/api/clients", {
+          params: {
+            search: debouncedSearch || undefined,
+            page,
+            limit,
+          },
+          withCredentials: true,
+          signal,
+        });
+
+        // Ignore responses from cancelled requests.
+        if (signal?.aborted) return;
+
+        const result = response.data;
+
+        setClients(Array.isArray(result?.data) ? result.data : []);
+
+        setPagination({
+          total: Number(result?.pagination?.total) || 0,
+          page: Number(result?.pagination?.page) || page,
+          limit: Number(result?.pagination?.limit) || limit,
+          totalPages: Number(result?.pagination?.totalPages) || 0,
+        });
+      } catch (error) {
+        if (signal?.aborted || axios.isCancel(error)) return;
+
+        console.error("Failed to fetch clients:", error);
+
+        showToast.error(
+          error.response?.data?.message || "Failed to fetch clients.",
+        );
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    [debouncedSearch, page, limit],
+  );
+
+  // --------------------------------------------------
+  // FETCH EFFECT
+  // --------------------------------------------------
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchClients(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [fetchClients, refreshKey]);
+
+  // --------------------------------------------------
+  // FORM HANDLERS
+  // --------------------------------------------------
 
   const handleChange = (field, value) => {
     setForm((previous) => ({
@@ -64,9 +136,13 @@ function ClientManagement() {
     }));
   };
 
+  const handleSearch = (value) => {
+    setSearch(value);
+  };
+
   const openAdd = () => {
     setEditingClient(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM });
     setIsFormOpen(true);
   };
 
@@ -92,62 +168,73 @@ function ClientManagement() {
   };
 
   const closeForm = () => {
-    if (saving) {
-      return;
-    }
+    if (saving) return;
 
     setIsFormOpen(false);
     setEditingClient(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM });
   };
 
-  const saveClient = async (event) => {
-    event.preventDefault();
+  // --------------------------------------------------
+  // VALIDATE FORM
+  // --------------------------------------------------
 
+  const validateForm = () => {
     if (!form.firstName.trim()) {
       showToast.error("First name is required.");
-      return;
+      return false;
     }
 
     if (!form.email.trim()) {
       showToast.error("Email is required.");
-      return;
+      return false;
     }
 
-    // Password required only while creating.
     if (!editingClient && !form.password) {
       showToast.error("Password is required.");
-      return;
+      return false;
     }
 
     if (form.password && form.password.length < 8) {
       showToast.error("Password must be at least 8 characters.");
-      return;
+      return false;
     }
 
     if (form.password !== form.confirmPassword) {
       showToast.error("Password and confirm password do not match.");
-      return;
+      return false;
+    }
+
+    return true;
+  };
+
+  // --------------------------------------------------
+  // CREATE / UPDATE CLIENT
+  // --------------------------------------------------
+
+  const saveClient = async (event) => {
+    event.preventDefault();
+
+    if (saving || !validateForm()) return;
+
+    const payload = {
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim() || null,
+      email: form.email.trim(),
+      phone: form.phone.trim() || null,
+      address: form.address.trim() || null,
+      type: form.type || "lead",
+      gst: form.gst.trim() || null,
+      domain: form.domain.trim() || "",
+      confirmPassword: form.confirmPassword,
+    };
+
+    if (form.password) {
+      payload.password = form.password;
     }
 
     try {
       setSaving(true);
-
-      const payload = {
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim() || null,
-        email: form.email.trim(),
-        phone: form.phone.trim() || null,
-        address: form.address.trim() || null,
-        type: form.type || "",
-        gst: form.gst.trim() || null,
-        domain: form.domain.trim() || "",
-        confirmPassword: form.confirmPassword,
-      };
-
-      if (form.password) {
-        payload.password = form.password;
-      }
 
       if (editingClient) {
         await axios.put(`/api/clients/${editingClient.uuid}`, payload, {
@@ -162,47 +249,32 @@ function ClientManagement() {
             ...payload,
             password: form.password,
           },
-          {
-            withCredentials: true,
-          }
+          { withCredentials: true },
         );
 
         showToast.success("Client created successfully.");
       }
 
-      closeForm();
+      setIsFormOpen(false);
+      setEditingClient(null);
+      setForm({ ...EMPTY_FORM });
 
-      await fetchClients();
+      // Refresh data without resetting the search.
+      setRefreshKey((previous) => previous + 1);
     } catch (error) {
       console.error("Failed to save client:", error);
 
       showToast.error(
-        error.response?.data?.message || "Failed to save client."
+        error.response?.data?.message || "Failed to save client.",
       );
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredClients = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return clients;
-    }
-
-    return clients.filter((client) => {
-      const user = client.user || {};
-
-      const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
-
-      return (
-        fullName.toLowerCase().includes(query) ||
-        user.email?.toLowerCase().includes(query) ||
-        client.phone?.toLowerCase().includes(query)
-      );
-    });
-  }, [clients, search]);
+  // --------------------------------------------------
+  // TABLE COLUMNS
+  // --------------------------------------------------
 
   const columns = [
     {
@@ -217,9 +289,7 @@ function ClientManagement() {
               {user.firstName} {user.lastName || ""}
             </p>
 
-            <p className="text-xs text-cm-text-muted">
-              {user.email || "—"}
-            </p>
+            <p className="text-xs text-cm-text-muted">{user.email || "—"}</p>
           </div>
         );
       },
@@ -256,9 +326,13 @@ function ClientManagement() {
     },
   ];
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Page Header */}
+      {/* PAGE HEADER */}
       <div className="relative isolate overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/70 px-6 py-6 shadow-sm sm:px-8">
         <div className="pointer-events-none absolute -right-16 -top-32 h-80 w-80 rounded-full border-2 border-blue-100/80" />
         <div className="pointer-events-none absolute -right-5 -top-24 h-56 w-56 rounded-full border-2 border-blue-100/80" />
@@ -289,7 +363,7 @@ function ClientManagement() {
                 </span>
 
                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-500">
-                  {clients.length} client records
+                  {pagination.total} client records
                 </span>
               </div>
             </div>
@@ -301,14 +375,14 @@ function ClientManagement() {
         </div>
       </div>
 
-      {/* Add / Edit Client Modal */}
+      {/* ADD / EDIT CLIENT MODAL */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-5">
           <form
             onSubmit={saveClient}
             className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
           >
-            {/* Modal Header */}
+            {/* MODAL HEADER */}
             <div className="relative isolate shrink-0 overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5 sm:px-7">
               <div className="pointer-events-none absolute -right-10 -top-24 h-64 w-64 rounded-full border border-white/10" />
               <div className="pointer-events-none absolute -right-2 -top-20 h-48 w-48 rounded-full border border-white/10" />
@@ -354,12 +428,13 @@ function ClientManagement() {
               </div>
             </div>
 
-            {/* Modal Body */}
+            {/* MODAL BODY */}
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-7">
               <div className="mb-5">
                 <h3 className="text-sm font-semibold text-slate-800">
                   Client Information
                 </h3>
+
                 <p className="mt-1 text-xs text-slate-500">
                   Enter the client's account details and contact information.
                 </p>
@@ -424,9 +499,7 @@ function ClientManagement() {
                 <Input
                   label="GST"
                   value={form.gst}
-                  onChange={(event) =>
-                    handleChange("gst", event.target.value)
-                  }
+                  onChange={(event) => handleChange("gst", event.target.value)}
                 />
 
                 <Input
@@ -444,9 +517,7 @@ function ClientManagement() {
                     { value: "lead", label: "Lead" },
                     { value: "converted", label: "Convert" },
                   ]}
-                  onChange={(e) => {
-                    handleChange("type", e.target.value);
-                  }}
+                  onChange={(event) => handleChange("type", event.target.value)}
                 />
 
                 <Select
@@ -469,7 +540,7 @@ function ClientManagement() {
               </div>
             </div>
 
-            {/* Modal Footer */}
+            {/* MODAL FOOTER */}
             <div className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-50/80 px-6 py-4 sm:px-7">
               <Button
                 type="button"
@@ -492,26 +563,32 @@ function ClientManagement() {
         </div>
       )}
 
-      {/* Client Search and Table */}
-      <div className="flex flex-col gap-4">
+      {/* CLIENT SEARCH AND TABLE */}
+      <section className="flex flex-col gap-4">
         <TableSearch
           value={search}
-          onChange={setSearch}
+          onChange={handleSearch}
           placeholder="Search client, email, company or phone..."
         />
 
-        {loading ? (
-          <div className="flex min-h-[200px] items-center justify-center">
-            <Loader />
-          </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            rows={filteredClients}
-            emptyMessage="No clients found."
-          />
-        )}
-      </div>
+        <DataTable
+          columns={columns}
+          rows={clients}
+          isLoading={loading}
+          emptyMessage={
+            debouncedSearch
+              ? "No clients match your search."
+              : "No clients found."
+          }
+          pagination={pagination}
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </section>
     </div>
   );
 }
