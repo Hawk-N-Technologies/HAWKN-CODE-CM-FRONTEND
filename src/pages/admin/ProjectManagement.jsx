@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   AlertTriangle,
@@ -9,12 +9,15 @@ import {
   Plus,
   Eye,
   ChevronLeft,
+  UploadCloud,
+  X,
   ChevronRight,
 } from "lucide-react";
 import Button from "../../components/common/Button";
 import Modal from "../../components/common/Modal";
 import Badge from "../../components/common/Badge";
 import Input from "../../components/common/Input";
+import TextArea from "../../components/common/TextArea";
 import Select from "../../components/common/Select";
 import ErrorState from "../../components/common/ErrorState";
 import StatCard from "../../components/cards/StatCard";
@@ -38,6 +41,10 @@ import {
 const TIERS = ["Tier I", "Tier II", "Tier III"];
 const STATUSES = [
   "Planning",
+  "Phase 1",
+  "Phase 2",
+  "Phase 3",
+  "Brd Approval",
   "In Development",
   "Testing",
   "Completed",
@@ -61,12 +68,23 @@ const SORT_OPTIONS = [
 // Badge only has: success / warning / danger / info / neutral
 const STATUS_TONE = {
   Planning: "neutral",
+  "Phase 1": "info",
+  "Phase 2": "info",
+  "Phase 3": "info",
+  "Brd Approval": "warning",
   "In Development": "info",
   Testing: "warning",
   Completed: "success",
   "On Hold": "warning",
   Cancelled: "danger",
 };
+
+const MAX_BRD_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_BRD_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 
 // Select's built-in placeholder ("") is disabled, so "no lead" needs its own value
 const NO_LEAD = "none";
@@ -77,11 +95,14 @@ const EMPTY_FORM = {
   projectLeadUuid: NO_LEAD,
   tier: "Tier I",
   status: "Planning",
+  projectType: "",
   startDate: "",
   deadline: "",
   internalDeadline: "",
   progress: 0,
   description: "",
+  githubRepos: "",
+  serverUrl: "",
 };
 
 // "2026-10-15" → "15 Oct 2026" (built from parts so timezone can't shift the day)
@@ -157,6 +178,9 @@ function DeadlineCell({ project }) {
  */
 function ProjectForm({ editing, options, onSaved, onCancel }) {
   const isEdit = Boolean(editing);
+  const brdInputRef = useRef(null);
+  const [brdFile, setBrdFile] = useState(null);
+  const [brdFileError, setBrdFileError] = useState("");
   const {
     register,
     handleSubmit,
@@ -166,16 +190,19 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
   } = useForm({
     defaultValues: isEdit
       ? {
-          name: editing.name,
-          clientUuid: editing.client.uuid,
+          name: editing.name ?? "",
+          clientUuid: editing.client?.uuid ?? editing.clientUuid ?? "",
           projectLeadUuid: editing.projectLead?.uuid ?? NO_LEAD,
-          tier: editing.tier,
-          status: editing.status,
+          tier: editing.tier ?? "Tier I",
+          status: editing.status ?? "Planning",
+          projectType: editing.projectType ?? "",
           startDate: editing.startDate ?? "",
           deadline: editing.deadline ?? "",
           internalDeadline: editing.internalDeadline ?? "",
-          progress: editing.progress,
+          progress: editing.progress ?? 0,
           description: editing.description ?? "",
+          githubRepos: editing.githubRepos ?? "",
+          serverUrl: editing.serverUrl ?? "",
         }
       : EMPTY_FORM,
   });
@@ -185,13 +212,15 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
       value: client.uuid,
       label: client.name,
     }));
+    const currentClientUuid = editing?.client?.uuid ?? editing?.clientUuid;
     if (
       isEdit &&
-      !list.some((option) => option.value === editing.client.uuid)
+      currentClientUuid &&
+      !list.some((option) => option.value === currentClientUuid)
     ) {
       list.push({
-        value: editing.client.uuid,
-        label: `${editing.client.name} (inactive)`,
+        value: currentClientUuid,
+        label: `${editing.client?.name ?? "Current client"} (inactive)`,
       });
     }
     return list;
@@ -217,19 +246,77 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
 
   const noClients = clientOptions.length === 0;
 
+  const handleBRDFileChange = (event) => {
+    const selectedFile = event.target.files?.[0] ?? null;
+    setBrdFileError("");
+    setBrdFile(null);
+
+    if (!selectedFile) return;
+
+    if (!ALLOWED_BRD_MIME_TYPES.includes(selectedFile.type)) {
+      event.target.value = "";
+      setBrdFileError("Only PDF, DOC, and DOCX files are allowed.");
+      return;
+    }
+
+    if (selectedFile.size > MAX_BRD_FILE_SIZE) {
+      event.target.value = "";
+      setBrdFileError("BRD file size must not exceed 10 MB.");
+      return;
+    }
+
+    setBrdFile(selectedFile);
+  };
+
+  const removeBRDFile = () => {
+    setBrdFile(null);
+    setBrdFileError("");
+    if (brdInputRef.current) brdInputRef.current.value = "";
+  };
+
   const onSubmit = async (values) => {
+    if (brdFileError) return;
+
     const payload = {
       ...values,
       progress: Number(values.progress),
       projectLeadUuid:
         values.projectLeadUuid === NO_LEAD ? null : values.projectLeadUuid,
     };
+
+    console.log(payload);
+
+    // The project endpoints use Multer single("brdFile"), so send multipart
+    // data even when the BRD file is optional. Do not append a FileList or
+    // the old unsupported multi-attachment field.
+    const formData = new FormData();
+
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || key === "attachments") return;
+      formData.append(key, value === null ? "" : String(value));
+    });
+
+    if (brdFile) {
+      formData.append("brdFile", brdFile);
+    }
+
+    console.table(
+      [...formData.entries()].map(([key, value]) => ({
+        field: key,
+        value: value instanceof File ? value.name : value,
+      })),
+    );
+
     try {
       const res = isEdit
-        ? await updateProject(editing.uuid, payload)
-        : await createProject(payload);
+        ? await updateProject(editing.uuid, formData)
+        : await createProject(formData);
+
       showToast.success(
-        `${res.message || (isEdit ? "Project updated successfully" : "Project created successfully")}.`,
+        res.message ||
+          (isEdit
+            ? "Project updated successfully."
+            : "Project created successfully."),
       );
       onSaved();
     } catch (error) {
@@ -250,8 +337,8 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
       title={isEdit ? "Edit project" : "Create a project"}
       description={
         isEdit
-          ? "Update project details, ownership, timeline and delivery progress."
-          : "Set up the project, assign its client and lead, and define delivery dates."
+          ? "Update project details, ownership, resources and delivery progress."
+          : "Set up the project, assign its client and lead, and define delivery details."
       }
       icon={isEdit ? PencilLine : Plus}
       size="xl"
@@ -278,6 +365,7 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
             </div>
           )}
 
+          {/* PROJECT DETAILS */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
             <div className="mb-4">
               <h3 className="text-sm font-bold text-cm-navy-950">
@@ -287,6 +375,7 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 Basic identity and project ownership.
               </p>
             </div>
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Input
                 label="Project Name"
@@ -294,30 +383,68 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 error={errors.name?.message}
                 {...register("name", {
                   required: "Project name is required",
-                  minLength: { value: 2, message: "Project name is too short" },
-                  maxLength: { value: 255, message: "Max 255 characters" },
+                  minLength: {
+                    value: 2,
+                    message: "Project name is too short",
+                  },
+                  maxLength: {
+                    value: 255,
+                    message: "Max 255 characters",
+                  },
                 })}
               />
+
               <Select
                 label="Client"
                 required
-                placeholder="Select client…"
+                placeholder="Select client..."
                 options={clientOptions}
                 error={errors.clientUuid?.message}
-                {...register("clientUuid", { required: "Select a client" })}
+                {...register("clientUuid", {
+                  required: "Select a client",
+                })}
               />
+
               <Select
                 label="Project Lead"
                 options={leadOptions}
                 error={errors.projectLeadUuid?.message}
                 {...register("projectLeadUuid")}
               />
+
               <Select
                 label="Project Tier"
-                options={TIERS.map((tier) => ({ value: tier, label: tier }))}
+                options={TIERS.map((tier) => ({
+                  value: tier,
+                  label: tier,
+                }))}
                 error={errors.tier?.message}
                 {...register("tier")}
               />
+
+              <Select
+                label="Project Type"
+                required
+                placeholder="Select project type..."
+                options={[
+                  { value: "Web Application", label: "Web Application" },
+                  { value: "Mobile Application", label: "Mobile Application" },
+                  { value: "Website", label: "Website" },
+                  { value: "Backend / API", label: "Backend / API" },
+                  { value: "AI / ML", label: "AI / ML" },
+                  {
+                    value: "Desktop Application",
+                    label: "Desktop Application",
+                  },
+                  { value: "E-commerce", label: "E-commerce" },
+                  { value: "Other", label: "Other" },
+                ]}
+                error={errors.projectType?.message}
+                {...register("projectType", {
+                  required: "Select a project type",
+                })}
+              />
+
               <Select
                 label="Status"
                 options={STATUSES.map((status) => ({
@@ -328,11 +455,15 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 error={errors.status?.message}
                 {...register("status", {
                   onChange: (event) => {
-                    if (event.target.value === "Completed")
-                      setValue("progress", 100, { shouldValidate: true });
+                    if (event.target.value === "Completed") {
+                      setValue("progress", 100, {
+                        shouldValidate: true,
+                      });
+                    }
                   },
                 })}
               />
+
               <Input
                 label="Progress (%)"
                 type="number"
@@ -341,16 +472,16 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 step="1"
                 error={errors.progress?.message}
                 {...register("progress", {
+                  valueAsNumber: true,
                   validate: (value) =>
-                    (Number.isInteger(Number(value)) &&
-                      Number(value) >= 0 &&
-                      Number(value) <= 100) ||
+                    (Number.isInteger(value) && value >= 0 && value <= 100) ||
                     "Enter a whole number from 0 to 100",
                 })}
               />
             </div>
           </section>
 
+          {/* TIMELINE */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
             <div className="mb-4">
               <h3 className="text-sm font-bold text-cm-navy-950">Timeline</h3>
@@ -358,6 +489,7 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 Set the client deadline and your internal delivery target.
               </p>
             </div>
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Input
                 label="Start Date"
@@ -365,6 +497,7 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 error={errors.startDate?.message}
                 {...register("startDate")}
               />
+
               <Input
                 label="Client Deadline"
                 type="date"
@@ -377,6 +510,7 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                     "Deadline can't be before the start date",
                 })}
               />
+
               <Input
                 label="Internal Deadline"
                 type="date"
@@ -385,10 +519,15 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
                 {...register("internalDeadline", {
                   validate: (value, all) => {
                     if (!value) return true;
-                    if (all.startDate && value < all.startDate)
+
+                    if (all.startDate && value < all.startDate) {
                       return "Can't be before the start date";
-                    if (all.deadline && value > all.deadline)
+                    }
+
+                    if (all.deadline && value > all.deadline) {
                       return "Should be on or before the client deadline";
+                    }
+
                     return true;
                   },
                 })}
@@ -396,20 +535,158 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
             </div>
           </section>
 
+          {/* DESCRIPTION */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
             <h3 className="mb-4 text-sm font-bold text-cm-navy-950">
               Description
             </h3>
+
             <Input
               label="Project Description (optional)"
-              placeholder="Scope, goals, notes…"
+              placeholder="Scope, goals, notes..."
               error={errors.description?.message}
               {...register("description", {
-                maxLength: { value: 5000, message: "Max 5000 characters" },
+                maxLength: {
+                  value: 5000,
+                  message: "Max 5000 characters",
+                },
               })}
             />
           </section>
+
+          {/* TECHNICAL RESOURCES */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="mb-5">
+              <h3 className="text-sm font-bold text-cm-navy-950">
+                Technical Resources
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Add repositories and deployment information.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <TextArea
+                label="GitHub Repository Links"
+                placeholder={`https://github.com/username/frontend
+https://github.com/username/backend
+https://github.com/username/admin`}
+                helperText="Enter up to 4 GitHub profile or repository URLs, one per line."
+                rows={4}
+                error={errors.githubRepos?.message}
+                {...register("githubRepos", {
+                  validate: (value) => {
+                    const urls = (value || "")
+                      .split(/\r?\n/)
+                      .map((url) => url.trim())
+                      .filter(Boolean);
+
+                    if (urls.length > 4) {
+                      return "Maximum 4 GitHub links allowed";
+                    }
+
+                    const invalidUrl = urls.find(
+                      (url) =>
+                        !/^https:\/\/github\.com\/[^/\s]+(?:\/[^/\s]+)?\/?$/.test(
+                          url,
+                        ),
+                    );
+
+                    if (invalidUrl) {
+                      return `Invalid GitHub URL: ${invalidUrl}`;
+                    }
+
+                    return true;
+                  },
+                })}
+              />
+
+              <Input
+                label="Server / Deployment URL"
+                type="url"
+                placeholder="https://your-project.com"
+                helperText="Live application, staging environment or server URL."
+                error={errors.serverUrl?.message}
+                {...register("serverUrl", {
+                  validate: (value) =>
+                    !value ||
+                    /^https?:\/\/.+\..+/.test(value) ||
+                    "Enter a valid server URL",
+                })}
+              />
+            </div>
+          </section>
+
+          {/* BUSINESS REQUIREMENTS DOCUMENT */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-sm font-bold text-cm-navy-950">
+                Business Requirements Document (BRD)
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {isEdit
+                  ? "Optional: upload a replacement BRD. The new version will be submitted for admin approval; leaving this empty keeps the current BRD unchanged."
+                  : "Optional: attach the initial BRD. It will be submitted for admin approval after the project is created."}
+              </p>
+            </div>
+
+            <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center transition hover:border-slate-400">
+              <UploadCloud className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+              <label htmlFor="project-brd-file" className="cursor-pointer">
+                <span className="text-sm font-semibold text-cm-navy-800">
+                  {isEdit ? "Choose replacement BRD" : "Choose BRD file"}
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  PDF, DOC or DOCX · Maximum 10 MB
+                </span>
+              </label>
+              <input
+                ref={brdInputRef}
+                id="project-brd-file"
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="sr-only"
+                onChange={handleBRDFileChange}
+                disabled={isSubmitting}
+              />
+              <label
+                htmlFor="project-brd-file"
+                className="mt-3 inline-flex cursor-pointer items-center rounded-lg bg-cm-navy-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cm-navy-800"
+              >
+                Browse files
+              </label>
+            </div>
+
+            {brdFileError && (
+              <p className="mt-2 text-sm text-red-600" role="alert">
+                {brdFileError}
+              </p>
+            )}
+
+            {brdFile && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-cm-border bg-white p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-cm-navy-950">
+                    {brdFile.name}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {(brdFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={removeBRDFile}
+                  className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-red-600"
+                  aria-label="Remove selected BRD file"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </section>
         </fieldset>
+
+        {/* FOOTER */}
         <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:px-8">
           <Button
             type="button"
@@ -419,6 +696,7 @@ function ProjectForm({ editing, options, onSaved, onCancel }) {
           >
             Cancel
           </Button>
+
           <Button type="submit" loading={isSubmitting} disabled={noClients}>
             {isEdit ? "Save Changes" : "Create Project"}
           </Button>
@@ -451,13 +729,16 @@ function ProjectDetails({ project, onClose, onEdit }) {
   const filled = {
     Overview: project.description,
     Client: [
-      project.client.name,
-      project.client.contactPerson,
-      project.client.email,
+      project.client?.name,
+      project.client?.contactPerson,
+      project.client?.email,
     ]
       .filter(Boolean)
       .join(" · "),
     Team: project.projectLead ? `Lead: ${project.projectLead.fullName}` : null,
+    Technology: project.projectType || null,
+    Deployment: project.serverUrl || null,
+    Documents: project.githubRepos || null,
   };
 
   return (
@@ -480,7 +761,7 @@ function ProjectDetails({ project, onClose, onEdit }) {
                 {project.name}
               </h3>
               <p className="mt-2 text-sm text-white/65">
-                {project.client.name} ·{" "}
+                {project.client?.name || "No client"} ·{" "}
                 {project.projectLead?.fullName || "Unassigned"} · {project.tier}
               </p>
             </div>
@@ -503,7 +784,7 @@ function ProjectDetails({ project, onClose, onEdit }) {
             ["Start date", formatDate(project.startDate)],
             ["Client deadline", formatDate(project.deadline)],
             ["Internal deadline", formatDate(project.internalDeadline)],
-            ["Technology", "Not configured"],
+            ["Project type", project.projectType || "Not specified"],
           ].map(([label, value]) => (
             <div
               key={label}

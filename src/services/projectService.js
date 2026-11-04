@@ -39,12 +39,20 @@ export async function getProjects({
 
   return res.data.data;
 }
+export async function createProject(formData) {
+  console.log("Is FormData:", formData instanceof FormData);
 
-export async function createProject(payload) {
-  const res = await axios.post(BASE, payload, config);
+  for (const [key, value] of formData.entries()) {
+    console.log("Sending:", key, value);
+  }
+
+  const res = await axios.post(BASE, formData, {
+    ...config,
+    transformRequest: [(data) => data],
+  });
+
   return res.data;
 }
-
 // Edit sends every field again (same shape as create)
 export async function updateProject(uuid, payload) {
   const res = await axios.put(`${BASE}/${uuid}`, payload, config);

@@ -114,37 +114,10 @@ const STATUS_TONE = {
 const EMPLOYMENT_TYPES = ["Full Time", "Intern", "Probation"];
 const EMPLOYMENT_STATUSES = ["Active", "On Leave", "Exited"];
 
-const ROLE_TABS = [
-  { key: "all", label: "All members", aliases: [] },
-  { key: "admin", label: "Admins", aliases: ["admin"] },
-  {
-    key: "bde",
-    label: "BDEs",
-    aliases: ["bde", "businessdevelopment", "businessdevelopmentexecutive"],
-  },
-  { key: "hr", label: "HR", aliases: ["hr", "humanresources"] },
-  {
-    key: "projectlead",
-    label: "Project Leads",
-    aliases: ["projectlead", "projectmanager"],
-  },
-  { key: "developer", label: "Developers", aliases: ["developer"] },
-  { key: "tester", label: "Testers", aliases: ["tester", "qa"] },
-  { key: "client", label: "Clients", aliases: ["client"] },
-];
-
 function normalizeRole(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
-}
-
-function personMatchesRole(person, tab, rolesMap = {}) {
-  if (tab.key === "all") return true;
-
-  const role = normalizeRole(person.roleName || rolesMap[person.role]?.name);
-
-  return tab.aliases.some((alias) => role === alias || role.includes(alias));
 }
 
 function mapUserFromApi(user) {
@@ -197,7 +170,7 @@ function mapUserFromApi(user) {
     country: user.employee?.country || user.country || "",
     joiningDate: user.joiningDate || "",
     dateOfBirth: user.dateOfBirth || user.employee?.dateOfBirth || "",
-    linkendinUrl: user?.linkedinUrl || user.employee?.linkendinUrl || "",
+    linkedinUrl: user?.linkedinUrl || user.employee?.linkedinUrl || "",
     githubUrl: user?.githubUrl || user.employee?.githubUrl || "",
     aadhaarLast4: user?.aadhaarLast4 || user.employee?.aadhaarLast4 || "",
 
@@ -210,7 +183,7 @@ function mapUserFromApi(user) {
     employmentStatus: user?.employmentStatus || "Active",
     type: user?.employmentType || "Full Time",
     employeeId: user?.employeeId || null,
-    employeeUuid: user.emloyeeUuid || null,
+    employeeUuid: user.employeeUuid || user.employee?.uuid || null,
 
     /**
      * Employee information is optional.
@@ -227,6 +200,17 @@ function PeopleManagement() {
   const [rolesMap, setRolesMap] = useState({});
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce server-side search and reset pagination together.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
   const [activeRole, setActiveRole] = useState("all");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -247,12 +231,16 @@ function PeopleManagement() {
   const [errors, setErrors] = useState({});
 
   const [isPeopleLoading, setIsPeopleLoading] = useState(true);
+  const [hasLoadedPeople, setHasLoadedPeople] = useState(false);
   const [isRolesLoading, setIsRolesLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef(null);
   const profileRef = useRef(null);
+  const peopleRequestRef = useRef(null);
 
-  const isInitialLoading = isPeopleLoading || isRolesLoading;
+  // Only the first load may replace the page with a full-screen loader.
+  // Later searches keep the search input mounted and focused.
+  const isInitialLoading = isRolesLoading || !hasLoadedPeople;
 
   /**
    * -------------------------------------------------------
@@ -272,8 +260,6 @@ function PeopleManagement() {
       setRoles(data);
 
       const map = Object.fromEntries(data.map((role) => [role.uuid, role]));
-      console.log(map);
-
       setRolesMap(map);
     } catch (error) {
       console.error("Get roles error:", error);
@@ -312,11 +298,17 @@ function PeopleManagement() {
   }, [activeRole, roles]);
 
   const getPeople = useCallback(async () => {
+    // Cancel the previous request so stale responses cannot overwrite newer
+    // search, filter, or pagination results.
+    peopleRequestRef.current?.abort();
+
+    const controller = new AbortController();
+    peopleRequestRef.current = controller;
     setIsPeopleLoading(true);
 
     try {
       const params = {
-        search: search.trim() || undefined,
+        search: debouncedSearch || undefined,
         page,
         limit,
         status: status || undefined,
@@ -326,9 +318,12 @@ function PeopleManagement() {
       const res = await axios.get("/api/employees/getPeople", {
         params,
         withCredentials: true,
+        signal: controller.signal,
       });
 
-      // Supports either { data: [...] , pagination } or
+      if (controller.signal.aborted) return;
+
+      // Supports either { data: [...], pagination } or
       // { data: { rows: [...], pagination } } API response formats.
       const payload = res.data?.data;
       const data = Array.isArray(payload)
@@ -347,71 +342,51 @@ function PeopleManagement() {
           totalPages: data.length ? 1 : 0,
         };
 
+      const total = Number(meta.total ?? data.length);
+      const responseLimit = Number(meta.limit ?? limit);
+
       setPeople(data.map(mapUserFromApi));
       setPagination({
-        total: Number(meta.total ?? data.length),
+        total,
         page: Number(meta.page ?? page),
-        limit: Number(meta.limit ?? limit),
+        limit: responseLimit,
         totalPages: Number(
-          meta.totalPages ??
-            Math.ceil(Number(meta.total ?? data.length) / limit),
+          meta.totalPages ?? Math.ceil(total / Math.max(responseLimit, 1)),
         ),
       });
     } catch (error) {
-      console.error("Get people error:", error);
-      setPeople([]);
-      setPagination({
-        total: 0,
-        page,
-        limit,
-        totalPages: 0,
-      });
+      // Aborted requests are expected when search or filters change.
+      if (controller.signal.aborted || axios.isCancel(error)) return;
 
+      console.error("Get people error:", error);
       showToast.error(
         error.response?.data?.message || "Failed to load people.",
       );
+      // Preserve the last successful rows during transient failures.
     } finally {
-      setIsPeopleLoading(false);
+      if (peopleRequestRef.current === controller) {
+        peopleRequestRef.current = null;
+        setIsPeopleLoading(false);
+        setHasLoadedPeople(true);
+      }
     }
-  }, [apiRole, limit, page, search, status]);
+  }, [apiRole, limit, page, debouncedSearch, status]);
 
-  /**
-   * -------------------------------------------------------
-   * INITIAL DATA
-   * -------------------------------------------------------
-   */
+  // Roles are reference data: fetch once, not on every search or page change.
   useEffect(() => {
     getRoles();
+  }, [getRoles]);
+
+  // Fetch people whenever a server-side query parameter changes.
+  useEffect(() => {
     getPeople();
-  }, [getRoles, getPeople]);
 
-  /**
-   * -------------------------------------------------------
-   * SEARCH
-   * -------------------------------------------------------
-   */
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const activeTab =
-      ROLE_TABS.find((tab) => tab.key === activeRole) ?? ROLE_TABS[0];
-    const roleFiltered = people.filter((person) =>
-      personMatchesRole(person, activeTab, rolesMap),
-    );
-
-    if (!query) {
-      return roleFiltered;
-    }
-
-    return roleFiltered.filter((person) => {
-      return (
-        person.name?.toLowerCase().includes(query) ||
-        person.firstName?.toLowerCase().includes(query) ||
-        person.lastName?.toLowerCase().includes(query) ||
-        person.email?.toLowerCase().includes(query) ||
-        person.roleName?.toLowerCase().includes(query)
-      );
-    });
-  }, [activeRole, people, rolesMap, search]);
+    return () => {
+      const activeRequest = peopleRequestRef.current;
+      peopleRequestRef.current = null;
+      activeRequest?.abort();
+    };
+  }, [getPeople]);
 
   useEffect(() => {
     const target = isFormOpen
@@ -536,12 +511,10 @@ function PeopleManagement() {
 
         return "";
 
-      case "linkendinUrl":
+      case "linkedinUrl":
         if (!formValue.trim()) return "LinkedIn is required.";
 
-        if (
-          !/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(formValue.trim())
-        ) {
+        if (!/^https?:\/\/(www\.)?linkedin\.com\/.+$/i.test(formValue.trim())) {
           return "Enter a valid LinkedIn URL.";
         }
 
@@ -550,9 +523,7 @@ function PeopleManagement() {
       case "githubUrl":
         if (!formValue.trim()) return "GitHub is required.";
 
-        if (
-          !/^https?:\/\/(www\.)?github\.com\/.+$/i.test(formValue.trim())
-        ) {
+        if (!/^https?:\/\/(www\.)?github\.com\/.+$/i.test(formValue.trim())) {
           return "Enter a valid GitHub URL.";
         }
 
@@ -580,10 +551,7 @@ function PeopleManagement() {
       case "salary":
         if (!formValue) return "";
 
-        if (
-          !Number.isInteger(Number(formValue)) ||
-          Number(formValue) <= 0
-        ) {
+        if (!Number.isInteger(Number(formValue)) || Number(formValue) <= 0) {
           return "Salary must be a positive whole number.";
         }
 
@@ -608,7 +576,7 @@ function PeopleManagement() {
       "phone2",
       "whatsapp",
       "aadhaarLast4",
-      "linkendinUrl",
+      "linkedinUrl",
       "githubUrl",
       "dateOfBirth",
       "role",
@@ -773,7 +741,7 @@ function PeopleManagement() {
       joiningDate: person.joiningDate || "",
       dateOfBirth: person.dateOfBirth || "",
 
-      linkendinUrl: person.linkendinUrl || "",
+      linkedinUrl: person.linkedinUrl || "",
       githubUrl: person.githubUrl || "",
 
       aadhaarLast4: person.aadhaarLast4 || "",
@@ -854,7 +822,6 @@ function PeopleManagement() {
     const validationErrors = validateForm(form);
 
     setErrors(validationErrors);
-    console.log(form);
     if (Object.keys(validationErrors).length > 0) {
       showToast.error("Please fix the validation errors.");
       return;
@@ -905,7 +872,7 @@ function PeopleManagement() {
       country: form.country.trim() || null,
       joiningDate: form.joiningDate || null,
       dateOfBirth: form.dateOfBirth || null,
-      linkedinUrl: form.linkendinUrl?.trim() || null,
+      linkedinUrl: form.linkedinUrl?.trim() || null,
       githubUrl: form.githubUrl?.trim() || null,
       aadhaarLast4: form.aadhaarLast4 || null,
       roleUuid: form.role,
@@ -939,7 +906,6 @@ function PeopleManagement() {
 
     try {
       let res;
-      console.log(form.uuid);
       if (form.uuid && form.id) {
         res = await axios.put(
           `/api/employees/people/${form.uuid}`,
@@ -1293,15 +1259,15 @@ function PeopleManagement() {
                 />
 
                 <Input
-                  label="linkendinUrl"
+                  label="LinkedIn URL"
                   required
-                  value={form.linkendinUrl}
-                  error={errors.linkendinUrl}
-                  onChange={handleChange("linkendinUrl")}
+                  value={form.linkedinUrl}
+                  error={errors.linkedinUrl}
+                  onChange={handleChange("linkedinUrl")}
                 />
 
                 <Input
-                  label="githubUrl"
+                  label="GitHub URL"
                   required
                   value={form.githubUrl}
                   error={errors.githubUrl}
@@ -1413,12 +1379,7 @@ function PeopleManagement() {
           <div className="max-h-[78vh] overflow-y-auto">
             <div className="bg-cm-navy-950 px-6 py-7 text-white sm:px-8">
               <div className="flex items-center gap-4">
-                <div
-                  onClick={() => {
-                    console.log(selected);
-                  }}
-                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-bold shadow-inner"
-                >
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-bold shadow-inner">
                   {(
                     selected.firstName?.[0] ||
                     selected.name?.[0] ||
@@ -1557,10 +1518,7 @@ function PeopleManagement() {
             <div className="w-full lg:w-64">
               <TableSearch
                 value={search}
-                onChange={(value) => {
-                  setSearch(value);
-                  setPage(1);
-                }}
+                onChange={setSearch}
                 placeholder="Search people..."
               />
             </div>
@@ -1569,10 +1527,10 @@ function PeopleManagement() {
 
         <DataTable
           columns={columns}
-          rows={filtered}
+          rows={people}
           isLoading={isPeopleLoading}
           emptyMessage={
-            search ? "No users match your search." : "No users found."
+            debouncedSearch ? "No users match your search." : "No users found."
           }
           pagination={pagination}
           onPageChange={setPage}
