@@ -10,9 +10,9 @@ import Loader from "../../components/common/Loader";
 const STATUS_PROGRESS = {
   Backlog: 0,
   "To Do": 0,
-  "In Progress": 50,
-  "Code Review": 80,
-  Testing: 90,
+  "In Progress": 0,
+  "Code Review": 0,
+  Testing: 50,
   Done: 100,
 };
 
@@ -30,14 +30,16 @@ function getStatusProgress(status) {
 }
 
 function calculateProgress(tasks) {
-  if (tasks.length === 0) return 0;
+  if (!tasks.length) return 0;
 
-  const total = tasks.reduce(
-    (sum, task) => sum + getStatusProgress(task.status),
+  const weightedProgress = tasks.reduce(
+    (sum, task) => sum + getStatusProgress(task.status) / 100,
     0,
   );
 
-  return Math.round(total / tasks.length);
+  return Number(
+    ((weightedProgress / tasks.length) * 100).toFixed(1),
+  );
 }
 
 function normalizeTask(task) {
@@ -83,6 +85,7 @@ function ProgressBar({ value, label }) {
 
 function ProgressSummary({ tasks }) {
   const completed = tasks.filter((task) => task.status === "Done").length;
+  const testing = tasks.filter((task) => task.status === "Testing").length;
   const progress = calculateProgress(tasks);
 
   return (
@@ -96,7 +99,7 @@ function ProgressSummary({ tasks }) {
             {progress}%
           </p>
           <p className="mt-1 text-sm text-cm-text-muted">
-            {completed} of {tasks.length} tasks completed
+            {completed} completed · {testing} testing · {tasks.length} total tasks
           </p>
         </div>
 
@@ -128,7 +131,7 @@ function TaskRow({ task }) {
           {task.title}
         </p>
         <p className="mt-1 text-xs text-cm-text-muted">
-          {task.status} · {getStatusProgress(task.status)}% task progress
+          {task.status} · {getStatusProgress(task.status)}% progress contribution
         </p>
       </div>
 

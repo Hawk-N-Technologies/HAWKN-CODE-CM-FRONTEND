@@ -9,27 +9,31 @@ import AttendanceButton from "../../components/common/AttendanceButton";
 import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
 
-const projects = [
-  {
-    id: "PRJ-001",
-    name: "Acme Retail ERP",
-    progress: 72,
-    status: "In Progress",
-  },
-  {
-    id: "PRJ-003",
-    name: "Internal HRMS",
-    progress: 79,
-    status: "In Progress",
-  },
-];
+const CLOSED_BUG_STATUSES = ["Fixed", "Closed", "Rejected"];
+
+const getList = (response) => {
+  const data = response?.data?.data ?? response?.data ?? [];
+  return Array.isArray(data) ? data : [];
+};
+
+const getProgress = (value) =>
+  Math.max(0, Math.min(100, Number(value) || 0));
 
 export default function Dashboard() {
   const navigate = useNavigate();
+
   const [canSwitchToLead, setCanSwitchToLead] = useState(false);
   const [checkingModes, setCheckingModes] = useState(true);
   const [switching, setSwitching] = useState(false);
 
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [openBugs, setOpenBugs] = useState(null);
+
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
+
+  // Check whether this developer can also access the Project Lead dashboard.
   useEffect(() => {
     let mounted = true;
 
@@ -42,6 +46,7 @@ export default function Dashboard() {
         if (mounted) {
           const modes =
             response.data?.data?.modes ?? response.data?.modes ?? [];
+
           setCanSwitchToLead(
             Array.isArray(modes) &&
               modes.some(
@@ -57,6 +62,108 @@ export default function Dashboard() {
     };
 
     checkModes();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Load real developer dashboard data.
+  useEffect(() => {
+    let mounted = true;
+
+    const loadDashboard = async () => {
+      setDashboardLoading(true);
+      setDashboardError("");
+
+      try {
+        const [projectsResponse, tasksResponse] = await Promise.all([
+          axios.get("/api/operations/my-projects", {
+            withCredentials: true,
+          }),
+          axios.get("/api/my-tasks", {
+            withCredentials: true,
+          }),
+        ]);
+
+        const projectList = getList(projectsResponse);
+        const taskList = getList(tasksResponse);
+
+        // Fetch bugs assigned to the logged-in developer in each assigned project.
+        let bugCount = 0;
+        let bugsAvailable = true;
+
+        if (projectList.length > 0) {
+          const bugResponses = await Promise.all(
+            projectList.map(async (project) => {
+              if (!project.id) return null;
+
+              try {
+                const response = await axios.get(
+                  `/api/bugs/projects/${encodeURIComponent(project.id)}/assigned-bugs`,
+                  { withCredentials: true },
+                );
+
+                return getList(response);
+              } catch (error) {
+                console.error(
+                  `Failed to load assigned bugs for project ${project.id}:`,
+                  error,
+                );
+
+                bugsAvailable = false;
+                return null;
+              }
+            }),
+          );
+
+          if (bugsAvailable) {
+            const uniqueBugs = new Map();
+
+            bugResponses.filter(Array.isArray).flat().forEach((bug) => {
+              const bugKey = bug.uuid ?? bug.id;
+
+              if (
+                bugKey &&
+                !CLOSED_BUG_STATUSES.includes(
+                  String(bug.status || "").trim(),
+                )
+              ) {
+                uniqueBugs.set(String(bugKey), bug);
+              }
+            });
+
+            bugCount = uniqueBugs.size;
+          }
+        }
+
+        if (mounted) {
+          setProjects(projectList);
+          setTasks(taskList);
+          setOpenBugs(
+            projectList.length === 0
+              ? 0
+              : bugsAvailable
+                ? bugCount
+                : null,
+          );
+        }
+      } catch (error) {
+        console.error("Developer dashboard loading failed:", error);
+
+        if (mounted) {
+          setDashboardError(
+            error.response?.data?.message ||
+              "Unable to load developer dashboard data.",
+          );
+        }
+      } finally {
+        if (mounted) setDashboardLoading(false);
+      }
+    };
+
+    loadDashboard();
+
     return () => {
       mounted = false;
     };
@@ -87,6 +194,10 @@ export default function Dashboard() {
     }
   };
 
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Done",
+  ).length;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -101,6 +212,7 @@ export default function Dashboard() {
 
         <div className="flex flex-wrap items-center gap-3">
           <AttendanceButton />
+
           {!checkingModes && canSwitchToLead && (
             <Button
               type="button"
@@ -113,6 +225,7 @@ export default function Dashboard() {
               Switch to Project Lead
             </Button>
           )}
+
           {checkingModes && (
             <span className="inline-flex items-center gap-2 text-xs text-cm-text-muted">
               <LoaderCircle size={14} className="animate-spin" />
@@ -122,45 +235,122 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {dashboardError && (
+        <div className="rounded-cm-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {dashboardError}
+        </div>
+      )}
+
+      {/* Dynamic developer metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="My Projects" value="2" />
-        <StatCard label="My Tasks" value="12" />
-        <StatCard label="Completed Tasks" value="18" />
-        <StatCard label="Open Bugs" value="4" />
+        <StatCard
+          label="My Projects"
+          value={dashboardLoading ? "—" : projects.length}
+        />
+
+        <StatCard
+          label="My Tasks"
+          value={dashboardLoading ? "—" : tasks.length}
+        />
+
+        <StatCard
+          label="Completed Tasks"
+          value={dashboardLoading ? "—" : completedTasks}
+        />
+
+        <StatCard
+          label="Open Bugs"
+          value={
+            dashboardLoading
+              ? "—"
+              : openBugs === null
+                ? "—"
+                : openBugs
+          }
+        />
       </div>
 
+      {/* Dynamic assigned projects */}
       <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-cm-text">My Projects</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-cm-text">
+              My Projects
+            </h2>
+            <p className="mt-1 text-xs text-cm-text-muted">
+              Projects assigned to you as a project lead or developer.
+            </p>
+          </div>
 
-        <div className="mt-4 space-y-3">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="rounded-cm-md border border-cm-border p-4"
-            >
-              <div className="flex justify-between gap-3">
-                <div>
-                  <p className="text-xs text-cm-text-muted">{project.id}</p>
-                  <h3 className="mt-1 font-medium text-cm-text">
-                    {project.name}
-                  </h3>
-                </div>
-                <Badge tone="info">{project.status}</Badge>
-              </div>
-
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-cm-border">
-                <div
-                  className="h-full rounded-full bg-blue-600"
-                  style={{ width: `${project.progress}%` }}
-                />
-              </div>
-
-              <p className="mt-2 text-xs text-cm-text-muted">
-                {project.progress}% complete
-              </p>
-            </div>
-          ))}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/developer/projects")}
+          >
+            View all projects
+          </Button>
         </div>
+
+        {dashboardLoading ? (
+          <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-cm-text-muted">
+            <LoaderCircle size={18} className="animate-spin" />
+            Loading projects...
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="py-10 text-center">
+            <p className="text-sm font-medium text-cm-text">
+              No assigned projects
+            </p>
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Projects assigned to you will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {projects.slice(0, 5).map((project) => {
+              const progress = getProgress(project.progress);
+
+              return (
+                <div
+                  key={project.uuid || project.id}
+                  className="rounded-cm-md border border-cm-border p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-cm-text-muted">
+                        {project.assignmentRole || "Assigned project"}
+                      </p>
+
+                      <h3 className="mt-1 font-medium text-cm-text">
+                        {project.name || "Untitled project"}
+                      </h3>
+
+                      <p className="mt-1 text-xs text-cm-text-muted">
+                        {project.taskCount ?? 0} total tasks ·{" "}
+                        {project.completedTaskCount ?? 0} completed
+                      </p>
+                    </div>
+
+                    <Badge tone="info">
+                      {project.status || "Not specified"}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-cm-border">
+                    <div
+                      className="h-full rounded-full bg-blue-600 transition-all"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+
+                  <p className="mt-2 text-xs text-cm-text-muted">
+                    {progress}% task-based progress
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
