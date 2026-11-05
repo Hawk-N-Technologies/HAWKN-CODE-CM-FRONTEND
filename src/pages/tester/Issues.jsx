@@ -28,6 +28,7 @@ const STATUSES = [
   "Confirmed",
   "Feature Request",
   "Rejected",
+  "Solved",
 ];
 const CLASSIFICATIONS = ["Bug", "Feature Request"];
 
