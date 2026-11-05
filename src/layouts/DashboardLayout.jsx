@@ -43,7 +43,7 @@ function DashboardLayout({ sections = [] }) {
 
   return (
     <NotificationProvider
-  enabled={["admin", "hr", "bde"].includes(
+  enabled={["admin", "hr", "bde", "developer"].includes(
     String(role || "").toLowerCase(),
   )}
 >
