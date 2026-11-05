@@ -1,12 +1,17 @@
+
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { ArrowRightLeft, LoaderCircle } from "lucide-react";
+import {
+  ArrowRightLeft,
+  LoaderCircle,
+  FolderKanban,
+  CheckCircle2,
+} from "lucide-react";
 
 import StatCard from "../../components/cards/StatCard";
 import Badge from "../../components/common/Badge";
 import AttendanceButton from "../../components/common/AttendanceButton";
-import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
 
 const CLOSED_BUG_STATUSES = ["Fixed", "Closed", "Rejected"];
@@ -200,157 +205,293 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">
-            Developer Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            View your projects, tasks, testing and development progress.
-          </p>
+      {/* =====================================================
+          STANDARD DEVELOPER PAGE HEADER
+      ===================================================== */}
+      <section className="relative isolate overflow-hidden rounded-[20px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+        {/* Decorative background rings */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-100"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-blue-100"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-50/50 to-transparent"
+        />
+
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Page identity and title */}
+          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+            <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[13px] bg-[#0b1833] text-base font-bold tracking-wide text-white shadow-sm sm:h-[62px] sm:w-[62px]">
+              DEV
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-700 sm:text-xs">
+                Development
+              </p>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                <h1 className="text-[25px] font-bold leading-tight tracking-tight text-[#101b32] sm:text-[28px] lg:text-[30px]">
+                  Developer Dashboard
+                </h1>
+
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-[11px]">
+                  Overview
+                </span>
+              </div>
+
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-500 sm:text-sm">
+                Monitor your assigned projects, tasks and development progress.
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Developer workspace
+                </span>
+
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs">
+                  Live dashboard data
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Header actions */}
+          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+            <AttendanceButton />
+
+            {!checkingModes && canSwitchToLead && (
+              <button
+                type="button"
+                onClick={switchToLead}
+                disabled={switching}
+                className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[10px] bg-[#0b1833] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#17294b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {switching ? (
+                  <LoaderCircle size={15} className="animate-spin" />
+                ) : (
+                  <ArrowRightLeft size={15} />
+                )}
+                {switching ? "Switching..." : "Switch to Project Lead"}
+              </button>
+            )}
+
+            {checkingModes && (
+              <span className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 text-[11px] text-slate-500">
+                <LoaderCircle size={13} className="animate-spin" />
+                Checking access
+              </span>
+            )}
+          </div>
         </div>
+      </section>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <AttendanceButton />
-
-          {!checkingModes && canSwitchToLead && (
-            <Button
-              type="button"
-              variant="outline"
-              loading={switching}
-              disabled={switching}
-              leftIcon={<ArrowRightLeft size={16} />}
-              onClick={switchToLead}
-            >
-              Switch to Project Lead
-            </Button>
-          )}
-
-          {checkingModes && (
-            <span className="inline-flex items-center gap-2 text-xs text-cm-text-muted">
-              <LoaderCircle size={14} className="animate-spin" />
-              Checking access
-            </span>
-          )}
-        </div>
-      </div>
-
+      {/* Dashboard Error */}
       {dashboardError && (
-        <div className="rounded-cm-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {dashboardError}
+        <div
+          role="alert"
+          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+        >
+          <p className="font-semibold">Dashboard data unavailable</p>
+          <p className="mt-1">{dashboardError}</p>
         </div>
       )}
 
-      {/* Dynamic developer metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="My Projects"
-          value={dashboardLoading ? "—" : projects.length}
-        />
-
-        <StatCard
-          label="My Tasks"
-          value={dashboardLoading ? "—" : tasks.length}
-        />
-
-        <StatCard
-          label="Completed Tasks"
-          value={dashboardLoading ? "—" : completedTasks}
-        />
-
-        <StatCard
-          label="Open Bugs"
-          value={
-            dashboardLoading
-              ? "—"
-              : openBugs === null
-                ? "—"
-                : openBugs
-          }
-        />
-      </div>
-
-      {/* Dynamic assigned projects */}
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
+      {/* =====================================================
+          PERFORMANCE OVERVIEW
+      ===================================================== */}
+      <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-cm-text">
-              My Projects
+            <h2 className="text-lg font-bold tracking-tight text-[#101b32] sm:text-xl">
+              Performance Overview
             </h2>
-            <p className="mt-1 text-xs text-cm-text-muted">
-              Projects assigned to you as a project lead or developer.
+            <p className="mt-1 text-sm text-slate-500">
+              Key development and workload metrics.
             </p>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/developer/projects")}
-          >
-            View all projects
-          </Button>
+          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-500">
+            Current totals
+          </span>
         </div>
 
-        {dashboardLoading ? (
-          <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-cm-text-muted">
-            <LoaderCircle size={18} className="animate-spin" />
-            Loading projects...
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="My Projects"
+            value={dashboardLoading ? "—" : projects.length}
+          />
+
+          <StatCard
+            label="My Tasks"
+            value={dashboardLoading ? "—" : tasks.length}
+          />
+
+          <StatCard
+            label="Completed Tasks"
+            value={dashboardLoading ? "—" : completedTasks}
+          />
+
+          <StatCard
+            label="Open Bugs"
+            value={
+              dashboardLoading
+                ? "—"
+                : openBugs === null
+                  ? "—"
+                  : openBugs
+            }
+          />
+        </div>
+      </section>
+
+      {/* =====================================================
+          MY PROJECTS
+      ===================================================== */}
+      <section className="overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <FolderKanban size={19} />
+            </div>
+
+            <div>
+              <h2 className="text-sm font-bold text-[#101b32] sm:text-base">
+                My Projects
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Projects assigned to you as a project lead or developer.
+              </p>
+            </div>
           </div>
-        ) : projects.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="text-sm font-medium text-cm-text">
-              No assigned projects
-            </p>
-            <p className="mt-1 text-sm text-cm-text-muted">
-              Projects assigned to you will appear here.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {projects.slice(0, 5).map((project) => {
-              const progress = getProgress(project.progress);
 
-              return (
-                <div
-                  key={project.uuid || project.id}
-                  className="rounded-cm-md border border-cm-border p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs text-cm-text-muted">
-                        {project.assignmentRole || "Assigned project"}
-                      </p>
+          <button
+            type="button"
+            onClick={() => navigate("/developer/projects")}
+            className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          >
+            View all projects
+          </button>
+        </div>
 
-                      <h3 className="mt-1 font-medium text-cm-text">
-                        {project.name || "Untitled project"}
-                      </h3>
+        <div className="p-4 sm:p-5">
+          {dashboardLoading ? (
+            <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-slate-500">
+              <LoaderCircle
+                size={18}
+                className="animate-spin text-blue-600"
+              />
+              Loading projects...
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="flex min-h-36 flex-col items-center justify-center text-center">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <FolderKanban size={20} />
+              </div>
 
-                      <p className="mt-1 text-xs text-cm-text-muted">
-                        {project.taskCount ?? 0} total tasks ·{" "}
-                        {project.completedTaskCount ?? 0} completed
-                      </p>
+              <h3 className="text-sm font-semibold text-[#101b32]">
+                No assigned projects
+              </h3>
+
+              <p className="mt-1 max-w-sm text-xs text-slate-500">
+                Projects assigned to you will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+              {projects.slice(0, 5).map((project) => {
+                const progress = getProgress(project.progress);
+
+                return (
+                  <article
+                    key={project.uuid || project.id}
+                    className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-blue-200"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                          {project.assignmentRole || "Assigned project"}
+                        </p>
+
+                        <h3 className="mt-1 text-sm font-semibold text-[#101b32]">
+                          {project.name || "Untitled project"}
+                        </h3>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          {project.taskCount ?? 0} total tasks
+                          <span className="mx-1.5 text-slate-300">·</span>
+                          {project.completedTaskCount ?? 0} completed
+                        </p>
+                      </div>
+
+                      <Badge tone="info">
+                        {project.status || "Not specified"}
+                      </Badge>
                     </div>
 
-                    <Badge tone="info">
-                      {project.status || "Not specified"}
-                    </Badge>
-                  </div>
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-xs font-medium text-slate-500">
+                          Project progress
+                        </span>
+                        <span className="text-xs font-bold tabular-nums text-[#101b32]">
+                          {progress}%
+                        </span>
+                      </div>
 
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-cm-border">
-                    <div
-                      className="h-full rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
+                      <div
+                        className="h-2 overflow-hidden rounded-full bg-slate-100"
+                        role="progressbar"
+                        aria-label={`${project.name || "Project"} progress`}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress}
+                      >
+                        <div
+                          className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
 
-                  <p className="mt-2 text-xs text-cm-text-muted">
-                    {progress}% task-based progress
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <CheckCircle2
+                          size={13}
+                          className="text-emerald-600"
+                        />
+                        Task-based progress
+                      </span>
+
+                      <span className="text-[11px] font-medium text-slate-500">
+                        {project.completedTaskCount ?? 0}/
+                        {project.taskCount ?? 0} tasks
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {!dashboardLoading && projects.length > 5 && (
+            <div className="mt-4 border-t border-slate-100 pt-3 text-center">
+              <button
+                type="button"
+                onClick={() => navigate("/developer/projects")}
+                className="text-xs font-semibold text-blue-700 transition-colors hover:text-blue-800"
+              >
+                View all {projects.length} projects
+              </button>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

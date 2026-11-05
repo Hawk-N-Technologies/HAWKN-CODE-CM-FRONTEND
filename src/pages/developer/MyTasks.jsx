@@ -1,5 +1,15 @@
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import {
+  ClipboardList,
+  Clock3,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  CheckCircle2,
+  FlaskConical,
+} from "lucide-react";
 
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
@@ -26,15 +36,6 @@ const PRIORITY_TONE = {
   High: "danger",
   Medium: "warning",
   Low: "neutral",
-};
-
-const STATUS_TONE = {
-  Backlog: "neutral",
-  "To Do": "neutral",
-  "In Progress": "warning",
-  "Code Review": "warning",
-  Testing: "info",
-  Done: "success",
 };
 
 const getSelectValue = (value) => value?.target?.value ?? value;
@@ -85,8 +86,6 @@ const formatDate = (value) => {
   if (!value) return "—";
 
   const dateString = String(value).slice(0, 10);
-
-  // Avoid timezone shifts for date-only values.
   const date = new Date(`${dateString}T00:00:00`);
 
   if (Number.isNaN(date.getTime())) return "—";
@@ -97,6 +96,115 @@ const formatDate = (value) => {
     year: "numeric",
   }).format(date);
 };
+
+function PageHeader({ title, subtitle, metadata = [], action }) {
+  return (
+    <section className="relative isolate overflow-hidden rounded-[20px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-100"
+      />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-blue-100"
+      />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-50/50 to-transparent"
+      />
+
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+          <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[13px] bg-[#0b1833] text-base font-bold tracking-wide text-white shadow-sm sm:h-[62px] sm:w-[62px]">
+            DEV
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-700 sm:text-xs">
+              Development
+            </p>
+
+            <h1 className="mt-1.5 break-words text-[25px] font-bold leading-tight tracking-tight text-[#101b32] sm:text-[28px] lg:text-[30px]">
+              {title}
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-500 sm:text-sm">
+              {subtitle}
+            </p>
+
+            {metadata.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {metadata.map((item, index) => (
+                  <span
+                    key={`${item.label}-${index}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs"
+                  >
+                    {item.dot && (
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    )}
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {action && (
+          <div className="relative z-10 flex shrink-0 items-center">
+            {action}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SummaryCard({ item }) {
+  const Icon = item.icon;
+
+  return (
+    <div className="rounded-[16px] border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[13px] font-medium text-slate-500 sm:text-sm">
+          {item.label}
+        </p>
+
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.iconBackground} ${item.iconColor}`}
+        >
+          <Icon size={18} />
+        </div>
+      </div>
+
+      <p className="mt-4 text-[28px] font-bold leading-none tracking-tight text-[#101b32] tabular-nums">
+        {item.value}
+      </p>
+
+      <p className="mt-2 text-xs text-slate-500">{item.description}</p>
+    </div>
+  );
+}
+
+function SectionHeading({ title, subtitle, trailing }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-bold tracking-tight text-[#101b32] sm:text-xl">
+          {title}
+        </h2>
+
+        {subtitle && (
+          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+        )}
+      </div>
+
+      {trailing}
+    </div>
+  );
+}
 
 export default function MyTasks() {
   const [tasks, setTasks] = useState([]);
@@ -297,21 +405,33 @@ export default function MyTasks() {
         label: "Total tasks",
         value: tasks.length,
         description: "Assigned to you",
+        icon: ClipboardList,
+        iconBackground: "bg-blue-50",
+        iconColor: "text-blue-700",
       },
       {
         label: "In progress",
         value: tasks.filter((task) => task.status === "In Progress").length,
         description: "Currently being worked on",
+        icon: Clock3,
+        iconBackground: "bg-amber-50",
+        iconColor: "text-amber-700",
       },
       {
         label: "In testing",
         value: tasks.filter((task) => task.status === "Testing").length,
         description: "Awaiting verification",
+        icon: FlaskConical,
+        iconBackground: "bg-violet-50",
+        iconColor: "text-violet-700",
       },
       {
         label: "Blocked",
         value: tasks.filter((task) => task.isBlocked).length,
         description: "Need attention",
+        icon: ShieldAlert,
+        iconBackground: "bg-rose-50",
+        iconColor: "text-rose-700",
       },
     ],
     [tasks],
@@ -401,7 +521,6 @@ export default function MyTasks() {
         render: (row) =>
           row.estimatedHours != null ? `${row.estimatedHours}h` : "—",
       },
-
       {
         key: "testResult",
         header: "Test Result",
@@ -448,53 +567,59 @@ export default function MyTasks() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page heading */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">My Tasks</h1>
-
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Tasks assigned to you across your projects, modules, and phases.
-          </p>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          disabled={loading}
-          onClick={fetchTasks}
-        >
-          {loading ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader context="inline" />
-              Refreshing...
-            </span>
-          ) : (
-            "Refresh"
-          )}
-        </Button>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-lg border border-cm-border bg-cm-surface p-4"
+    <main className="flex flex-col gap-6">
+      {/* Standardized developer page header */}
+      <PageHeader
+        title="My Tasks"
+        subtitle="Tasks assigned to you across your projects, modules, and phases."
+        metadata={[
+          { label: "Task workspace", dot: true },
+          {
+            label: loading
+              ? "Loading records..."
+              : `${tasks.length} assigned task${tasks.length === 1 ? "" : "s"}`,
+          },
+        ]}
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={fetchTasks}
           >
-            <p className="text-sm text-cm-text-muted">{item.label}</p>
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader context="inline" />
+                Refreshing...
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <RefreshCw size={15} />
+                Refresh
+              </span>
+            )}
+          </Button>
+        }
+      />
 
-            <p className="mt-2 text-2xl font-semibold text-cm-text">
-              {item.value}
-            </p>
+      {/* Task summary */}
+      <section className="flex flex-col gap-4">
+        <SectionHeading
+          title="Task Overview"
+          subtitle="A summary of your assigned development work."
+          trailing={
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-500">
+              Live task totals
+            </span>
+          }
+        />
 
-            <p className="mt-1 text-xs text-cm-text-muted">
-              {item.description}
-            </p>
-          </div>
-        ))}
-      </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {summary.map((item) => (
+            <SummaryCard key={item.label} item={item} />
+          ))}
+        </div>
+      </section>
 
       {/* Error state */}
       {error && !loading && (
@@ -507,71 +632,92 @@ export default function MyTasks() {
         </div>
       )}
 
-      {/* Search and filters */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <TableSearch
-          value={search}
-          onChange={setSearch}
-          placeholder="Search tasks, projects, modules..."
+      {/* Task list */}
+      <section className="flex min-w-0 flex-col gap-4">
+        <SectionHeading
+          title="Assigned Tasks"
+          subtitle="Search tasks, review their details and update your task status."
+          trailing={
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-500">
+              {rows.length} matching records
+            </span>
+          }
         />
 
-        <Select
-          label="Status"
-          value={filter}
-          options={[
-            { value: "All", label: "All statuses" },
-            ...STATUSES.map((status) => ({
-              value: status,
-              label: status,
-            })),
-          ]}
-          onChange={(value) => setFilter(getSelectValue(value))}
-        />
-      </div>
+        {/* Search and filters */}
+        <div className="rounded-[16px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="min-w-0">
+              <TableSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search tasks, projects, modules..."
+              />
+            </div>
 
-      {/* Main content */}
-      <section
-        className="min-w-0 rounded-lg border border-cm-border bg-cm-surface"
-        aria-label="My tasks list"
-        aria-busy={loading}
-      >
-        {loading ? (
-          <Loader context="section" label="Loading your tasks..." />
-        ) : error ? (
-          <div className="p-4 text-center text-sm text-cm-text-muted">
-            Your task list could not be loaded. Use Retry above.
+            <div className="min-w-0">
+              <Select
+                label="Status"
+                value={filter}
+                options={[
+                  { value: "All", label: "All statuses" },
+                  ...STATUSES.map((status) => ({
+                    value: status,
+                    label: status,
+                  })),
+                ]}
+                onChange={(value) => setFilter(getSelectValue(value))}
+              />
+            </div>
           </div>
-        ) : tasks.length === 0 ? (
-          <EmptyState
-            title="No tasks assigned"
-            description="Tasks assigned to you will appear here."
-          />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            title="No matching tasks"
-            description="Try changing your search or status filter."
-            action={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setFilter("All");
-                }}
-              >
-                Clear filters
-              </Button>
-            }
-          />
-        ) : (
-          <DataTable
-            columns={columns}
-            rows={rows}
-            emptyMessage="No tasks found."
-          />
-        )}
+        </div>
+
+        {/* Main task table */}
+        <section
+          className="min-w-0 overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-sm"
+          aria-label="My tasks list"
+          aria-busy={loading}
+        >
+          {loading ? (
+            <div className="flex min-h-64 items-center justify-center">
+              <Loader context="section" label="Loading your tasks..." />
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center text-sm text-slate-500">
+              Your task list could not be loaded. Use Retry above.
+            </div>
+          ) : tasks.length === 0 ? (
+            <EmptyState
+              title="No tasks assigned"
+              description="Tasks assigned to you will appear here."
+            />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              title="No matching tasks"
+              description="Try changing your search or status filter."
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearch("");
+                    setFilter("All");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={rows}
+              emptyMessage="No tasks found."
+            />
+          )}
+        </section>
       </section>
-    </div>
+    </main>
   );
 }
