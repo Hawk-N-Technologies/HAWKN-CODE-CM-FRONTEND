@@ -99,29 +99,46 @@ function Notifications() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">
-            Notifications
-          </h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Updates about your BRDs and their review status.
-          </p>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            {unreadCount} unread notification
-            {unreadCount === 1 ? "" : "s"}
-          </p>
-        </div>
+      {/* Standardized BDE Page Header */}
+      <div className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        {/* Decorative Background */}
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-        <Button
-          variant="outline"
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0}
-        >
-          Mark All Read
-        </Button>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              Business Development
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Notifications
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Updates about your BRDs and their review status.
+            </p>
+
+            <div className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-slate-200">
+              {unreadCount} unread notification
+              {unreadCount === 1 ? "" : "s"}
+            </div>
+          </div>
+
+          <div className="relative z-10 shrink-0">
+            <Button
+              variant="outline"
+              onClick={handleMarkAllRead}
+              disabled={unreadCount === 0}
+            >
+              Mark All Read
+            </Button>
+          </div>
+        </div>
       </div>
 
+      {/* Notification Filters */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((value) => (
           <Button
@@ -140,12 +157,14 @@ function Notifications() {
         ))}
       </div>
 
+      {/* Search */}
       <TableSearch
         value={search}
         onChange={setSearch}
         placeholder="Search BRD notifications..."
       />
 
+      {/* Errors */}
       {(error || actionError) && (
         <div
           role="alert"
@@ -155,6 +174,7 @@ function Notifications() {
         </div>
       )}
 
+      {/* Notification List */}
       {loading ? (
         <div className="rounded-cm-lg border border-cm-border bg-cm-card p-6 text-sm text-cm-text-muted">
           Loading notifications...
@@ -186,15 +206,18 @@ function Notifications() {
                     <h2 className="font-semibold text-cm-text">
                       {item.title}
                     </h2>
+
                     <Badge tone={item.readAt ? "neutral" : "info"}>
                       {item.readAt ? "Read" : "Unread"}
                     </Badge>
+
                     <Badge tone="neutral">{item.type}</Badge>
                   </div>
 
                   <p className="mt-2 text-sm text-cm-text-muted">
                     {item.message}
                   </p>
+
                   <p className="mt-2 text-xs text-cm-text-muted">
                     {formatTime(item.createdAt)}
                   </p>
