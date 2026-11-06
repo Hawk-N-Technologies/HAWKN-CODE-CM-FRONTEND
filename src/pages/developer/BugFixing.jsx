@@ -1,5 +1,4 @@
-
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import {
   RefreshCw,
@@ -7,16 +6,17 @@ import {
   Bug,
   CalendarDays,
   AlertCircle,
+  Sparkles,
   FolderKanban,
   CheckCircle2,
   Clock3,
   CircleDot,
 } from "lucide-react";
-
 import Select from "../../components/common/Select";
 import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
 
+// Keep these values aligned with the statuses accepted by your backend.
 const DEVELOPER_STATUSES = ["Assigned", "In Progress", "Fixed"];
 
 const STATUS_STYLES = {
@@ -26,7 +26,7 @@ const STATUS_STYLES = {
 };
 
 const SEVERITY_STYLES = {
-  Low: "bg-slate-100 text-slate-700",
+  Low: "bg-gray-100 text-gray-700",
   Medium: "bg-blue-50 text-blue-700",
   High: "bg-orange-50 text-orange-700",
   Critical: "bg-red-50 text-red-700",
@@ -53,285 +53,21 @@ const normalizeBug = (bug) => ({
   createdAt: bug.createdAt ?? bug.created_at ?? null,
 });
 
+// The dropdown uses the project's public UUID.
+// The assigned-bugs controller expects the internal numeric projects.id.
 const getProjectUuid = (project) =>
   String(project?.uuid ?? project?.id ?? "");
-
-const getSelectValue = (eventOrValue) =>
-  eventOrValue?.target?.value ?? eventOrValue;
-
-const formatDate = (value) => {
-  if (!value) return "—";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "—";
-
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-/* -------------------------------------------------------------------------- */
-/* Standardized developer page header                                        */
-/* -------------------------------------------------------------------------- */
-
-function PageHeader({ title, subtitle, metadata, action }) {
-  return (
-    <section className="relative isolate overflow-hidden rounded-[20px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 shadow-sm sm:px-6 sm:py-6">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-100"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-blue-100"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-50/50 to-transparent"
-      />
-
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-          <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[13px] bg-[#0b1833] text-base font-bold tracking-wide text-white shadow-sm sm:h-[62px] sm:w-[62px]">
-            DEV
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-700 sm:text-xs">
-              Development
-            </p>
-
-            <h1 className="mt-1.5 break-words text-[25px] font-bold leading-tight tracking-tight text-[#101b32] sm:text-[28px] lg:text-[30px]">
-              {title}
-            </h1>
-
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-500 sm:text-sm">
-              {subtitle}
-            </p>
-
-            {metadata?.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {metadata.map((item, index) => (
-                  <span
-                    key={`${item.label}-${index}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs"
-                  >
-                    {item.dot && (
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    )}
-                    {item.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {action && (
-          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
-            {action}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Summary cards                                                              */
-/* -------------------------------------------------------------------------- */
-
-function SummaryCard({ label, value, description, icon: Icon, iconStyle }) {
-  return (
-    <article className="rounded-[16px] border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-medium text-slate-500 sm:text-sm">
-          {label}
-        </p>
-
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}
-        >
-          <Icon size={19} strokeWidth={1.8} />
-        </div>
-      </div>
-
-      <p className="mt-4 text-[28px] font-bold leading-none tracking-tight text-[#101b32] tabular-nums">
-        {value}
-      </p>
-
-      <p className="mt-2 text-xs text-slate-500">{description}</p>
-    </article>
-  );
-}
-
-function SectionHeading({ title, subtitle, trailing }) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-bold tracking-tight text-[#101b32] sm:text-xl">
-          {title}
-        </h2>
-
-        {subtitle && (
-          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-        )}
-      </div>
-
-      {trailing}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Bug card                                                                   */
-/* -------------------------------------------------------------------------- */
-
-function BugCard({
-  bug,
-  selectedStatus,
-  saving,
-  onStatusChange,
-  onSave,
-}) {
-  const statusChanged = selectedStatus !== bug.status;
-
-  return (
-    <article className="rounded-[16px] border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
-      {/* Bug heading */}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-              <Bug size={12} />
-              Bug report
-            </span>
-
-            {bug.createdAt && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
-                <CalendarDays size={12} />
-                {formatDate(bug.createdAt)}
-              </span>
-            )}
-          </div>
-
-          <h3 className="break-words text-[15px] font-bold leading-snug text-[#17233b] sm:text-base">
-            {bug.title}
-          </h3>
-
-          {bug.description && (
-            <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-slate-500">
-              {bug.description}
-            </p>
-          )}
-        </div>
-
-        <span
-          className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
-            SEVERITY_STYLES[bug.severity] ?? SEVERITY_STYLES.Medium
-          }`}
-        >
-          <AlertCircle size={13} />
-          {bug.severity}
-        </span>
-      </div>
-
-      {/* Current status */}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
-        <span className="text-[11px] font-medium text-slate-400">
-          Current status
-        </span>
-
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset ${
-            STATUS_STYLES[bug.status] ??
-            "bg-slate-100 text-slate-700 ring-slate-200"
-          }`}
-        >
-          <CircleDot size={12} />
-          {bug.status}
-        </span>
-      </div>
-
-      {/* Status update */}
-
-      <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
-        <div className="mb-3">
-          <p className="text-xs font-bold text-[#17233b]">
-            Update bug status
-          </p>
-
-          <p className="mt-1 text-[11px] text-slate-500">
-            Select the new status and save your changes.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="w-full flex-1 sm:max-w-xs">
-            <Select
-              label="New status"
-              name={`status-${bug.id}`}
-              value={selectedStatus}
-              options={DEVELOPER_STATUSES.map((status) => ({
-                value: status,
-                label: status,
-              }))}
-              onChange={onStatusChange}
-              disabled={saving}
-            />
-          </div>
-
-          <Button
-            type="button"
-            onClick={onSave}
-            disabled={saving || !statusChanged}
-          >
-            <span className="inline-flex items-center gap-2">
-              {saving ? (
-                <RefreshCw size={15} className="animate-spin" />
-              ) : (
-                <Save size={15} />
-              )}
-
-              {saving ? "Saving..." : "Save Status"}
-            </span>
-          </Button>
-        </div>
-
-        {statusChanged && (
-          <p className="mt-2 text-[11px] font-medium text-blue-700">
-            Unsaved change: {bug.status} → {selectedStatus}
-          </p>
-        )}
-      </div>
-    </article>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Main page                                                                  */
-/* -------------------------------------------------------------------------- */
 
 export default function BugFixing() {
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
   const [projectMap, setProjectMap] = useState({});
-
   const [loadingProjects, setLoadingProjects] = useState(false);
+
   const [bugs, setBugs] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const [savingBugId, setSavingBugId] = useState(null);
   const [statusChanges, setStatusChanges] = useState({});
-
-  /* Fetch available projects */
 
   useEffect(() => {
     let active = true;
@@ -356,7 +92,7 @@ export default function BugFixing() {
           list.map((project) => [
             getProjectUuid(project),
             project.id,
-          ]),
+          ])
         );
 
         if (active) {
@@ -370,7 +106,7 @@ export default function BugFixing() {
       } catch (error) {
         if (active) {
           showToast.error(
-            error.response?.data?.message || "Failed to load projects.",
+            error.response?.data?.message || "Failed to load projects."
           );
         }
       } finally {
@@ -385,13 +121,10 @@ export default function BugFixing() {
     };
   }, []);
 
-  /* Fetch bugs assigned to the developer */
-
   const fetchAssignedBugs = useCallback(async () => {
     if (!projectId) {
       setBugs([]);
       setStatusChanges({});
-      setLoading(false);
       return;
     }
 
@@ -407,8 +140,10 @@ export default function BugFixing() {
       }
 
       const response = await axios.get(
-        `/api/bugs/projects/${encodeURIComponent(numericProjectId)}/assigned-bugs`,
-        { withCredentials: true },
+        `/api/bugs/projects/${encodeURIComponent(
+          numericProjectId
+        )}/assigned-bugs`,
+        { withCredentials: true }
       );
 
       const list = getList(response).map(normalizeBug);
@@ -417,7 +152,7 @@ export default function BugFixing() {
       setStatusChanges({});
     } catch (error) {
       showToast.error(
-        error.response?.data?.message || "Failed to load assigned bugs.",
+        error.response?.data?.message || "Failed to load assigned bugs."
       );
     } finally {
       setLoading(false);
@@ -427,8 +162,6 @@ export default function BugFixing() {
   useEffect(() => {
     fetchAssignedBugs();
   }, [fetchAssignedBugs]);
-
-  /* Save bug status */
 
   const handleStatusSave = async (bug) => {
     const nextStatus = statusChanges[bug.id] ?? bug.status;
@@ -441,256 +174,444 @@ export default function BugFixing() {
     setSavingBugId(bug.id);
 
     try {
-      const response = await axios.put(
+      const res = await axios.put(
         `/api/bugs/developer/${bug.uuid}/status`,
         { status: nextStatus },
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
-      if (response.status === 200) {
+      if (res.status == 200) {
         showToast.success("Bug status updated successfully.");
         await fetchAssignedBugs();
       }
     } catch (error) {
       showToast.error(
-        error.response?.data?.message || "Failed to update bug status.",
+        error.response?.data?.message || "Failed to update bug status."
       );
     } finally {
       setSavingBugId(null);
     }
   };
 
-  /* Summary metrics */
-
-  const summary = useMemo(
-    () => ({
-      total: bugs.length,
-      assigned: bugs.filter((bug) => bug.status === "Assigned").length,
-      inProgress: bugs.filter((bug) => bug.status === "In Progress").length,
-      fixed: bugs.filter((bug) => bug.status === "Fixed").length,
-    }),
-    [bugs],
-  );
-
   const selectedProject = projects.find(
-    (project) => getProjectUuid(project) === projectId,
+    (project) => getProjectUuid(project) === projectId
   );
 
-  const summaryCards = [
-    {
-      label: "Assigned Bugs",
-      value: summary.total,
-      description: "Total bugs assigned to you",
-      icon: Bug,
-      iconStyle: "bg-blue-50 text-blue-700",
-    },
-    {
-      label: "Assigned",
-      value: summary.assigned,
-      description: "Awaiting development",
-      icon: CircleDot,
-      iconStyle: "bg-slate-100 text-slate-700",
-    },
-    {
-      label: "In Progress",
-      value: summary.inProgress,
-      description: "Currently being worked on",
-      icon: Clock3,
-      iconStyle: "bg-amber-50 text-amber-700",
-    },
-    {
-      label: "Fixed",
-      value: summary.fixed,
-      description: "Marked as fixed",
-      icon: CheckCircle2,
-      iconStyle: "bg-emerald-50 text-emerald-700",
-    },
-  ];
+  const projectName = selectedProject
+    ? selectedProject.name ??
+      selectedProject.projectName ??
+      `Project ${projectId}`
+    : "No project selected";
+
+  const assignedCount = bugs.length;
+  const fixedCount = bugs.filter((bug) => bug.status === "Fixed").length;
+  const inProgressCount = bugs.filter(
+    (bug) => bug.status === "In Progress"
+  ).length;
+  const assignedStatusCount = bugs.filter(
+    (bug) => bug.status === "Assigned"
+  ).length;
+
+  const severityCount = {
+    Critical: bugs.filter((bug) => bug.severity === "Critical").length,
+    High: bugs.filter((bug) => bug.severity === "High").length,
+    Medium: bugs.filter((bug) => bug.severity === "Medium").length,
+    Low: bugs.filter((bug) => bug.severity === "Low").length,
+  };
 
   return (
-    <main className="flex min-w-0 flex-col gap-6">
-      {/* Standardized page header */}
+    <section className="space-y-6">
+      {/* Page Header */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 text-white shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-2 -top-12 h-52 w-52 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute bottom-[-100px] left-[38%] h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
 
-      <PageHeader
-        title="Bug Fixing"
-        subtitle="Review bugs assigned to you, track their severity, and update fixing progress."
-        metadata={[
-          { label: "Development workspace", dot: true },
-          {
-            label: loadingProjects
-              ? "Loading projects..."
-              : `${projects.length} available project${projects.length === 1 ? "" : "s"}`,
-          },
-        ]}
-        action={
-          <Button
-            type="button"
-            onClick={fetchAssignedBugs}
-            disabled={loading || !projectId}
-            variant="outline"
-          >
-            <span className="inline-flex items-center gap-2">
-              <RefreshCw
-                size={15}
-                className={loading ? "animate-spin" : ""}
-              />
-              Refresh
-            </span>
-          </Button>
-        }
-      />
+        <div className="relative z-10 flex flex-col justify-between gap-7 xl:flex-row xl:items-end">
+          <div className="min-w-0">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-100">
+              <Sparkles size={13} />
+              Personal Workspace
+            </div>
 
-      {/* Project selection */}
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-[34px]">
+              Bug Fixing
+            </h1>
 
-      <section className="rounded-[16px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">
+              Review bugs assigned to you, track their severity, and update
+              their resolution status.
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2">
+                <FolderKanban size={14} className="text-blue-300" />
+                {projectName}
+              </span>
+
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2">
+                <Bug size={14} className="text-blue-300" />
+                {assignedCount} assigned{" "}
+                {assignedCount === 1 ? "bug" : "bugs"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+            <div className="min-w-[145px] rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Selected project
+              </p>
+              <p className="mt-1 max-w-[180px] truncate text-base font-semibold text-white">
+                {projectName}
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              onClick={fetchAssignedBugs}
+              disabled={loading || !projectId}
+            >
+              <span className="inline-flex items-center gap-2">
+                <RefreshCw
+                  size={16}
+                  className={loading ? "animate-spin" : ""}
+                />
+                Refresh
+              </span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Project Selection */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
             <FolderKanban size={19} />
           </div>
 
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-bold text-[#101b32]">
-              Project Workspace
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Project Selection
             </h2>
-
-            <p className="mt-1 text-xs text-slate-500">
-              Select a project to view bugs assigned to you.
+            <p className="mt-0.5 text-xs text-slate-500">
+              Select a project to view your assigned bugs.
             </p>
-
-            <div className="mt-3 max-w-xl">
-              <Select
-                label="Select project"
-                name="projectId"
-                required
-                value={projectId}
-                options={projects.map((project) => ({
-                  value: getProjectUuid(project),
-                  label:
-                    project.name ??
-                    project.projectName ??
-                    `Project ${getProjectUuid(project)}`,
-                }))}
-                placeholder={
-                  loadingProjects ? "Loading projects..." : "Select project"
-                }
-                disabled={loadingProjects || projects.length === 0}
-                onChange={(eventOrValue) => {
-                  const value = getSelectValue(eventOrValue);
-
-                  setProjectId(value);
-                  setBugs([]);
-                  setStatusChanges({});
-                }}
-              />
-            </div>
-
-            {selectedProject && (
-              <p className="mt-2 text-xs font-medium text-blue-700">
-                Selected:{" "}
-                {selectedProject.name ?? selectedProject.projectName}
-              </p>
-            )}
           </div>
         </div>
-      </section>
 
-      {/* Summary */}
+        <div className="max-w-xl">
+          <Select
+            label="Project"
+            name="projectId"
+            required
+            value={projectId}
+            options={projects.map((project) => ({
+              value: getProjectUuid(project),
+              label:
+                project.name ??
+                project.projectName ??
+                `Project ${getProjectUuid(project)}`,
+            }))}
+            placeholder={
+              loadingProjects ? "Loading projects..." : "Select project"
+            }
+            disabled={loadingProjects}
+            onChange={(eventOrValue) => {
+              const value = eventOrValue?.target?.value ?? eventOrValue;
 
-      <section className="flex flex-col gap-4">
-        <SectionHeading
-          title="Bug Overview"
-          subtitle="Current status of bugs assigned to you."
-          trailing={
-            <span className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500">
-              {loading ? "Updating..." : "Current totals"}
-            </span>
-          }
-        />
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((item) => (
-            <SummaryCard key={item.label} {...item} />
-          ))}
+              setProjectId(value);
+              setBugs([]);
+              setStatusChanges({});
+            }}
+          />
         </div>
       </section>
 
-      {/* Assigned bugs */}
+      {/* Summary Cards */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">
+            Your bug summary
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Overview of your assigned bug-fixing workload.
+          </p>
+        </div>
 
-      <section className="flex flex-col gap-4">
-        <SectionHeading
-          title="Assigned Bugs"
-          subtitle="Review each bug and update its current fixing status."
-          trailing={
-            <span className="text-xs font-medium text-slate-500">
-              {bugs.length} {bugs.length === 1 ? "bug" : "bugs"}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Assigned Bugs"
+            value={assignedCount}
+            description="Total assigned to you"
+            icon={Bug}
+            iconClass="bg-indigo-50 text-indigo-600"
+            dotClass="bg-indigo-500"
+          />
+
+          <SummaryCard
+            label="Assigned"
+            value={assignedStatusCount}
+            description="Awaiting progress"
+            icon={CircleDot}
+            iconClass="bg-blue-50 text-blue-600"
+            dotClass="bg-blue-500"
+          />
+
+          <SummaryCard
+            label="In Progress"
+            value={inProgressCount}
+            description="Currently being worked on"
+            icon={Clock3}
+            iconClass="bg-amber-50 text-amber-600"
+            dotClass="bg-amber-500"
+          />
+
+          <SummaryCard
+            label="Fixed"
+            value={fixedCount}
+            description="Marked as fixed"
+            icon={CheckCircle2}
+            iconClass="bg-emerald-50 text-emerald-600"
+            dotClass="bg-emerald-500"
+          />
+        </div>
+      </section>
+
+      {/* Severity Overview */}
+      {projectId && !loading && bugs.length > 0 && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Severity breakdown
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Distribution of bugs assigned to you by severity.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {Object.entries(severityCount).map(([severity, count]) => (
+              <div
+                key={severity}
+                className="rounded-xl border border-slate-100 bg-slate-50/80 p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      SEVERITY_STYLES[severity]
+                    }`}
+                  >
+                    {severity}
+                  </span>
+                  <span className="text-xl font-semibold tabular-nums text-slate-900">
+                    {count}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Assigned Bugs */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              Assigned Bugs
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Review bug details and manage their status.
+            </p>
+          </div>
+
+          {projectId && (
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+              {assignedCount}{" "}
+              {assignedCount === 1 ? "record" : "records"}
             </span>
-          }
-        />
+          )}
+        </div>
 
         {!projectId ? (
-          <div className="rounded-[16px] border border-dashed border-slate-200 bg-white p-8 text-center">
-            <FolderKanban
-              className="mx-auto mb-3 text-slate-300"
-              size={30}
-            />
-
-            <p className="text-sm font-semibold text-[#17233b]">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <FolderKanban size={22} />
+            </div>
+            <p className="font-semibold text-slate-800">
               Select a project
             </p>
-
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-sm text-slate-500">
               Choose a project above to view your assigned bugs.
             </p>
           </div>
         ) : loading ? (
-          <div className="flex min-h-48 items-center justify-center rounded-[16px] border border-slate-200 bg-white">
-            <div className="flex flex-col items-center gap-3">
-              <RefreshCw
-                className="animate-spin text-blue-600"
-                size={24}
-              />
-
-              <p className="text-sm text-slate-500">
-                Loading assigned bugs...
-              </p>
-            </div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-14 text-center">
+            <RefreshCw
+              size={25}
+              className="mx-auto mb-3 animate-spin text-indigo-500"
+            />
+            <p className="text-sm font-medium text-slate-700">
+              Loading assigned bugs...
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Retrieving your project bug records.
+            </p>
           </div>
         ) : bugs.length === 0 ? (
-          <div className="rounded-[16px] border border-dashed border-slate-200 bg-white p-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500">
               <Bug size={23} />
             </div>
-
-            <p className="mt-3 text-sm font-bold text-[#17233b]">
+            <p className="font-semibold text-slate-800">
               No assigned bugs found
             </p>
-
-            <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
+            <p className="mt-1 text-sm text-slate-500">
               Bugs assigned to you for this project will appear here.
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {bugs.map((bug) => (
-              <BugCard
-                key={bug.id}
-                bug={bug}
-                selectedStatus={statusChanges[bug.id] ?? bug.status}
-                saving={savingBugId === bug.id}
-                onStatusChange={(eventOrValue) => {
-                  const value = getSelectValue(eventOrValue);
+          <div className="space-y-4">
+            {bugs.map((bug) => {
+              const selectedStatus = statusChanges[bug.id] ?? bug.status;
+              const isSaving = savingBugId === bug.id;
 
-                  setStatusChanges((previous) => ({
-                    ...previous,
-                    [bug.id]: value,
-                  }));
-                }}
-                onSave={() => handleStatusSave(bug)}
-              />
-            ))}
+              return (
+                <article
+                  key={bug.id}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
+                >
+                  <div className="p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            <Bug size={12} />
+                            Bug report
+                          </span>
+
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${
+                              SEVERITY_STYLES[bug.severity] ??
+                              SEVERITY_STYLES.Medium
+                            }`}
+                          >
+                            <AlertCircle
+                              className="mr-1 inline"
+                              size={13}
+                            />
+                            {bug.severity}
+                          </span>
+                        </div>
+
+                        <h3 className="break-words text-base font-semibold text-slate-900 sm:text-lg">
+                          {bug.title}
+                        </h3>
+
+                        {bug.description && (
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-500">
+                            {bug.description}
+                          </p>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          <span
+                            className={`rounded-full px-3 py-1.5 font-medium ring-1 ring-inset ${
+                              STATUS_STYLES[bug.status] ??
+                              "bg-gray-100 text-gray-700 ring-gray-200"
+                            }`}
+                          >
+                            {bug.status}
+                          </span>
+
+                          {bug.createdAt && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5">
+                              <CalendarDays size={13} />
+                              {new Date(
+                                bug.createdAt
+                              ).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-end">
+                      <div className="w-full sm:max-w-xs">
+                        <Select
+                          label="Update status"
+                          name={`status-${bug.id}`}
+                          value={selectedStatus}
+                          options={DEVELOPER_STATUSES.map((status) => ({
+                            value: status,
+                            label: status,
+                          }))}
+                          onChange={(eventOrValue) => {
+                            const value =
+                              eventOrValue?.target?.value ?? eventOrValue;
+
+                            setStatusChanges((previous) => ({
+                              ...previous,
+                              [bug.id]: value,
+                            }));
+                          }}
+                          disabled={isSaving}
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={() => handleStatusSave(bug)}
+                        disabled={
+                          isSaving || selectedStatus === bug.status
+                        }
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <Save size={16} />
+                          {isSaving ? "Saving..." : "Save Status"}
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
-    </main>
+    </section>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  description,
+  icon: Icon,
+  iconClass,
+  dotClass,
+}) {
+  return (
+    <article className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+      <span
+        className={`absolute right-5 top-5 h-2.5 w-2.5 rounded-full ${dotClass}`}
+      />
+
+      <div
+        className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconClass}`}
+      >
+        <Icon size={20} />
+      </div>
+
+      <div className="mt-5">
+        <p className="text-sm font-medium text-slate-500">{label}</p>
+        <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+          {value}
+        </p>
+        <p className="mt-1 text-xs text-slate-400">{description}</p>
+      </div>
+    </article>
   );
 }

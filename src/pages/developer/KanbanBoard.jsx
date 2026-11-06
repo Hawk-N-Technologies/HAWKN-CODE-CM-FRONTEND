@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
@@ -167,63 +166,63 @@ function initials(name) {
 /* Standardized developer page header                                        */
 /* -------------------------------------------------------------------------- */
 
+
 function PageHeader({ title, subtitle, metadata = [], action }) {
   return (
-    <section className="relative isolate overflow-hidden rounded-[20px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+    <section className="relative isolate overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 text-white shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-100"
+        className="pointer-events-none absolute -right-16 -top-24 -z-10 h-[290px] w-[290px] rounded-full border border-white/10"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-blue-100"
+        className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-white/10"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-50/50 to-transparent"
+        className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-indigo-500/10 to-transparent"
       />
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-          <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[13px] bg-[#0b1833] text-base font-bold tracking-wide text-white shadow-sm sm:h-[62px] sm:w-[62px]">
-            DEV
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-[-100px] left-[38%] -z-10 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl"
+      />
+
+      <div className="relative z-10 flex flex-col justify-between gap-7 xl:flex-row xl:items-end">
+        <div className="min-w-0">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-100">
+            Development Workspace
           </div>
 
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-700 sm:text-xs">
-              Development
-            </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-[34px]">
+            {title}
+          </h1>
 
-            <h1 className="mt-1.5 break-words text-[25px] font-bold leading-tight tracking-tight text-[#101b32] sm:text-[28px] lg:text-[30px]">
-              {title}
-            </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">
+            {subtitle}
+          </p>
 
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-500 sm:text-sm">
-              {subtitle}
-            </p>
-
-            {metadata.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {metadata.map((item, index) => (
-                  <span
-                    key={`${item.label}-${index}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs"
-                  >
-                    {item.dot && (
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    )}
-                    {item.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          {metadata.length > 0 && (
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+              {metadata.map((item, index) => (
+                <span
+                  key={`${item.label}-${index}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2"
+                >
+                  {item.dot && (
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  )}
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {action && (
-          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
+          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-3 xl:justify-end">
             {action}
           </div>
         )}
@@ -231,6 +230,7 @@ function PageHeader({ title, subtitle, metadata = [], action }) {
     </section>
   );
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* Summary card                                                               */
@@ -1229,57 +1229,59 @@ export default function KanbanBoard({ projectUuid: projectUuidProp }) {
           >
             {/* Standardized modal header */}
 
-            <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 sm:px-6">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-8 -top-20 h-44 w-44 rounded-full border border-blue-100"
-              />
+            
+<div className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-6 sm:py-6">
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute -right-8 -top-20 h-44 w-44 rounded-full border border-white/10"
+  />
 
-              <div className="relative flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                      Task details
-                    </span>
+  <div className="relative flex items-start justify-between gap-4">
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-100">
+          Task Details
+        </span>
 
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      {String(selectedTask.taskCode).startsWith("TASK-")
-                        ? selectedTask.taskCode
-                        : `TASK-${String(selectedTask.taskCode).slice(-8)}`}
-                    </span>
-                  </div>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+          {String(selectedTask.taskCode).startsWith("TASK-")
+            ? selectedTask.taskCode
+            : `TASK-${String(selectedTask.taskCode).slice(-8)}`}
+        </span>
+      </div>
 
-                  <h2
-                    id="task-dialog-title"
-                    className="mt-2 break-words text-lg font-bold leading-snug tracking-tight text-[#101b32] sm:text-xl"
-                  >
-                    {selectedTask.title}
-                  </h2>
+      <h2
+        id="task-dialog-title"
+        className="mt-2 break-words text-lg font-bold leading-snug tracking-tight text-white sm:text-xl"
+      >
+        {selectedTask.title}
+      </h2>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    Review task information and the latest testing details.
-                  </p>
-                </div>
+      <p className="mt-1 text-xs text-slate-300">
+        Review task information and the latest testing details.
+      </p>
+    </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedTaskId(null)}
-                  aria-label="Close task details"
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="h-4 w-4"
-                    aria-hidden="true"
-                  >
-                    <path d="m18 6-12 12M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+    <button
+      type="button"
+      onClick={() => setSelectedTaskId(null)}
+      aria-label="Close task details"
+      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.08] text-white transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="h-4 w-4"
+        aria-hidden="true"
+      >
+        <path d="m18 6-12 12M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+</div>
+
 
             {/* Modal content */}
 
