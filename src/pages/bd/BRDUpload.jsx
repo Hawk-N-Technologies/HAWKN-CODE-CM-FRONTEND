@@ -37,6 +37,7 @@ function formatDate(value) {
 
 function BRDUpload() {
   const [activeTab, setActiveTab] = useState("upload");
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const [projects, setProjects] = useState([]);
   const [brdData, setBrdData] = useState([]);
@@ -143,6 +144,18 @@ function BRDUpload() {
     loadBRDData();
   }, []);
 
+  function openUploadModal() {
+    setError("");
+    setSuccessMessage("");
+    setActiveTab("upload");
+    setIsUploadModalOpen(true);
+  }
+
+  function closeUploadModal() {
+    if (uploading) return;
+    setIsUploadModalOpen(false);
+  }
+
   function handleFileChange(event) {
     const selectedFile = event.target.files?.[0];
 
@@ -210,6 +223,7 @@ function BRDUpload() {
 
       await Promise.all([fetchBRDSummary(), fetchBRDHistory()]);
 
+      setIsUploadModalOpen(false);
       setActiveTab("history");
       setHistoryFilter("All");
       setSearch("");
@@ -249,38 +263,32 @@ function BRDUpload() {
       render: (row) => (
         <div>
           <p className="font-medium text-cm-text">{row.project}</p>
-
           <p className="text-xs text-cm-text-muted">{row.client}</p>
         </div>
       ),
     },
-
     {
       key: "fileName",
       header: "BRD",
       render: (row) => (
         <div>
           <p className="text-sm font-medium text-cm-text">{row.fileName}</p>
-
           <p className="text-xs text-cm-text-muted">{row.version}</p>
         </div>
       ),
     },
-
     {
       key: "uploadedBy",
       header: "Uploaded By",
       render: (row) => (
         <div>
           <p className="text-sm text-cm-text">{row.uploadedBy}</p>
-
           <p className="text-xs text-cm-text-muted">
             {formatDate(row.uploadedAt)}
           </p>
         </div>
       ),
     },
-
     {
       key: "status",
       header: "Status",
@@ -288,21 +296,18 @@ function BRDUpload() {
         <Badge tone={STATUS_TONE[row.status] || "neutral"}>{row.status}</Badge>
       ),
     },
-
     {
       key: "reviewedBy",
       header: "Reviewed By",
       render: (row) => (
         <div>
           <p className="text-sm text-cm-text">{row.reviewedBy || "—"}</p>
-
           <p className="text-xs text-cm-text-muted">
             {formatDate(row.reviewedAt)}
           </p>
         </div>
       ),
     },
-
     {
       key: "remarks",
       header: "Remarks",
@@ -310,7 +315,6 @@ function BRDUpload() {
         <span className="text-sm text-cm-text-muted">{row.remarks || "—"}</span>
       ),
     },
-
     {
       key: "action",
       header: "",
@@ -334,43 +338,61 @@ function BRDUpload() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">BRD Management</h1>
+      {/* Standardized Page Header */}
+      <div className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-        <p className="mt-1 text-sm text-cm-text-muted">
-          Upload project BRDs and track approval status and history.
-        </p>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              BUSINESS DEVELOPMENT
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              BRD Management
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Upload project BRDs and track approval status and history.
+            </p>
+          </div>
+
+          <Button onClick={openUploadModal}>
+            Upload BRD
+          </Button>
+        </div>
       </div>
 
-      <div className="border-b border-cm-border">
-        <div className="flex gap-6">
-          <button
-            type="button"
-            onClick={() => setActiveTab("upload")}
-            className={`border-b-2 px-1 pb-3 text-sm font-medium transition ${
-              activeTab === "upload"
-                ? "border-cm-primary text-cm-primary"
-                : "border-transparent text-cm-text-muted hover:text-cm-text"
-            }`}
-          >
-            Upload BRD
-          </button>
+      {/* Upload BRD / History Tabs */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-cm-border pb-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab("upload")}
+          className={`rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-200 ${
+            activeTab === "upload"
+              ? "bg-[#0b1734] text-white shadow-md shadow-slate-900/20"
+              : "border border-cm-border bg-cm-card text-cm-text-muted hover:border-[#0b1734] hover:text-[#0b1734]"
+          }`}
+        >
+          Upload BRD
+        </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("history");
-              fetchBRDHistory();
-            }}
-            className={`border-b-2 px-1 pb-3 text-sm font-medium transition ${
-              activeTab === "history"
-                ? "border-cm-primary text-cm-primary"
-                : "border-transparent text-cm-text-muted hover:text-cm-text"
-            }`}
-          >
-            History
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("history");
+            fetchBRDHistory();
+          }}
+          className={`rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-200 ${
+            activeTab === "history"
+              ? "bg-[#0b1734] text-white shadow-md shadow-slate-900/20"
+              : "border border-cm-border bg-cm-card text-cm-text-muted hover:border-[#0b1734] hover:text-[#0b1734]"
+          }`}
+        >
+          History
+        </button>
       </div>
 
       {error && (
@@ -385,92 +407,35 @@ function BRDUpload() {
         </div>
       )}
 
+      {/* Upload Tab: BRD Status */}
       {activeTab === "upload" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <form
-            onSubmit={handleUpload}
-            className="flex flex-col gap-5 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm lg:col-span-2"
-          >
+          <div className="flex flex-col gap-4 rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm lg:col-span-2">
             <div>
-              <h2 className="text-sm font-semibold text-cm-text">
-                Upload Business Requirements Document
+              <h2 className="text-base font-semibold text-cm-text">
+                Business Requirements Documents
               </h2>
-
-              <p className="mt-1 text-xs text-cm-text-muted">
-                Select a project and upload the latest BRD document.
+              <p className="mt-1 text-sm text-cm-text-muted">
+                Submit a project BRD for admin approval and monitor its review
+                status.
               </p>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="project"
-                className="text-sm font-medium text-cm-text"
-              >
-                Project <span className="text-red-500">*</span>
-              </label>
-
-              <select
-                id="project"
-                value={selectedProject}
-                onChange={(event) => setSelectedProject(event.target.value)}
-                disabled={loadingProjects || uploading}
-                className="w-full rounded-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text outline-none focus:border-cm-primary focus:ring-1 focus:ring-cm-primary"
-              >
-                <option value="">Select a project</option>
-
-                {projects.map((project) => (
-                  <option key={project.uuid} value={project.uuid}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-
-              {loadingProjects && <Loader context="inline" />}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="brd-file"
-                className="text-sm font-medium text-cm-text"
-              >
-                BRD File <span className="text-red-500">*</span>
-              </label>
-
-              <input
-                ref={fileInputRef}
-                id="brd-file"
-                type="file"
-                accept=".pdf,.doc,.docx"
-                disabled={uploading}
-                onChange={handleFileChange}
-                className="block w-full rounded-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text file:mr-4 file:rounded-md file:border-0 file:bg-cm-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
-              />
-
-              <p className="text-xs text-cm-text-muted">
-                Supported formats: PDF, DOC, DOCX. Maximum size: 10 MB.
-              </p>
-            </div>
-
-            {file && (
-              <div className="rounded-md border border-cm-border bg-cm-background p-4">
-                <p className="text-xs text-cm-text-muted">Selected file</p>
-
-                <p className="mt-1 text-sm font-medium text-cm-text">
-                  {file.name}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-cm-border bg-cm-background p-4">
+              <div>
+                <p className="text-sm font-medium text-cm-text">
+                  Ready to submit a BRD?
                 </p>
-
                 <p className="mt-1 text-xs text-cm-text-muted">
-                  {(file.size / 1024).toFixed(1)} KB
+                  PDF, DOC, and DOCX files up to 10 MB are supported.
                 </p>
               </div>
-            )}
 
-            <div className="flex justify-end border-t border-cm-border pt-4">
-              <Button type="submit" disabled={loadingProjects}>
-                {uploading ? <Loader context="inline" /> : "Upload BRD"}
+              <Button onClick={openUploadModal}>
+                Upload BRD
               </Button>
             </div>
-          </form>
+          </div>
 
           <div className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-cm-text">BRD Status</h2>
@@ -482,7 +447,6 @@ function BRDUpload() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
                     <p className="text-xs text-cm-text-muted">Total</p>
-
                     <p className="mt-1 text-2xl font-bold text-cm-text">
                       {summary.total}
                     </p>
@@ -490,7 +454,6 @@ function BRDUpload() {
 
                   <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
                     <p className="text-xs text-cm-text-muted">Pending</p>
-
                     <p className="mt-1 text-2xl font-bold text-cm-warning-600">
                       {summary.pending}
                     </p>
@@ -498,7 +461,6 @@ function BRDUpload() {
 
                   <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
                     <p className="text-xs text-cm-text-muted">Approved</p>
-
                     <p className="mt-1 text-2xl font-bold text-cm-success-600">
                       {summary.approved}
                     </p>
@@ -506,7 +468,6 @@ function BRDUpload() {
 
                   <div className="rounded-cm-lg border border-cm-border bg-cm-card p-4">
                     <p className="text-xs text-cm-text-muted">Rejected</p>
-
                     <p className="mt-1 text-2xl font-bold text-cm-danger-600">
                       {summary.rejected}
                     </p>
@@ -515,7 +476,6 @@ function BRDUpload() {
 
                 <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5">
                   <p className="text-xs text-cm-text-muted">Current Status</p>
-
                   <div className="mt-3">
                     <Badge tone={summary.pending > 0 ? "warning" : "success"}>
                       {summary.currentStatus}
@@ -528,6 +488,7 @@ function BRDUpload() {
         </div>
       )}
 
+      {/* History Tab */}
       {activeTab === "history" && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -535,7 +496,6 @@ function BRDUpload() {
               <h2 className="text-sm font-semibold text-cm-text">
                 BRD History
               </h2>
-
               <p className="mt-1 text-xs text-cm-text-muted">
                 View all uploaded BRDs and their approval status.
               </p>
@@ -544,7 +504,7 @@ function BRDUpload() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setActiveTab("upload")}
+              onClick={openUploadModal}
             >
               Upload New BRD
             </Button>
@@ -579,7 +539,6 @@ function BRDUpload() {
                   }`}
                 >
                   {filter}
-
                   <span className="ml-2">{count}</span>
                 </button>
               );
@@ -599,6 +558,161 @@ function BRDUpload() {
               }
             />
           )}
+        </div>
+      )}
+
+      {/* Standardized Upload Modal */}
+      {isUploadModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/70 px-4 py-6 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeUploadModal();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="brd-upload-modal-title"
+            className="relative my-auto w-full max-w-3xl overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6 sm:px-8">
+              <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
+
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <div>
+                  <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                    BUSINESS DEVELOPMENT
+                  </span>
+
+                  <h2
+                    id="brd-upload-modal-title"
+                    className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-[28px]"
+                  >
+                    Upload Business Requirements Document
+                  </h2>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-300">
+                    Select the project and attach its latest BRD for admin
+                    approval.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeUploadModal}
+                  disabled={uploading}
+                  aria-label="Close upload modal"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleUpload}
+              className="flex max-h-[calc(100vh-220px)] flex-col overflow-y-auto"
+            >
+              <div className="flex flex-col gap-5 p-6 sm:p-8">
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="project"
+                    className="text-sm font-medium text-cm-text"
+                  >
+                    Project <span className="text-red-500">*</span>
+                  </label>
+
+                  <select
+                    id="project"
+                    value={selectedProject}
+                    onChange={(event) =>
+                      setSelectedProject(event.target.value)
+                    }
+                    disabled={loadingProjects || uploading}
+                    className="w-full rounded-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text outline-none focus:border-cm-primary focus:ring-1 focus:ring-cm-primary"
+                  >
+                    <option value="">Select a project</option>
+
+                    {projects.map((project) => (
+                      <option key={project.uuid} value={project.uuid}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {loadingProjects && <Loader context="inline" />}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="brd-file"
+                    className="text-sm font-medium text-cm-text"
+                  >
+                    BRD File <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    ref={fileInputRef}
+                    id="brd-file"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    disabled={uploading}
+                    onChange={handleFileChange}
+                    className="block w-full rounded-md border border-cm-border bg-cm-card px-3 py-2 text-sm text-cm-text file:mr-4 file:rounded-md file:border-0 file:bg-cm-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+                  />
+
+                  <p className="text-xs text-cm-text-muted">
+                    Supported formats: PDF, DOC, DOCX. Maximum size: 10 MB.
+                  </p>
+                </div>
+
+                {file && (
+                  <div className="rounded-md border border-cm-border bg-cm-background p-4">
+                    <p className="text-xs text-cm-text-muted">
+                      Selected file
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-cm-text">
+                      {file.name}
+                    </p>
+
+                    <p className="mt-1 text-xs text-cm-text-muted">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap justify-end gap-3 border-t border-cm-border bg-cm-background px-6 py-4 sm:px-8">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeUploadModal}
+                  disabled={uploading}
+                >
+                  Cancel
+                </Button>
+
+                <Button type="submit" disabled={loadingProjects || uploading}>
+                  {uploading ? (
+                    <Loader context="inline" />
+                  ) : (
+                    "Upload BRD"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

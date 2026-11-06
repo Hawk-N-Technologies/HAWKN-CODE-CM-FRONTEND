@@ -5,18 +5,34 @@ import AttendanceButton from "../../components/common/AttendanceButton";
 export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">Tester Dashboard</h1>
+      {/* Standardized BDE Dashboard Header */}
+      <div className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        {/* Decorative Background */}
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Manage assigned testing work, bugs, retesting and client testing.
-          </p>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              Business Development
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              BDE Dashboard
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Manage your assigned work, track activities and monitor your
+              current dashboard overview.
+            </p>
+          </div>
+
+          {/* Attendance */}
+          <div className="relative z-10 shrink-0">
+            <AttendanceButton />
+          </div>
         </div>
-
-        {/* Attendance */}
-        <AttendanceButton />
       </div>
 
       {/* Stats */}
