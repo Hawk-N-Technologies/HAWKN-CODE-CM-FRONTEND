@@ -66,25 +66,31 @@ const priorityTone = (value) =>
       ? "warning"
       : "neutral";
 
-const normalizeTask = (task) => ({
-  ...task,
-  id: task.uuid,
-  moduleId: task.moduleId == null ? "" : String(task.moduleId),
-  phaseId: task.phaseId == null ? "" : String(task.phaseId),
-  assignedTo: task.assignedTo == null ? "" : String(task.assignedTo),
-  startDate: task.startDate || "",
-  dueDate: task.dueDate || "",
-  estimatedHours: task.estimatedHours ?? "",
-  actualHours: task.actualHours ?? "",
-  blockedReason: task.blockedReason || "",
-  isBlocked: Boolean(task.isBlocked),
-  priority: task.priority || "Medium",
-  status: task.status || "Backlog",
-  assignedTesters: task.assignedTesters || [],
-});
+const normalizeTask = (task) => {
+  console.log(task);
+
+  return {
+    ...task,
+    id: task.uuid,
+    moduleId: task.moduleId == null ? "" : String(task.moduleId),
+    phaseId: task.phaseId == null ? "" : String(task.phaseId),
+    assignedTo: task.assignedTo == null ? "" : String(task.assignedTo),
+    startDate: task.startDate || "",
+    dueDate: task.dueDate || "",
+    estimatedHours: task.estimatedHours ?? "",
+    actualHours: task.actualHours ?? "",
+    blockedReason: task.blockedReason || "",
+    isBlocked: Boolean(task.isBlocked),
+    priority: task.priority || "Medium",
+    status: task.status || "Backlog",
+    assignedTesters: task.assignedTesters || [],
+    projectUuid: task.projectUuid,
+  };
+};
 
 function Tasks() {
   const [projects, setProjects] = useState([]);
+  const [projectMap, setProjectMap] = useState([]);
   const [modules, setModules] = useState([]);
   const [phases, setPhases] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -165,9 +171,9 @@ function Tasks() {
       if (projectResult.status === "fulfilled") {
         const items = listFrom(projectResult.value);
         setProjects(items);
-        setSelectedProject(
-          items.length ? String(items[0].uuid ?? items[0].id) : "",
-        );
+        console.log(items);
+        setProjectMap(Object.fromEntries(items.map((i) => [i.uuid, i.name])));
+        console.log(projectMap["2455b2d4-ba29-440f-868a-2db3d118bfb0"]);
         setProjectName(items.length ? String(items[0].name) : "");
       } else {
         showToast.error(
@@ -339,6 +345,7 @@ function Tasks() {
       const phaseName =
         phases.find((item) => String(item.id) === String(task.phaseId))?.name ||
         "";
+
       const assigneeName = getEmployeeName(task.assignedTo);
       return [
         task.uuid,
@@ -562,7 +569,12 @@ function Tasks() {
       key: "projetId",
       header: "Project Name",
       render: (row) => (
-        <span className="text-sm text-cm-text">{projectName}</span>
+        <span
+      
+          className="text-sm text-cm-text"
+        >
+          {projectMap[row.projectUuid]}
+        </span>
       ),
     },
     {
