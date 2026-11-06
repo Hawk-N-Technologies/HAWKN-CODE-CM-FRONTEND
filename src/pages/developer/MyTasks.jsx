@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -99,61 +98,58 @@ const formatDate = (value) => {
 
 function PageHeader({ title, subtitle, metadata = [], action }) {
   return (
-    <section className="relative isolate overflow-hidden rounded-[20px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+    <section className="relative isolate overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-100"
+        className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-300/15"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-blue-100"
+        className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-indigo-300/15"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-50/50 to-transparent"
+        className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-400/10 to-transparent"
       />
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-          <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[13px] bg-[#0b1833] text-base font-bold tracking-wide text-white shadow-sm sm:h-[62px] sm:w-[62px]">
-            DEV
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-700 sm:text-xs">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200/20 bg-blue-300/10 px-3 py-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-300" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100 sm:text-[11px]">
               Development
             </p>
-
-            <h1 className="mt-1.5 break-words text-[25px] font-bold leading-tight tracking-tight text-[#101b32] sm:text-[28px] lg:text-[30px]">
-              {title}
-            </h1>
-
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-500 sm:text-sm">
-              {subtitle}
-            </p>
-
-            {metadata.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {metadata.map((item, index) => (
-                  <span
-                    key={`${item.label}-${index}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs"
-                  >
-                    {item.dot && (
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    )}
-                    {item.label}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
+
+          <h1 className="break-words text-3xl font-semibold tracking-tight text-white sm:text-[34px]">
+            {title}
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">
+            {subtitle}
+          </p>
+
+          {metadata.length > 0 && (
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              {metadata.map((item, index) => (
+                <span
+                  key={`${item.label}-${index}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-[11px] font-medium text-slate-200 sm:text-xs"
+                >
+                  {item.dot && (
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  )}
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {action && (
-          <div className="relative z-10 flex shrink-0 items-center">
+          <div className="relative z-10 flex shrink-0 items-center xl:justify-end">
             {action}
           </div>
         )}
