@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +6,8 @@ import {
   LoaderCircle,
   FolderKanban,
   CheckCircle2,
+  Sparkles,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 import StatCard from "../../components/cards/StatCard";
@@ -55,8 +56,8 @@ export default function Dashboard() {
           setCanSwitchToLead(
             Array.isArray(modes) &&
               modes.some(
-                (mode) => String(mode).toLowerCase() === "project_lead",
-              ),
+                (mode) => String(mode).toLowerCase() === "project_lead"
+              )
           );
         }
       } catch {
@@ -106,37 +107,40 @@ export default function Dashboard() {
               try {
                 const response = await axios.get(
                   `/api/bugs/projects/${encodeURIComponent(project.id)}/assigned-bugs`,
-                  { withCredentials: true },
+                  { withCredentials: true }
                 );
 
                 return getList(response);
               } catch (error) {
                 console.error(
                   `Failed to load assigned bugs for project ${project.id}:`,
-                  error,
+                  error
                 );
 
                 bugsAvailable = false;
                 return null;
               }
-            }),
+            })
           );
 
           if (bugsAvailable) {
             const uniqueBugs = new Map();
 
-            bugResponses.filter(Array.isArray).flat().forEach((bug) => {
-              const bugKey = bug.uuid ?? bug.id;
+            bugResponses
+              .filter(Array.isArray)
+              .flat()
+              .forEach((bug) => {
+                const bugKey = bug.uuid ?? bug.id;
 
-              if (
-                bugKey &&
-                !CLOSED_BUG_STATUSES.includes(
-                  String(bug.status || "").trim(),
-                )
-              ) {
-                uniqueBugs.set(String(bugKey), bug);
-              }
-            });
+                if (
+                  bugKey &&
+                  !CLOSED_BUG_STATUSES.includes(
+                    String(bug.status || "").trim()
+                  )
+                ) {
+                  uniqueBugs.set(String(bugKey), bug);
+                }
+              });
 
             bugCount = uniqueBugs.size;
           }
@@ -150,7 +154,7 @@ export default function Dashboard() {
               ? 0
               : bugsAvailable
                 ? bugCount
-                : null,
+                : null
           );
         }
       } catch (error) {
@@ -159,7 +163,7 @@ export default function Dashboard() {
         if (mounted) {
           setDashboardError(
             error.response?.data?.message ||
-              "Unable to load developer dashboard data.",
+              "Unable to load developer dashboard data."
           );
         }
       } finally {
@@ -192,7 +196,7 @@ export default function Dashboard() {
       showToast.error(
         error.response?.data?.message ||
           error.message ||
-          "Unable to switch dashboard.",
+          "Unable to switch dashboard."
       );
     } finally {
       setSwitching(false);
@@ -200,70 +204,70 @@ export default function Dashboard() {
   };
 
   const completedTasks = tasks.filter(
-    (task) => task.status === "Done",
+    (task) => task.status === "Done"
   ).length;
 
   return (
     <div className="flex flex-col gap-6">
       {/* =====================================================
-          STANDARD DEVELOPER PAGE HEADER
+          STANDARD NAVY DEVELOPER PAGE HEADER
       ===================================================== */}
-      <section className="relative isolate overflow-hidden rounded-[20px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+      <section className="relative isolate overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 text-white shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
         {/* Decorative background rings */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-28 -z-10 h-[290px] w-[290px] rounded-full border border-blue-100"
+          className="pointer-events-none absolute -right-16 -top-24 -z-10 h-[290px] w-[290px] rounded-full border border-white/10"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-blue-100"
+          className="pointer-events-none absolute -right-5 -top-20 -z-10 h-[220px] w-[220px] rounded-full border border-white/10"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-blue-50/50 to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 -z-20 w-1/3 bg-gradient-to-l from-indigo-500/10 to-transparent"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-[-100px] left-[38%] -z-10 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl"
         />
 
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          {/* Page identity and title */}
-          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-            <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[13px] bg-[#0b1833] text-base font-bold tracking-wide text-white shadow-sm sm:h-[62px] sm:w-[62px]">
-              DEV
+        <div className="relative z-10 flex flex-col justify-between gap-7 xl:flex-row xl:items-end">
+          {/* Page identity */}
+          <div className="min-w-0">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-100">
+              <Sparkles size={13} />
+              Personal Workspace
             </div>
 
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-blue-700 sm:text-xs">
-                Development
-              </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-[34px]">
+              Developer Dashboard
+            </h1>
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-                <h1 className="text-[25px] font-bold leading-tight tracking-tight text-[#101b32] sm:text-[28px] lg:text-[30px]">
-                  Developer Dashboard
-                </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">
+              Monitor your assigned projects, tasks and development progress
+              from one place.
+            </p>
 
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-[11px]">
-                  Overview
-                </span>
-              </div>
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Developer workspace
+              </span>
 
-              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-500 sm:text-sm">
-                Monitor your assigned projects, tasks and development progress.
-              </p>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2">
+                <FolderKanban size={14} className="text-blue-300" />
+                {dashboardLoading ? "Loading projects..." : `${projects.length} assigned projects`}
+              </span>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Developer workspace
-                </span>
-
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs">
-                  Live dashboard data
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2">
+                <CheckCircle2 size={14} className="text-emerald-300" />
+                Live dashboard data
+              </span>
             </div>
           </div>
 
           {/* Header actions */}
-          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-3 xl:justify-end">
             <AttendanceButton />
 
             {!checkingModes && canSwitchToLead && (
@@ -271,19 +275,20 @@ export default function Dashboard() {
                 type="button"
                 onClick={switchToLead}
                 disabled={switching}
-                className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[10px] bg-[#0b1833] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#17294b] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.09] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {switching ? (
                   <LoaderCircle size={15} className="animate-spin" />
                 ) : (
                   <ArrowRightLeft size={15} />
                 )}
+
                 {switching ? "Switching..." : "Switch to Project Lead"}
               </button>
             )}
 
             {checkingModes && (
-              <span className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 text-[11px] text-slate-500">
+              <span className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 text-[11px] text-slate-300">
                 <LoaderCircle size={13} className="animate-spin" />
                 Checking access
               </span>
@@ -354,8 +359,8 @@ export default function Dashboard() {
       {/* =====================================================
           MY PROJECTS
       ===================================================== */}
-      <section className="overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
               <FolderKanban size={19} />
