@@ -68,23 +68,23 @@ function MetricCard({ label, value, detail, icon: Icon, tone }) {
   };
 
   return (
-    <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+    <article className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
+          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
             {value}
           </p>
         </div>
 
         <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 ${tones[tone]}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${tones[tone]}`}
         >
           <Icon size={20} />
         </span>
       </div>
 
-      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
+      <p className="mt-3 text-xs leading-5 text-slate-500">{detail}</p>
     </article>
   );
 }
@@ -113,11 +113,19 @@ function SOPModal({ children, onClose }) {
         aria-labelledby="sop-modal-title"
         className="relative flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
       >
-        {/* Premium modal header */}
         <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-6 sm:px-7 sm:py-7">
-          <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full border border-white/10" />
-          <div className="pointer-events-none absolute -right-1 -top-10 h-40 w-40 rounded-full border border-white/10" />
-          <div className="pointer-events-none absolute bottom-[-90px] right-28 h-44 w-44 rounded-full border border-white/5" />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full border border-white/10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-1 -top-10 h-40 w-40 rounded-full border border-white/10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-[-90px] right-28 h-44 w-44 rounded-full border border-white/5"
+          />
 
           <div className="relative flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-4">
@@ -261,41 +269,50 @@ function SOPs() {
   return (
     <div className="min-w-0 space-y-6 pb-6">
       {/* Page hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/80 p-5 shadow-sm sm:p-7">
-        <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border border-blue-100" />
-        <div className="pointer-events-none absolute -right-2 -top-12 h-44 w-44 rounded-full border border-blue-100/80" />
-        <div className="pointer-events-none absolute bottom-[-100px] right-40 h-48 w-48 rounded-full border border-blue-100/60" />
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
 
-        <div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0b1833] text-white shadow-lg shadow-slate-900/10">
-              <BookOpen size={23} />
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+                <BookOpen size={23} />
+              </div>
+
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                HUMAN RESOURCES
+              </span>
             </div>
 
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700">
-                People operations
-              </p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Standard Operating Procedures
+            </h1>
 
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                Standard Operating Procedures
-              </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Manage company procedures, track effective dates, and maintain
+              acknowledgement records in one place.
+            </p>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Manage company procedures, track effective dates, and maintain
-                acknowledgement records in one place.
-              </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                SOP management
+              </span>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  SOP management
-                </span>
-
-                <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500">
-                  {summary.total} total documents
-                </span>
-              </div>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-slate-200">
+                {summary.total} total documents
+              </span>
             </div>
           </div>
 
@@ -308,7 +325,7 @@ function SOPs() {
             </Button>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* Summary cards */}
       <section className="space-y-3">
@@ -358,8 +375,8 @@ function SOPs() {
       </section>
 
       {/* SOP register */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-900">
               SOP register
@@ -381,7 +398,7 @@ function SOPs() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search SOPs or documents..."
                 aria-label="Search SOPs"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
               />
             </div>
 
@@ -420,7 +437,7 @@ function SOPs() {
           {filteredSops.map((sop) => (
             <article
               key={sop.id}
-              className="group rounded-2xl border border-slate-200/80 bg-white p-4 transition duration-200 hover:border-blue-200 hover:shadow-md sm:p-5"
+              className="group rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md sm:p-5"
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
@@ -543,10 +560,7 @@ function SOPs() {
       {/* Add SOP modal */}
       {showForm && (
         <SOPModal onClose={closeForm}>
-          <form
-            onSubmit={add}
-            className="min-h-0 overflow-y-auto"
-          >
+          <form onSubmit={add} className="min-h-0 overflow-y-auto">
             <div className="space-y-5 p-5 sm:p-7">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">
