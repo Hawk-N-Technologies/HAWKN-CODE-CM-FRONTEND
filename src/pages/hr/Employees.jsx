@@ -756,32 +756,41 @@ function Employees() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
-      <header className="flex flex-col gap-4 border-b border-cm-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-cm-blue-700">
-            Company administration
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-cm-text">
-            Employees
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
-            Manage employee profiles, roles, employment details and account
-            information.
-          </p>
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Employees
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Manage employee profiles, roles, employment details and account information.
+            </p>
+          </div>
+
+          <Button
+            onClick={openAdd}
+            disabled={isSubmitting || isRolesLoading}
+            className="w-full sm:w-auto"
+          >
+            {isRolesLoading ? "Loading roles..." : "Add Employee"}
+          </Button>
         </div>
-        <Button
-          onClick={openAdd}
-          disabled={isSubmitting || isRolesLoading}
-          className="w-full sm:w-auto"
-        >
-          {isRolesLoading ? "Loading roles..." : "Add Employee"}
-        </Button>
       </header>
 
       {isFormOpen && (
         <Modal
           open={isFormOpen}
           onClose={closeForm}
+          eyebrow="HUMAN RESOURCES"
           title={form.id ? "Edit employee" : "Add employee"}
           description={
             form.id
@@ -997,6 +1006,7 @@ function Employees() {
         <Modal
           open={Boolean(selected)}
           onClose={() => setSelected(null)}
+          eyebrow="HUMAN RESOURCES"
           title="Employee profile"
           description="Employee identity, role and employment overview."
           icon={ContactRound}

@@ -408,22 +408,29 @@ function AttendanceHistory() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Attendance History Filters */}
-      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
-        <div className="relative isolate overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5">
-          <div className="pointer-events-none absolute -right-8 -top-16 h-44 w-44 rounded-full border border-white/10" />
-          <div className="pointer-events-none absolute right-8 top-5 h-28 w-28 rounded-full border border-white/10" />
+      {/* PAGE HEADER */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-          <div className="relative flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-base font-semibold text-white">
-                Attendance History
-              </h2>
-              <p className="mt-1 text-sm text-blue-100/75">
-                Review and filter employee attendance records.
-              </p>
-            </div>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
 
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Attendance History
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Review employee attendance, track daily presence, and monitor
+              attendance records across selected periods.
+            </p>
+          </div>
+
+          <div className="relative z-10 shrink-0">
             <Button
               variant="outline"
               onClick={() => getHistory(true)}
@@ -431,6 +438,21 @@ function AttendanceHistory() {
             >
               {isRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* ATTENDANCE HISTORY FILTERS */}
+      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+        <div className="border-b border-cm-border bg-slate-50/70 px-5 py-4 md:px-6">
+          <div>
+            <h2 className="text-base font-semibold text-cm-text">
+              Attendance History Filters
+            </h2>
+
+            <p className="mt-1 text-sm text-cm-text-muted">
+              Refine attendance records by date, employee, status, or keyword.
+            </p>
           </div>
         </div>
 
@@ -525,7 +547,7 @@ function AttendanceHistory() {
         </div>
       </section>
 
-      {/* Error State */}
+      {/* ERROR STATE */}
       {error && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
           <div>
@@ -547,7 +569,7 @@ function AttendanceHistory() {
         </div>
       )}
 
-      {/* Attendance Statistics */}
+      {/* ATTENDANCE STATISTICS */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((card) => (
           <div
@@ -571,7 +593,7 @@ function AttendanceHistory() {
         ))}
       </section>
 
-      {/* Attendance Records */}
+      {/* ATTENDANCE RECORDS */}
       <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-cm-border px-5 py-5 md:px-6">
           <div>

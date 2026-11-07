@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -172,8 +171,8 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
         aria-labelledby="onboarding-modal-title"
         className="my-auto flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:max-h-[90vh] sm:rounded-3xl"
       >
-        {/* Soft navy header */}
-        <header className="relative shrink-0 overflow-hidden border-b border-slate-200 bg-gradient-to-r from-[#0b1932] via-[#112746] to-[#19385d] px-5 py-5 text-white sm:px-8 sm:py-6">
+        {/* Standardized HR modal header */}
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-8 sm:py-6">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-white/10"
@@ -181,6 +180,10 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -right-1 -top-16 h-44 w-44 rounded-full border border-white/10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-0 h-56 w-56 bg-blue-500/10 blur-3xl"
           />
 
           <div className="relative flex items-start justify-between gap-4">
@@ -190,6 +193,10 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
               </div>
 
               <div className="min-w-0">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                  HUMAN RESOURCES
+                </p>
+
                 <div className="flex flex-wrap items-center gap-2">
                   <h2
                     id="onboarding-modal-title"
@@ -710,46 +717,35 @@ function EmployeeOnboarding() {
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-6">
       {/* Page heading */}
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-blue-50/60 p-5 shadow-sm sm:p-7">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full border border-blue-100 sm:h-80 sm:w-80"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-5 -top-12 h-44 w-44 rounded-full border border-blue-100"
-        />
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-        <div className="relative flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0b1932] text-lg font-bold text-white shadow-sm sm:h-14 sm:w-14">
-              HR
-            </div>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
 
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 sm:text-xs">
-                People Operations
-              </p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Employee Onboarding
+            </h1>
 
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                Employee Onboarding
-              </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              A clear view of new joiners, checklist progress, and the steps needed
+              to get every employee ready.
+            </p>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                A clear view of new joiners, checklist progress, and the
-                steps needed to get every employee ready.
-              </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Employee lifecycle
+              </span>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs text-slate-600">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Employee lifecycle
-                </span>
-
-                <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs text-slate-600">
-                  {records.length} onboarding records
-                </span>
-              </div>
+              <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
+                {records.length} onboarding records
+              </span>
             </div>
           </div>
 
@@ -764,7 +760,7 @@ function EmployeeOnboarding() {
             </div>
           )}
         </div>
-      </section>
+      </header>
 
       {/* Status overview */}
       {!isLoading && !loadError && (

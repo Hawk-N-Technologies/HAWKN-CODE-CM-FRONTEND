@@ -103,26 +103,33 @@ const FORM_DEFAULTS = () => ({
 // Reusable UI
 // ---------------------------------------------------------------------------
 
+
 function SectionHeading({ eyebrow, title, description, action }) {
   return (
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-      <div>
+    <div className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+      <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
             {eyebrow}
           </p>
         )}
-        <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
+
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
           {title}
-        </h2>
+        </h1>
+
         {description && (
-          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+            {description}
+          </p>
         )}
       </div>
+
       {action}
     </div>
   );
 }
+
 
 function MetricCard({ label, value, detail, icon: Icon, tone }) {
   const tones = {
@@ -154,6 +161,7 @@ function MetricCard({ label, value, detail, icon: Icon, tone }) {
   );
 }
 
+
 function PayrollModal({ title, description, onClose, children }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -172,7 +180,7 @@ function PayrollModal({ title, description, onClose, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -181,58 +189,82 @@ function PayrollModal({ title, description, onClose, children }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="payroll-modal-title"
-        className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+        className="my-auto flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
       >
-        <header className="relative isolate shrink-0 overflow-hidden border-b border-white/10 bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-5 text-white sm:px-7">
-          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/[0.07]" />
-          <div className="pointer-events-none absolute -right-1 -top-10 h-36 w-36 rounded-full border border-white/[0.07]" />
+        {/* STANDARDIZED HR MODAL HEADER */}
+
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-8 sm:py-6">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-white/10"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-1 -top-16 h-44 w-44 rounded-full border border-white/10"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-0 h-56 w-56 bg-blue-500/10 blur-3xl"
+          />
 
           <div className="relative flex items-start justify-between gap-4">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
-                <Wallet size={19} />
+            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 sm:h-12 sm:w-12">
+                <Wallet size={21} />
               </span>
+
               <div className="min-w-0">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                  HUMAN RESOURCES
+                </p>
+
                 <div className="flex flex-wrap items-center gap-2">
                   <h2
                     id="payroll-modal-title"
-                    className="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                    className="text-xl font-bold tracking-tight text-white sm:text-2xl"
                   >
                     {title}
                   </h2>
-                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
+
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
                     Payroll
                   </span>
                 </div>
+
                 {description && (
-                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
+                  <p className="mt-1.5 max-w-2xl text-sm leading-5 text-slate-300">
                     {description}
                   </p>
                 )}
               </div>
             </div>
+
             <button
               type="button"
               aria-label="Close dialog"
               onClick={onClose}
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300"
             >
               <X size={17} />
             </button>
           </div>
 
-          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-sky-300" />
-            <span>Payroll operations</span>
-            <span className="text-slate-500">/</span>
-            <span>Employee salary and payment details</span>
+          <div className="relative mt-5 flex flex-wrap items-center gap-2 text-xs text-blue-100/90">
+            <span className="h-2 w-2 rounded-full bg-blue-300" />
+            Payroll operations
+            <span className="text-white/40">/</span>
+            Employee salary and payment details
           </div>
         </header>
+
         <div className="overflow-y-auto p-5 sm:p-7">{children}</div>
       </section>
     </div>
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // Create Payroll form
@@ -933,6 +965,28 @@ export default function PayrollRuns() {
 
   return (
     <div className="min-w-0 space-y-6">
+      {/* STANDARDIZED HR PAGE HEADER */}
+
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
+
+        <SectionHeading
+          eyebrow="HUMAN RESOURCES"
+          title="Payroll Runs"
+          description="Create payroll records, review salary calculations, filter employee records and process pending payments."
+          action={
+            <Button onClick={() => setShowForm(true)}>
+              <span className="inline-flex items-center gap-2">
+                <Plus size={16} />
+                Create Payroll
+              </span>
+            </Button>
+          }
+        />
+      </header>
+
       {/* SUMMARY CARDS */}
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -969,24 +1023,6 @@ export default function PayrollRuns() {
         />
       </section>
 
-      {/* PAYROLL HEADER */}
-
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
-        <SectionHeading
-          eyebrow="Payroll operations"
-          title="Payroll runs"
-          description="Create payroll records, filter results and process pending payments."
-          action={
-            <Button onClick={() => setShowForm(true)}>
-              <span className="inline-flex items-center gap-2">
-                <Plus size={16} />
-                Create Payroll
-              </span>
-            </Button>
-          }
-        />
-      </section>
-
       {/* CREATE PAYROLL MODAL */}
 
       {showForm && (
@@ -1007,38 +1043,39 @@ export default function PayrollRuns() {
       {/* PAYROLL FILTER SECTION */}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {/* HEADER */}
+        {/* STANDARDIZED FILTER HEADER */}
 
-        <div className="relative isolate overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5">
-          <div className="pointer-events-none absolute -right-8 -top-16 h-44 w-44 rounded-full border border-white/10" />
-          <div className="pointer-events-none absolute right-8 top-5 h-28 w-28 rounded-full border border-white/10" />
+        <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 sm:px-6">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-2 -top-12 h-40 w-40 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 bg-blue-500/10 blur-3xl" />
 
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-semibold text-white">
                   Filter Payroll
                 </h3>
-                <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+
+                <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
                   Search
                 </span>
               </div>
 
-              <p className="mt-1 text-sm text-blue-100/75">
+              <p className="mt-1 text-sm leading-5 text-slate-300">
                 Find payroll records using employees, date range and payment
                 status.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-xl font-bold text-white">
-                  {pagination.total}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-blue-100/60">
-                  Total records
-                </p>
-              </div>
+            <div className="relative text-right">
+              <p className="text-xl font-bold text-white">
+                {pagination.total}
+              </p>
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">
+                Total records
+              </p>
             </div>
           </div>
         </div>

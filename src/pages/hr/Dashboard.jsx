@@ -125,7 +125,10 @@ const MetricCard = ({ label, value, detail, link, accent = "blue" }) => {
   );
 
   return link ? (
-    <Link to={link} className="block h-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+    <Link
+      to={link}
+      className="block h-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+    >
       {content}
     </Link>
   ) : (
@@ -182,22 +185,24 @@ function Dashboard() {
 
   if (error) {
     return (
-      <div className="mx-auto w-full max-w-screen-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0b1932] text-sm font-bold text-white">
-            HR
-          </div>
+      <div className="mx-auto w-full max-w-screen-2xl">
+        <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
-              HR Management
-            </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+          <div className="relative z-10">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
               HR Dashboard
             </h1>
-            <p className="mt-3 text-sm text-red-600">{error}</p>
+
+            <p className="mt-3 text-sm leading-6 text-red-300">{error}</p>
           </div>
-        </div>
+        </section>
       </div>
     );
   }
@@ -246,61 +251,54 @@ function Dashboard() {
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-5 sm:gap-6">
-      {/* Dashboard header */}
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-100 p-5 shadow-sm sm:p-7 lg:p-8">
+      {/* Standardized HR Dashboard Header */}
+      <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-blue-100 sm:h-80 sm:w-80"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-blue-100 sm:h-64 sm:w-64"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
         />
 
-        <div className="relative flex min-w-0 flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0b1932] text-sm font-bold tracking-wide text-white shadow-sm sm:h-14 sm:w-14">
-              HR
-            </div>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
 
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
-                People Operations
-              </p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              HR Dashboard
+            </h1>
 
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  HR Dashboard
-                </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              People overview and HR actions for {formatDate(data.date)}.
+            </p>
 
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Overview
-                </span>
-              </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Live dashboard data
+              </span>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-                People overview and HR actions for {formatDate(data.date)}.
-              </p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Live dashboard data
-                </span>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">
-                  HR workspace
-                </span>
-              </div>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                HR workspace
+              </span>
             </div>
           </div>
 
-          <div className="relative flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-end">
+          <div className="relative flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <AttendanceButton />
           </div>
         </div>
       </section>
 
-      {/* KPI cards */}
+      {/* KPI Cards */}
       <section aria-label="HR key metrics">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -317,14 +315,14 @@ function Dashboard() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
           {kpis.map((kpi) => (
             <MetricCard key={kpi.label} {...kpi} />
           ))}
         </div>
       </section>
 
-      {/* Attendance and leave */}
+      {/* Attendance and Leave */}
       <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
         <Panel title="Today's Attendance" link="/hr/attendance">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -371,7 +369,7 @@ function Dashboard() {
           )}
         </Panel>
 
-        {/* Internship and probation */}
+        {/* Internship and Probation */}
         <Panel
           title="Internship / Probation Alerts"
           link="/hr/internship-probation"
