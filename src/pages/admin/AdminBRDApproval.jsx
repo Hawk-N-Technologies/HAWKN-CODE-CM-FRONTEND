@@ -144,19 +144,21 @@ const normalizeBRD = (brd) => {
 
 function SummaryCard({ title, value, icon: Icon, description }) {
   return (
-    <div className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">
+    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-cm-text-muted">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-cm-text">{value}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+            {value}
+          </p>
         </div>
 
-        <div className="rounded-lg bg-cm-bg p-2.5 text-cm-primary">
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-blue-700 transition-colors group-hover:bg-blue-100">
           <Icon className="h-5 w-5" />
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-cm-text-muted">{description}</p>
+      <p className="mt-3 text-xs leading-5 text-slate-500">{description}</p>
     </div>
   );
 }
@@ -408,29 +410,54 @@ function AdminBRDApproval() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-cm-primary" />
-            <h1 className="text-xl font-bold text-cm-text">BRD Approval</h1>
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+                <FileText className="h-6 w-6" />
+              </div>
+
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                ADMINISTRATION
+              </span>
+            </div>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              BRD Approval
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Review uploaded Business Requirements Documents, verify project
+              details, and approve or reject submissions.
+            </p>
           </div>
 
-          <p className="mt-1 max-w-2xl text-sm text-cm-text-muted">
-            Review uploaded Business Requirements Documents, verify project
-            details, and approve or reject submissions.
-          </p>
+          <Button
+            variant="outline"
+            onClick={() => fetchBRDs(true)}
+            disabled={refreshing || loading}
+            loading={refreshing}
+            className="border-white/20 bg-white/10 text-white hover:bg-white/15"
+          >
+            {!refreshing && <RefreshCw className="mr-2 h-4 w-4" />}
+            Refresh
+          </Button>
         </div>
-
-        <Button
-          variant="outline"
-          onClick={() => fetchBRDs(true)}
-          disabled={refreshing || loading}
-          loading={refreshing}
-        >
-          {!refreshing && <RefreshCw className="mr-2 h-4 w-4" />}
-          Refresh
-        </Button>
-      </div>
+      </header>
 
       {/* Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -464,20 +491,22 @@ function AdminBRDApproval() {
       </div>
 
       {/* BRD table */}
-      <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-        <div className="border-b border-cm-border p-5">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-50/70 px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="font-semibold text-cm-text">Uploaded BRDs</h2>
+              <h2 className="text-base font-bold tracking-tight text-slate-900">
+                Uploaded BRDs
+              </h2>
 
-              <p className="mt-1 text-sm text-cm-text-muted">
+              <p className="mt-1 text-sm text-slate-500">
                 {filteredBRDs.length} document
                 {filteredBRDs.length !== 1 ? "s" : ""} found
               </p>
             </div>
 
             <div className="relative w-full lg:max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cm-text-muted" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
               <input
                 type="search"
@@ -485,7 +514,7 @@ function AdminBRDApproval() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search project, client, file..."
                 aria-label="Search BRDs"
-                className="w-full rounded-cm-md border border-cm-border bg-cm-card py-2.5 pl-9 pr-3 text-sm text-cm-text outline-none focus:border-cm-primary"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
@@ -496,16 +525,24 @@ function AdminBRDApproval() {
                 key={value}
                 type="button"
                 onClick={() => setActiveFilter(value)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
                   activeFilter === value
-                    ? "border-cm-primary bg-cm-primary/10 font-medium text-cm-primary"
-                    : "border-cm-border text-cm-text-muted hover:bg-cm-bg"
+                    ? "border-blue-200 bg-blue-50 text-blue-700"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                 }`}
               >
                 {label}
 
                 {value === "PENDING" && (
-                  <span className="ml-2">{counts.pending}</span>
+                  <span
+                    className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${
+                      activeFilter === value
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {counts.pending}
+                  </span>
                 )}
               </button>
             ))}
@@ -536,7 +573,7 @@ function AdminBRDApproval() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left">
-              <thead className="bg-cm-bg text-xs uppercase tracking-wide text-cm-text-muted">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-medium">Project / Client</th>
                   <th className="px-5 py-3 font-medium">Document</th>
@@ -546,21 +583,21 @@ function AdminBRDApproval() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-cm-border">
+              <tbody className="divide-y divide-slate-100">
                 {filteredBRDs.map((brd) => {
                   const canReview = brd.status === STATUS.PENDING;
 
                   return (
                     <tr
                       key={brd.uuid || brd.id}
-                      className="transition hover:bg-cm-bg/60"
+                      className="transition-colors hover:bg-slate-50/80"
                     >
                       <td className="px-5 py-4">
-                        <p className="font-medium text-cm-text">
+                        <p className="font-semibold text-slate-900">
                           {brd.projectName}
                         </p>
 
-                        <p className="mt-1 flex items-center gap-1 text-xs text-cm-text-muted">
+                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                           <Building2 className="h-3.5 w-3.5" />
                           {brd.clientName}
                         </p>
@@ -568,7 +605,7 @@ function AdminBRDApproval() {
 
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="rounded-lg bg-cm-bg p-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
                             <FileText className="h-5 w-5 text-cm-primary" />
                           </div>
 
@@ -577,7 +614,7 @@ function AdminBRDApproval() {
                               {brd.fileName}
                             </p>
 
-                            <p className="mt-1 text-xs text-cm-text-muted">
+                            <p className="mt-1 text-xs text-slate-500">
                               Version{" "}
                               {brd.version?.version ??
                                 brd.version?.versionNumber ??
@@ -588,9 +625,9 @@ function AdminBRDApproval() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <p className="text-sm text-cm-text">{brd.uploader}</p>
+                        <p className="text-sm text-slate-700">{brd.uploader}</p>
 
-                        <p className="mt-1 text-xs text-cm-text-muted">
+                        <p className="mt-1 text-xs text-slate-500">
                           {formatDate(brd.uploadedAt)}
                         </p>
                       </td>
