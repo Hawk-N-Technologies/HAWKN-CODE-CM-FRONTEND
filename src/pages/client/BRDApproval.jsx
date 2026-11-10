@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -9,7 +10,6 @@ import {
   XCircle,
   Clock3,
   CalendarDays,
-  ExternalLink,
   X,
   Building2,
   UserRound,
@@ -19,11 +19,9 @@ import {
   History,
   Download,
   AlertCircle,
-  ChevronRight,
 } from "lucide-react";
 
 import Badge from "../../components/common/Badge";
-import Button from "../../components/common/Button";
 import Textarea from "../../components/common/TextArea";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
@@ -31,9 +29,9 @@ import showAlert from "../../components/common/Alert";
 
 const API_URL = "/api/brds";
 
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Statuses and helpers
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 const STATUS = {
   DRAFT: "DRAFT",
@@ -53,15 +51,6 @@ const STATUS_LABEL = {
   [STATUS.APPROVED]: "Approved",
 };
 
-const STATUS_TONE = {
-  [STATUS.DRAFT]: "neutral",
-  [STATUS.PENDING_ADMIN]: "warning",
-  [STATUS.ADMIN_REJECTED]: "danger",
-  [STATUS.PENDING_CLIENT]: "warning",
-  [STATUS.CLIENT_REJECTED]: "danger",
-  [STATUS.APPROVED]: "success",
-};
-
 const FILTERS = [
   { value: "PENDING", label: "Awaiting my review" },
   { value: "ALL", label: "All BRDs" },
@@ -73,6 +62,7 @@ const formatDate = (value) => {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
+
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -94,6 +84,7 @@ const getErrorMessage = (error, fallback) =>
 const getPersonName = (person) => {
   if (!person) return "";
   if (typeof person === "string") return person;
+
   return (
     person.name || [person.firstName, person.lastName].filter(Boolean).join(" ")
   );
@@ -104,6 +95,7 @@ const getLatestVersion = (brd) => {
   if (brd.version && typeof brd.version === "object") return brd.version;
 
   const versions = Array.isArray(brd.versions) ? brd.versions : [];
+
   return (
     [...versions].sort(
       (a, b) =>
@@ -115,6 +107,7 @@ const getLatestVersion = (brd) => {
 
 const normalizeBRD = (brd) => {
   const version = getLatestVersion(brd);
+
   return {
     ...brd,
     version,
@@ -134,54 +127,61 @@ const getStatusClass = (status) => {
   if (status === STATUS.APPROVED) {
     return "border-emerald-200 bg-emerald-50 text-emerald-800";
   }
+
   if (status === STATUS.CLIENT_REJECTED || status === STATUS.ADMIN_REJECTED) {
     return "border-rose-200 bg-rose-50 text-rose-700";
   }
+
   if (status === STATUS.PENDING_CLIENT || status === STATUS.PENDING_ADMIN) {
     return "border-amber-200 bg-amber-50 text-amber-800";
   }
-  return "border-cm-border bg-cm-bg text-cm-text-muted";
+
+  return "border-slate-200 bg-slate-100 text-slate-600";
 };
 
-// ---------------------------------------------------------------------------
-// Reusable components
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Reusable UI components
+// -----------------------------------------------------------------------------
 
 function SummaryCard({ title, value, icon: Icon, description, accent }) {
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-cm-navy-950/[0.035] transition-transform duration-300 group-hover:scale-125" />
+    <article className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-slate-900/[0.035] transition-transform duration-300 group-hover:scale-125" />
+
       <div className="relative flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cm-text-muted">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
             {title}
           </p>
-          <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-cm-navy-950">
+          <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-[#101a3a]">
             {value}
           </p>
         </div>
+
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl bg-cm-navy-950 text-white shadow-sm ${accent || ""}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ${accent || "bg-blue-50 text-blue-700"}`}
         >
           <Icon className="h-5 w-5" strokeWidth={1.8} />
         </div>
       </div>
-      <p className="relative mt-3 text-xs text-cm-text-muted">{description}</p>
+
+      <p className="relative mt-3 text-xs text-slate-500">{description}</p>
     </article>
   );
 }
 
 function DetailItem({ icon: Icon, label, value }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-cm-border p-3.5">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cm-navy-950/[0.06] text-cm-navy-950">
+    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-white p-3.5">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-800">
         <Icon className="h-4 w-4" />
       </div>
+
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-cm-text-muted">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           {label}
         </p>
-        <p className="mt-1 break-words text-sm font-semibold text-cm-text">
+        <p className="mt-1 break-words text-sm font-semibold text-slate-800">
           {value || "—"}
         </p>
       </div>
@@ -196,11 +196,13 @@ function ModalFrame({
   children,
   footer,
   wide = false,
+  eyebrow = "CLIENT WORKSPACE",
 }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") onClose();
     };
+
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
@@ -213,7 +215,7 @@ function ModalFrame({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-cm-navy-950/70 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -222,29 +224,56 @@ function ModalFrame({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`flex max-h-[92vh] w-full ${wide ? "max-w-6xl" : "max-w-4xl"} flex-col overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-2xl`}
+        className={`flex max-h-[92vh] w-full ${
+          wide ? "max-w-6xl" : "max-w-4xl"
+        } flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-cm-border px-5 py-4 sm:px-6">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-bold text-cm-navy-950 sm:text-lg">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-1 text-xs text-cm-text-muted">{subtitle}</p>
-            )}
+        <header className="relative isolate overflow-hidden border-b border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-6">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-14 -top-24 h-56 w-56 rounded-full border border-white/10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-5 -top-14 h-40 w-40 rounded-full border border-white/10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-0 h-48 w-48 bg-blue-500/10 blur-3xl"
+          />
+
+          <div className="relative z-10 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-blue-200">
+                {eyebrow}
+              </span>
+
+              <h2 className="mt-2 break-words text-lg font-bold tracking-tight text-white sm:text-xl">
+                {title}
+              </h2>
+
+              {subtitle && (
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-300 sm:text-sm">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-navy-950 focus:outline-none focus:ring-2 focus:ring-cm-navy-950"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </header>
+
         {children}
+
         {footer && (
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-cm-border bg-cm-bg/50 px-5 py-3 sm:px-6">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3 sm:px-6">
             {footer}
           </footer>
         )}
@@ -258,17 +287,20 @@ function FilterPill({ active, children, count, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-1 ${
+      className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-1 ${
         active
-          ? "border-cm-navy-950 bg-cm-navy-950 text-white shadow-sm"
-          : "border-cm-border bg-cm-card text-cm-text-muted hover:border-cm-navy-950/40 hover:text-cm-navy-950"
+          ? "border-[#101a3a] bg-[#101a3a] text-white shadow-sm"
+          : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-[#101a3a]"
       }`}
     >
       {children}
+
       {count !== undefined && (
         <span
           className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-            active ? "bg-white/15 text-white" : "bg-cm-bg text-cm-text-muted"
+            active
+              ? "bg-white/15 text-white"
+              : "bg-slate-100 text-slate-500"
           }`}
         >
           {count}
@@ -278,9 +310,33 @@ function FilterPill({ active, children, count, onClick }) {
   );
 }
 
-// ---------------------------------------------------------------------------
+function SectionHeading({ eyebrow, title, description, icon: Icon }) {
+  return (
+    <div className="flex items-start gap-3">
+      {Icon && (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-800">
+          <Icon className="h-5 w-5" />
+        </div>
+      )}
+
+      <div>
+        {eyebrow && (
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+            {eyebrow}
+          </p>
+        )}
+        <h3 className="mt-1 text-base font-bold text-[#101a3a]">{title}</h3>
+        {description && (
+          <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
 // BRD approval page
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 export default function BRDApproval() {
   const [brds, setBrds] = useState([]);
@@ -316,6 +372,7 @@ export default function BRDApproval() {
       });
 
       const records = response.data?.data;
+
       if (!Array.isArray(records)) {
         throw new Error("The server did not return a BRD list.");
       }
@@ -407,6 +464,7 @@ export default function BRDApproval() {
     }
 
     const requestId = ++documentRequestId.current;
+
     setDocumentPreview({
       fileName: version.fileName || "BRD document",
       mimeType: version.mimeType || "",
@@ -537,48 +595,74 @@ export default function BRDApproval() {
 
   return (
     <div className="min-h-full space-y-7 pb-8">
-      {/* Hero */}
-      <header className="relative isolate overflow-hidden rounded-3xl bg-cm-navy-950 px-6 py-7 text-white shadow-lg sm:px-8 sm:py-9">
-        <div className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full border border-white/10" />
-        <div className="pointer-events-none absolute -right-4 -top-12 h-56 w-56 rounded-full border border-white/10" />
-        <div className="pointer-events-none absolute bottom-[-5rem] right-1/4 h-44 w-44 rounded-full bg-white/[0.04] blur-2xl" />
+      {/* Page header */}
+      <header className="relative isolate overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 text-white shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl"
+        />
 
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/80">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
               <Sparkles className="h-3.5 w-3.5" />
-              Requirements workspace
-            </div>
-            <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-              BRD approval
+              Client workspace
+            </span>
+
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              BRD Approval
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
               Review business requirements, inspect document versions and keep
               delivery aligned with your expectations.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => fetchBRDs(true)}
-            disabled={loading || refreshing}
-            className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-60 md:self-auto"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-            {refreshing ? "Refreshing…" : "Refresh BRDs"}
-          </button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <div className="rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200">
+                Awaiting your review
+              </p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-white">
+                {loading ? "—" : counts.pending}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => fetchBRDs(true)}
+              disabled={loading || refreshing}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
+              {refreshing ? "Refreshing…" : "Refresh BRDs"}
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Summary */}
       <section>
         <div className="mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-cm-text-muted">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
             Approval overview
           </p>
-          <h2 className="mt-1 text-lg font-bold text-cm-navy-950">
+          <h2 className="mt-1 text-lg font-bold text-[#101a3a]">
             Your BRD activity
           </h2>
         </div>
@@ -589,54 +673,58 @@ export default function BRDApproval() {
             value={loading ? "—" : counts.all}
             icon={FileText}
             description="Assigned to your account"
+            accent="bg-blue-50 text-blue-700"
           />
           <SummaryCard
             title="Awaiting review"
             value={loading ? "—" : counts.pending}
             icon={Clock3}
             description="Requires your decision"
+            accent="bg-amber-50 text-amber-700"
           />
           <SummaryCard
             title="Approved"
             value={loading ? "—" : counts.approved}
             icon={CheckCircle2}
             description="Approval completed"
+            accent="bg-emerald-50 text-emerald-700"
           />
           <SummaryCard
             title="Changes requested"
             value={loading ? "—" : counts.rejected}
             icon={MessageSquareText}
             description="Returned for corrections"
+            accent="bg-rose-50 text-rose-700"
           />
         </div>
       </section>
 
       {/* BRD list */}
-      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
-        <div className="border-b border-cm-border p-5 sm:p-6">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-cm-text-muted">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 Document centre
               </p>
-              <h2 className="mt-1 text-lg font-bold text-cm-navy-950">
+              <h2 className="mt-1 text-lg font-bold text-[#101a3a]">
                 Business requirements
               </h2>
-              <p className="mt-1 text-sm text-cm-text-muted">
+              <p className="mt-1 text-sm text-slate-500">
                 {filteredBRDs.length} matching{" "}
                 {filteredBRDs.length === 1 ? "document" : "documents"}
               </p>
             </div>
 
             <label className="relative block w-full lg:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cm-text-muted" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search project or document…"
                 aria-label="Search BRDs"
-                className="h-11 w-full rounded-xl border border-cm-border bg-cm-bg pl-10 pr-4 text-sm text-cm-text outline-none transition placeholder:text-cm-text-muted focus:border-cm-navy-950 focus:ring-2 focus:ring-cm-navy-950/10"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"
               />
             </label>
           </div>
@@ -661,32 +749,30 @@ export default function BRDApproval() {
           </div>
         ) : loadError && brds.length === 0 ? (
           <div className="flex min-h-64 flex-col items-center justify-center p-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cm-navy-950 text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-800">
               <FileText className="h-5 w-5" />
             </div>
-            <h3 className="mt-4 font-semibold text-cm-navy-950">
+            <h3 className="mt-4 font-semibold text-[#101a3a]">
               Unable to load BRDs
             </h3>
-            <p className="mt-1 max-w-md text-sm text-cm-text-muted">
-              {loadError}
-            </p>
+            <p className="mt-1 max-w-md text-sm text-slate-500">{loadError}</p>
             <button
               type="button"
               onClick={() => fetchBRDs()}
-              className="mt-4 rounded-lg bg-cm-navy-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cm-navy-900 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2"
+              className="mt-4 rounded-lg bg-[#101a3a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2a55] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Try again
             </button>
           </div>
         ) : filteredBRDs.length === 0 ? (
           <div className="flex min-h-64 flex-col items-center justify-center p-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cm-navy-950/[0.06] text-cm-navy-950">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
               <Search className="h-5 w-5" />
             </div>
-            <h3 className="mt-4 font-semibold text-cm-navy-950">
+            <h3 className="mt-4 font-semibold text-[#101a3a]">
               {search ? "No matching BRDs" : "Nothing to review"}
             </h3>
-            <p className="mt-1 max-w-md text-sm text-cm-text-muted">
+            <p className="mt-1 max-w-md text-sm text-slate-500">
               {search
                 ? "Try another search term or choose a different status filter."
                 : activeFilter === "PENDING"
@@ -700,7 +786,7 @@ export default function BRDApproval() {
                   setSearch("");
                   setActiveFilter("PENDING");
                 }}
-                className="mt-3 text-xs font-bold text-cm-navy-950 underline underline-offset-4"
+                className="mt-3 text-xs font-bold text-blue-800 underline underline-offset-4"
               >
                 Reset filters
               </button>
@@ -709,7 +795,7 @@ export default function BRDApproval() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px] text-left">
-              <thead className="bg-cm-bg/80 text-[10px] uppercase tracking-[0.14em] text-cm-text-muted">
+              <thead className="bg-slate-50 text-[10px] uppercase tracking-[0.14em] text-slate-500">
                 <tr>
                   <th className="px-5 py-4 font-bold sm:px-6">Project</th>
                   <th className="px-5 py-4 font-bold">Document</th>
@@ -718,31 +804,33 @@ export default function BRDApproval() {
                   <th className="px-5 py-4 text-right font-bold">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-cm-border">
+
+              <tbody className="divide-y divide-slate-100">
                 {filteredBRDs.map((brd) => (
                   <tr
                     key={brd.uuid || brd.id}
-                    className="transition hover:bg-cm-bg/60"
+                    className="transition hover:bg-blue-50/40"
                   >
                     <td className="px-5 py-4 sm:px-6">
-                      <p className="font-semibold text-cm-navy-950">
+                      <p className="font-semibold text-[#101a3a]">
                         {brd.projectName}
                       </p>
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-cm-text-muted">
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                         <Building2 className="h-3.5 w-3.5" />
                         {brd.clientName}
                       </p>
                     </td>
+
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cm-navy-950/[0.06] text-cm-navy-950">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-800">
                           <FileText className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="max-w-56 truncate text-sm font-semibold text-cm-text">
+                          <p className="max-w-56 truncate text-sm font-semibold text-slate-800">
                             {brd.fileName}
                           </p>
-                          <p className="mt-1 text-xs text-cm-text-muted">
+                          <p className="mt-1 text-xs text-slate-500">
                             Version{" "}
                             {brd.version?.version ??
                               brd.version?.versionNumber ??
@@ -751,9 +839,11 @@ export default function BRDApproval() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-sm text-cm-text-muted">
+
+                    <td className="px-5 py-4 text-sm text-slate-500">
                       {formatDate(brd.uploadedAt || brd.updatedAt)}
                     </td>
+
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${getStatusClass(brd.status)}`}
@@ -761,12 +851,13 @@ export default function BRDApproval() {
                         {STATUS_LABEL[brd.status] || brd.status || "Unknown"}
                       </span>
                     </td>
+
                     <td className="px-5 py-4">
                       <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => openDetails(brd)}
-                          className="inline-flex items-center gap-2 rounded-lg bg-cm-navy-950 px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-cm-navy-900 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2"
+                          className="inline-flex items-center gap-2 rounded-lg bg-[#101a3a] px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1b2a55] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           Review BRD
@@ -789,32 +880,35 @@ export default function BRDApproval() {
             selectedBRD.title || selectedBRD.fileName || "Business requirements"
           }
           onClose={closeDetails}
+          eyebrow="BRD REVIEW"
           footer={
             <div className="flex w-full items-center justify-between gap-3">
-              <p className="hidden text-xs text-cm-text-muted sm:block">
+              <p className="hidden text-xs text-slate-500 sm:block">
                 {submitting
                   ? "Saving your decision…"
                   : "Your review is securely submitted to the project team."}
               </p>
+
               <button
                 type="button"
                 onClick={closeDetails}
                 disabled={submitting}
-                className="ml-auto rounded-lg border border-cm-border px-4 py-2 text-sm font-semibold text-cm-text transition hover:bg-cm-bg disabled:opacity-50"
+                className="ml-auto rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
               >
                 Close
               </button>
             </div>
           }
         >
-          <div className="overflow-y-auto p-5 sm:p-6">
+          <div className="overflow-y-auto bg-slate-50/70 p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span
                 className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold ${getStatusClass(selectedBRD.status)}`}
               >
                 {STATUS_LABEL[selectedBRD.status] || selectedBRD.status}
               </span>
-              <span className="flex items-center gap-1.5 text-xs text-cm-text-muted">
+
+              <span className="flex items-center gap-1.5 text-xs text-slate-500">
                 <CalendarDays className="h-3.5 w-3.5" />
                 Updated {formatDate(selectedBRD.updatedAt)}
               </span>
@@ -848,31 +942,32 @@ export default function BRDApproval() {
             </div>
 
             {selectedBRD.description && (
-              <div className="mt-4 rounded-xl border border-cm-border bg-cm-bg/50 p-4">
-                <h3 className="text-sm font-bold text-cm-navy-950">
-                  BRD description
-                </h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-cm-text-muted">
+              <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+                <SectionHeading
+                  eyebrow="Project information"
+                  title="BRD description"
+                  icon={FileText}
+                />
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
                   {selectedBRD.description}
                 </p>
-              </div>
+              </section>
             )}
 
-            <section className="mt-5 rounded-xl border border-cm-border p-4">
+            <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-cm-navy-950">
-                    BRD document
-                  </h3>
-                  <p className="mt-1 text-xs text-cm-text-muted">
-                    Open the latest uploaded version in the secure preview.
-                  </p>
-                </div>
+                <SectionHeading
+                  eyebrow="Latest uploaded file"
+                  title="BRD document"
+                  description="Open the latest uploaded version in the secure preview."
+                  icon={FileText}
+                />
+
                 <button
                   type="button"
                   onClick={() => openDocument(selectedBRD)}
                   disabled={!selectedBRD.version?.uuid}
-                  className="inline-flex items-center gap-2 rounded-lg bg-cm-navy-950 px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-cm-navy-900 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#101a3a] px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-[#1b2a55] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Preview document
@@ -881,14 +976,15 @@ export default function BRDApproval() {
             </section>
 
             {selectedBRD.versions?.length > 0 && (
-              <section className="mt-5 rounded-xl border border-cm-border p-4">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-cm-navy-950" />
-                  <h3 className="text-sm font-bold text-cm-navy-950">
-                    Version history
-                  </h3>
-                </div>
-                <div className="mt-3 space-y-2">
+              <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+                <SectionHeading
+                  eyebrow="Uploaded revisions"
+                  title="Version history"
+                  description="Review earlier versions of this BRD."
+                  icon={History}
+                />
+
+                <div className="mt-4 space-y-2">
                   {[...selectedBRD.versions]
                     .sort(
                       (a, b) => Number(b.version ?? 0) - Number(a.version ?? 0),
@@ -901,33 +997,36 @@ export default function BRDApproval() {
                       return (
                         <div
                           key={version.uuid || version.id}
-                          className="flex flex-col gap-3 rounded-xl border border-cm-border bg-cm-bg/50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cm-card text-cm-navy-950">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-800 shadow-sm">
                               <FileText className="h-4 w-4" />
                             </div>
+
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-cm-text">
+                              <p className="truncate text-sm font-semibold text-slate-800">
                                 {version.fileName || "BRD document"}
                               </p>
-                              <p className="mt-1 text-xs text-cm-text-muted">
+                              <p className="mt-1 text-xs text-slate-500">
                                 Version {version.version ?? "—"} ·{" "}
                                 {formatDate(version.createdAt)}
                                 {fileSize ? ` · ${fileSize}` : ""}
                               </p>
                             </div>
+
                             {isCurrent && (
-                              <span className="shrink-0 rounded-full border border-cm-navy-950/15 bg-cm-navy-950/[0.06] px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-cm-navy-950">
+                              <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-blue-800">
                                 Latest
                               </span>
                             )}
                           </div>
+
                           <button
                             type="button"
                             onClick={() => openDocument(version)}
                             disabled={!version.uuid}
-                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cm-navy-950/20 px-3 py-2 text-xs font-semibold text-cm-navy-950 transition hover:bg-cm-navy-950 hover:text-white focus:outline-none focus:ring-2 focus:ring-cm-navy-950 disabled:opacity-50"
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-800 transition hover:border-blue-800 hover:bg-blue-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             Preview
@@ -939,16 +1038,16 @@ export default function BRDApproval() {
               </section>
             )}
 
-            <section className="mt-5 rounded-xl border border-cm-border p-4">
-              <div className="flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4 text-cm-navy-950" />
-                <h3 className="text-sm font-bold text-cm-navy-950">
-                  Review history
-                </h3>
-              </div>
+            <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+              <SectionHeading
+                eyebrow="Decision records"
+                title="Review history"
+                description="Previous approval decisions and recorded feedback."
+                icon={MessageSquareText}
+              />
 
               {reviewHistory.length === 0 ? (
-                <p className="mt-3 rounded-lg bg-cm-bg/60 p-3 text-sm text-cm-text-muted">
+                <p className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
                   No review comments have been recorded yet.
                 </p>
               ) : (
@@ -956,7 +1055,7 @@ export default function BRDApproval() {
                   {reviewHistory.map((review) => (
                     <div
                       key={review.uuid || review.id}
-                      className="border-l-2 border-cm-navy-950/20 pl-4"
+                      className="border-l-2 border-blue-200 pl-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Badge
@@ -969,15 +1068,18 @@ export default function BRDApproval() {
                             ? "approved"
                             : "requested changes"}
                         </Badge>
-                        <span className="text-xs text-cm-text-muted">
+
+                        <span className="text-xs text-slate-500">
                           {formatDate(review.reviewedAt)}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm font-semibold text-cm-text">
+
+                      <p className="mt-2 text-sm font-semibold text-slate-800">
                         {getPersonName(review.reviewer) || "Reviewer"}
                       </p>
+
                       {review.message && (
-                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-cm-text-muted">
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">
                           {review.message}
                         </p>
                       )}
@@ -988,16 +1090,17 @@ export default function BRDApproval() {
             </section>
 
             {selectedBRD.status === STATUS.PENDING_CLIENT ? (
-              <section className="mt-5 rounded-xl border border-cm-navy-950/15 bg-cm-navy-950/[0.025] p-4 sm:p-5">
+              <section className="mt-5 rounded-xl border border-blue-200 bg-blue-50/60 p-4 sm:p-5">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cm-navy-950 text-white">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#101a3a] text-white">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
+
                   <div>
-                    <h3 className="text-sm font-bold text-cm-navy-950">
+                    <h3 className="text-sm font-bold text-[#101a3a]">
                       Your decision
                     </h3>
-                    <p className="mt-1 text-xs leading-5 text-cm-text-muted">
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
                       Approve the requirements or request changes. A reason is
                       required when requesting changes.
                     </p>
@@ -1024,11 +1127,12 @@ export default function BRDApproval() {
                     <XCircle className="h-4 w-4" />
                     Request changes
                   </button>
+
                   <button
                     type="button"
                     onClick={() => submitDecision("APPROVED")}
                     disabled={submitting}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-cm-navy-950 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-cm-navy-900 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#101a3a] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1b2a55] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     {submitting ? "Submitting…" : "Approve BRD"}
@@ -1036,9 +1140,9 @@ export default function BRDApproval() {
                 </div>
               </section>
             ) : (
-              <div className="mt-5 flex items-start gap-3 rounded-xl border border-cm-border bg-cm-bg/60 p-4">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-cm-navy-950" />
-                <p className="text-sm leading-6 text-cm-text-muted">
+              <div className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-800" />
+                <p className="text-sm leading-6 text-slate-600">
                   {selectedBRD.status === STATUS.APPROVED
                     ? "This BRD has been approved. No further client decision is available."
                     : selectedBRD.status === STATUS.CLIENT_REJECTED
@@ -1058,38 +1162,43 @@ export default function BRDApproval() {
           subtitle="Secure document preview"
           onClose={closeDocument}
           wide
+          eyebrow="DOCUMENT VIEWER"
           footer={
             <>
-              <span className="min-w-0 truncate text-xs text-cm-text-muted">
+              <span className="min-w-0 truncate text-xs text-slate-500">
                 {documentPreview.fileName}
               </span>
+
               <button
                 type="button"
                 onClick={closeDocument}
-                className="rounded-lg bg-cm-navy-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cm-navy-900 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2"
+                className="rounded-lg bg-[#101a3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1b2a55] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 Close preview
               </button>
             </>
           }
         >
-          <div className="flex min-h-[55vh] flex-1 flex-col bg-cm-bg">
+          <div className="flex min-h-[55vh] flex-1 flex-col bg-slate-100">
             {documentPreview.loading ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
-                <div className="h-9 w-9 animate-spin rounded-full border-4 border-cm-border border-t-cm-navy-950" />
-                <p className="text-sm font-semibold text-cm-text">
+                <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-blue-800" />
+                <p className="text-sm font-semibold text-slate-700">
                   Loading document…
+                </p>
+                <p className="text-xs text-slate-500">
+                  Retrieving the file securely.
                 </p>
               </div>
             ) : documentPreview.error ? (
               <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cm-card text-cm-navy-950">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-rose-600 shadow-sm">
                   <AlertCircle className="h-6 w-6" />
                 </div>
-                <h3 className="mt-4 text-sm font-bold text-cm-navy-950">
+                <h3 className="mt-4 text-sm font-bold text-[#101a3a]">
                   Could not preview this document
                 </h3>
-                <p className="mt-1 max-w-md text-sm text-cm-text-muted">
+                <p className="mt-1 max-w-md text-sm leading-6 text-slate-500">
                   {documentPreview.error}
                 </p>
               </div>
@@ -1103,20 +1212,23 @@ export default function BRDApproval() {
                 />
               ) : (
                 <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cm-card text-cm-navy-950">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-800 shadow-sm">
                     <FileText className="h-7 w-7" />
                   </div>
-                  <h3 className="mt-4 text-sm font-bold text-cm-navy-950">
+
+                  <h3 className="mt-4 text-sm font-bold text-[#101a3a]">
                     Preview unavailable for this file type
                   </h3>
-                  <p className="mt-1 max-w-md text-sm text-cm-text-muted">
+
+                  <p className="mt-1 max-w-md text-sm leading-6 text-slate-500">
                     This file type cannot be displayed directly in the browser.
                     You can download it to review the contents.
                   </p>
+
                   <a
                     href={documentPreview.url}
                     download={documentPreview.fileName || "BRD-document"}
-                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-cm-navy-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cm-navy-900"
+                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#101a3a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2a55] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
                     <Download className="h-4 w-4" />
                     Download document

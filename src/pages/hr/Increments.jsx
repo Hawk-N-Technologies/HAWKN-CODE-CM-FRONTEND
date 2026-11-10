@@ -46,13 +46,14 @@ function Modal({ title, description, onClose, size = "max-w-3xl", children }) {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") onClose();
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -64,35 +65,47 @@ function Modal({ title, description, onClose, size = "max-w-3xl", children }) {
         aria-describedby={
           description ? "bonus-increment-modal-description" : undefined
         }
-        className={`flex max-h-[90vh] w-full ${size} flex-col overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-2xl`}
+        className={`my-auto flex max-h-[92dvh] w-full ${size} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl`}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-cm-border px-6 py-4">
-          <div>
-            <h2
-              id="bonus-increment-modal-title"
-              className="text-lg font-semibold text-cm-text"
-            >
-              {title}
-            </h2>
-            {description && (
-              <p
-                id="bonus-increment-modal-description"
-                className="mt-1 text-sm text-cm-text-muted"
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-5 -top-10 h-28 w-28 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 bg-blue-500/10 blur-3xl" />
+
+          <div className="relative z-10 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                HUMAN RESOURCES
+              </span>
+
+              <h2
+                id="bonus-increment-modal-title"
+                className="mt-3 text-xl font-bold tracking-tight text-white"
               >
-                {description}
-              </p>
-            )}
+                {title}
+              </h2>
+              {description && (
+                <p
+                  id="bonus-increment-modal-description"
+                  className="mt-2 text-sm leading-6 text-slate-300"
+                >
+                  {description}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="shrink-0 rounded-xl border border-white/10 bg-white/10 p-2 text-slate-200 transition hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="rounded-lg p-2 text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#000052]"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
         </header>
-        <div className="overflow-y-auto p-6">{children}</div>
+
+        <div className="overflow-y-auto bg-white p-6">{children}</div>
       </section>
     </div>
   );
@@ -244,7 +257,7 @@ function CompensationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -253,36 +266,45 @@ function CompensationModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="compensation-modal-title"
-        className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+        className="my-auto flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
       >
-        <header className="relative isolate shrink-0 overflow-hidden border-b border-white/10 bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-5 text-white sm:px-7">
-          <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/[0.07]" />
-          <div className="pointer-events-none absolute -right-1 -top-10 h-36 w-36 rounded-full border border-white/[0.07]" />
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6 sm:px-7">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-5 -top-10 h-28 w-28 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 bg-blue-500/10 blur-3xl" />
 
-          <div className="relative flex items-start justify-between gap-4">
+          <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm">
                 <Icon size={19} />
               </span>
+
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                  HUMAN RESOURCES
+                </span>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <h2
                     id="compensation-modal-title"
-                    className="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                    className="text-lg font-bold tracking-tight text-white sm:text-xl"
                   >
                     {title}
                   </h2>
+
                   <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-200">
                     {badge}
                   </span>
                 </div>
+
                 {description && (
-                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-300">
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
                     {description}
                   </p>
                 )}
               </div>
             </div>
+
             <button
               type="button"
               aria-label="Close dialog"
@@ -300,6 +322,7 @@ function CompensationModal({
             <span>Employee salary and payment details</span>
           </div>
         </header>
+
         <div className="overflow-y-auto bg-white">{children}</div>
       </section>
     </div>
@@ -1604,27 +1627,26 @@ function Increments() {
   return (
     <div className="flex flex-col gap-6 pb-6">
       {/* PAGE HEADER */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-card text-cm-text shadow-sm">
-            <Wallet size={23} />
-          </div>
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-cm-text">
-                Bonuses & Increments
-              </h1>
-              <Badge tone="neutral">HR Management</Badge>
-            </div>
+        <div className="relative z-10">
+          <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+            HUMAN RESOURCES
+          </span>
 
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-cm-text-muted">
-              Manage one-time employee bonuses and recurring salary increases
-              from one compensation workspace.
-            </p>
-          </div>
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+            Bonuses & Increments
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+            Manage one-time employee bonuses and recurring salary increases
+            from one compensation workspace.
+          </p>
         </div>
-      </div>
+      </header>
 
       {/* TAB NAVIGATION */}
       <div className="rounded-cm-lg border border-cm-border bg-cm-card p-2 shadow-sm">

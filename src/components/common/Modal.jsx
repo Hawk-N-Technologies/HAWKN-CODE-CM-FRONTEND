@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
@@ -15,6 +16,7 @@ export default function Modal({
   title,
   description,
   icon: Icon,
+  eyebrow = "HUMAN RESOURCES",
   size = "lg",
   closeDisabled = false,
   children,
@@ -23,20 +25,17 @@ export default function Modal({
   const onCloseRef = useRef(onClose);
   const closeDisabledRef = useRef(closeDisabled);
 
-  // Keep callbacks current without triggering the focus effect.
   useEffect(() => {
     onCloseRef.current = onClose;
     closeDisabledRef.current = closeDisabled;
   }, [onClose, closeDisabled]);
 
-  // Run only when the modal opens or closes.
   useEffect(() => {
     if (!open) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // Focus the dialog once when it opens.
     dialogRef.current?.focus();
 
     const handleKeyDown = (event) => {
@@ -57,7 +56,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !closeDisabled) {
           onClose?.();
@@ -72,14 +71,15 @@ export default function Modal({
         tabIndex={-1}
         className={`my-auto w-full ${
           SIZE_CLASSES[size] ?? SIZE_CLASSES.lg
-        } overflow-hidden rounded-2xl border border-white/20 bg-white shadow-[0_28px_100px_rgba(2,6,23,0.4)] outline-none animate-in fade-in zoom-in-95 duration-200`}
+        } overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_28px_100px_rgba(2,6,23,0.4)] outline-none animate-in fade-in zoom-in-95 duration-200`}
       >
         {(title || description || Icon) && (
-          <header className="relative overflow-hidden bg-cm-navy-950 px-6 py-5 text-white sm:px-8 sm:py-6">
-            <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border border-white/10" />
-            <div className="pointer-events-none absolute -right-2 -top-8 h-32 w-32 rounded-full border border-white/10" />
+          <header className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6 text-white sm:px-8">
+            <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+            <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+            <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-            <div className="relative flex items-start gap-4 pr-10">
+            <div className="relative z-10 flex items-start gap-4 pr-12">
               {Icon && (
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white shadow-inner">
                   <Icon size={21} strokeWidth={1.8} aria-hidden="true" />
@@ -87,17 +87,23 @@ export default function Modal({
               )}
 
               <div className="min-w-0 flex-1">
+                {eyebrow && (
+                  <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                    {eyebrow}
+                  </span>
+                )}
+
                 {title && (
                   <h2
                     id="shared-modal-title"
-                    className="text-lg font-bold tracking-tight sm:text-xl"
+                    className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-[28px]"
                   >
                     {title}
                   </h2>
                 )}
 
                 {description && (
-                  <p className="mt-1.5 max-w-2xl text-sm leading-6 text-white/65">
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
                     {description}
                   </p>
                 )}

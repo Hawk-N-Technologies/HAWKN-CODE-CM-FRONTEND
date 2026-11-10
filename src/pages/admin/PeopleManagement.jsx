@@ -1069,30 +1069,65 @@ function PeopleManagement() {
    * -------------------------------------------------------
    */
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
-      {/* HEADER */}
-      <header className="flex flex-col gap-4 border-b border-cm-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-cm-blue-700">
-            Company administration
-          </p>
+    <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-col gap-6 pb-8">
+      {/* ADMINISTRATION HEADER */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-cm-text">
-            People Management
-          </h1>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+              <ContactRound size={24} strokeWidth={1.7} />
+            </div>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
-            Manage company users, roles and account access.
-          </p>
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                ADMINISTRATION
+              </span>
+
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+                People Management
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                Manage company users, roles, employee records, and account
+                access from one central workspace.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3.5 py-2.5 backdrop-blur-sm">
+              <ContactRound size={16} className="text-blue-200" />
+              <span className="text-xs font-medium text-slate-100">
+                {pagination.total}{" "}
+                {pagination.total === 1 ? "Member" : "Members"}
+              </span>
+            </div>
+
+            <Button
+              onClick={openAdd}
+              disabled={isSubmitting || isRolesLoading}
+              className="w-full sm:w-auto"
+            >
+              <span className="inline-flex items-center gap-2">
+                <UserPlus size={16} />
+                {isRolesLoading ? "Loading roles..." : "Add Employee"}
+              </span>
+            </Button>
+          </div>
         </div>
-
-        <Button
-          onClick={openAdd}
-          disabled={isSubmitting || isRolesLoading}
-          className="w-full sm:w-auto"
-        >
-          {isRolesLoading ? "Loading roles..." : "Add Employee"}
-        </Button>
       </header>
 
       {/* CREATE / EDIT MODAL */}
@@ -1338,7 +1373,7 @@ function PeopleManagement() {
             </fieldset>
 
             {/* FORM ACTIONS */}
-            <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-slate-50/90 px-6 py-4 backdrop-blur sm:px-8">
+            <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-slate-50/95 px-6 py-4 backdrop-blur sm:px-8">
               <Button
                 type="button"
                 variant="outline"
@@ -1377,7 +1412,7 @@ function PeopleManagement() {
           size="lg"
         >
           <div className="max-h-[78vh] overflow-y-auto">
-            <div className="bg-cm-navy-950 px-6 py-7 text-white sm:px-8">
+            <div className="bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 text-white sm:px-8">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-bold shadow-inner">
                   {(
@@ -1463,26 +1498,32 @@ function PeopleManagement() {
         </Modal>
       )}
 
-      {/* SEARCH + TABLE */}
+      {/* PEOPLE DIRECTORY */}
       <section
         id="people-list-panel"
         role="tabpanel"
         aria-labelledby="people-list-heading"
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-5"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2
-              id="people-list-heading"
-              className="text-lg font-bold tracking-tight text-cm-text"
-            >
-              People
-            </h2>
+        <div className="flex flex-col gap-4 rounded-2xl border border-[#d8e2ef] bg-[#f8faff] p-5 shadow-[0_3px_14px_rgba(20,40,75,0.035)] sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#d8e2ef] bg-[#eaf1fb] text-cm-navy-950">
+              <ContactRound size={19} />
+            </div>
 
-            <p className="mt-1 text-sm text-cm-text-muted">
-              {pagination.total} {pagination.total === 1 ? "member" : "members"}{" "}
-              in your company
-            </p>
+            <div>
+              <h2
+                id="people-list-heading"
+                className="text-base font-bold tracking-tight text-cm-navy-950"
+              >
+                People Directory
+              </h2>
+
+              <p className="mt-1 text-xs text-[#71819b]">
+                {pagination.total}{" "}
+                {pagination.total === 1 ? "member" : "members"} in your company
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:items-end">
@@ -1525,21 +1566,25 @@ function PeopleManagement() {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          rows={people}
-          isLoading={isPeopleLoading}
-          emptyMessage={
-            debouncedSearch ? "No users match your search." : "No users found."
-          }
-          pagination={pagination}
-          onPageChange={setPage}
-          onPageSizeChange={(nextLimit) => {
-            setLimit(nextLimit);
-            setPage(1);
-          }}
-          pageSizeOptions={[10, 25, 50, 100]}
-        />
+        <div className="overflow-hidden rounded-2xl border border-[#d8e2ef] bg-white shadow-[0_3px_14px_rgba(20,40,75,0.035)]">
+          <DataTable
+            columns={columns}
+            rows={people}
+            isLoading={isPeopleLoading}
+            emptyMessage={
+              debouncedSearch
+                ? "No users match your search."
+                : "No users found."
+            }
+            pagination={pagination}
+            onPageChange={setPage}
+            onPageSizeChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setPage(1);
+            }}
+            pageSizeOptions={[10, 25, 50, 100]}
+          />
+        </div>
       </section>
     </div>
   );

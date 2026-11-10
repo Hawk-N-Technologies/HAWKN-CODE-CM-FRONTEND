@@ -58,13 +58,18 @@ function SectionHeader({ icon: Icon, title, description, action }) {
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-bg text-cm-text">
           <Icon size={19} strokeWidth={1.8} />
         </div>
+
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-cm-text">{title}</h2>
+          <h2 className="text-sm font-semibold text-cm-text">
+            {title}
+          </h2>
+
           <p className="mt-1 text-xs leading-5 text-cm-text-muted">
             {description}
           </p>
         </div>
       </div>
+
       {action}
     </div>
   );
@@ -76,7 +81,11 @@ function EmptyState({ icon: Icon, title, description }) {
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cm-border bg-cm-card text-cm-text-muted shadow-sm">
         <Icon size={22} strokeWidth={1.7} />
       </div>
-      <p className="mt-3 text-sm font-semibold text-cm-text">{title}</p>
+
+      <p className="mt-3 text-sm font-semibold text-cm-text">
+        {title}
+      </p>
+
       <p className="mt-1 max-w-xs text-xs leading-5 text-cm-text-muted">
         {description}
       </p>
@@ -131,25 +140,42 @@ function Dashboard() {
 
   if (error && !data) {
     return (
-      <section className="rounded-cm-lg border border-cm-border bg-cm-card p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-cm-text">Admin Dashboard</h1>
-        <p className="mt-3 text-sm text-cm-danger-600">{error}</p>
-        <button
-          type="button"
-          onClick={() => loadOverview()}
-          className="mt-4 rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-sm font-semibold text-cm-text hover:bg-cm-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cm-blue-600"
-        >
-          Try again
-        </button>
+      <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] p-6 shadow-sm sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+
+        <div className="relative z-10">
+          <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+            ADMINISTRATION
+          </span>
+
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+            Admin Dashboard
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-red-200">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => loadOverview()}
+            className="mt-5 rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+          >
+            Try Again
+          </button>
+        </div>
       </section>
     );
   }
 
   const overview = { ...EMPTY_OVERVIEW, ...(data ?? {}) };
   const cards = { ...EMPTY_OVERVIEW.cards, ...(overview.cards ?? {}) };
+
   const pendingApprovals = Array.isArray(overview.pendingApprovals)
     ? overview.pendingApprovals
     : [];
+
   const activityFeed = Array.isArray(overview.activityFeed)
     ? overview.activityFeed
     : [];
@@ -189,64 +215,66 @@ function Dashboard() {
 
   return (
     <div className="flex min-w-0 flex-col gap-7">
+      {/* REFRESH ERROR */}
       {error && (
         <div className="rounded-xl border border-cm-border bg-cm-bg px-4 py-3 text-sm text-cm-danger-600">
           Could not refresh dashboard data: {error}
         </div>
       )}
 
-      {/* Welcome header */}
-      <section className="relative isolate overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-        <div className="relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+      {/* ADMIN PAGE HEADER */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
           <div className="min-w-0">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-cm-blue-600" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-cm-text-muted">
-                Admin workspace
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-cm-text sm:text-3xl">
-              Welcome back, Admin
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              ADMINISTRATION
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Admin Dashboard
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-cm-text-muted">
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
               Your company at a glance. Review team metrics, track approvals,
               and stay on top of workspace activity.
             </p>
           </div>
 
-          <div className="flex w-full shrink-0 items-center gap-3 rounded-xl border border-cm-border bg-cm-bg p-4 sm:w-auto sm:min-w-[190px]">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-card text-cm-text shadow-sm">
+          <div className="relative z-10 flex shrink-0 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] p-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-blue-100">
               <Users size={21} strokeWidth={1.8} />
             </div>
+
             <div>
-              <p className="text-2xl font-bold leading-7 tracking-tight text-cm-text">
+              <p className="text-2xl font-bold leading-7 tracking-tight text-white">
                 {cards.totalEmployees ?? 0}
               </p>
-              <p className="mt-1 text-xs text-cm-text-muted">Team members</p>
+
+              <p className="mt-1 text-xs text-slate-300">
+                Team members
+              </p>
             </div>
           </div>
         </div>
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-24 -z-0 h-64 w-64 rounded-full border border-cm-border/70"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-4 -top-12 -z-0 h-40 w-40 rounded-full border border-cm-border/70"
-        />
-      </section>
+      </header>
 
-      {/* KPI cards */}
+      {/* KPI CARDS */}
       <section>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-base font-semibold tracking-tight text-cm-text">
-              Company overview
+              Company Overview
             </h2>
+
             <p className="mt-1 text-xs text-cm-text-muted">
-              Key metrics across your organization
+              Key metrics across your organization.
             </p>
           </div>
+
           <div className="inline-flex items-center gap-1.5 text-xs text-cm-text-muted">
             <Activity size={14} />
             {loading ? "Refreshing totals..." : "Current totals"}
@@ -260,20 +288,21 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Workspace activity */}
+      {/* WORKSPACE ACTIVITY */}
       <section>
         <div className="mb-4">
           <h2 className="text-base font-semibold tracking-tight text-cm-text">
-            Workspace activity
+            Workspace Activity
           </h2>
+
           <p className="mt-1 text-xs text-cm-text-muted">
-            Approvals and updates that may need your attention
+            Approvals and updates that may need your attention.
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          {/* Pending approvals */}
-          <section className="min-w-0 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-6">
+          {/* PENDING BRD APPROVALS */}
+          <section className="min-w-0 rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
             <SectionHeader
               icon={ClipboardCheck}
               title="Pending BRD Approvals"
@@ -302,13 +331,15 @@ function Dashboard() {
                       <p className="truncate text-sm font-medium text-cm-text">
                         {item.name ?? item.title ?? "Untitled approval"}
                       </p>
+
                       <p className="mt-1 text-xs text-cm-text-muted">
                         Submitted {formatDate(item.date ?? item.createdAt)}
                       </p>
                     </div>
+
                     <Link
                       to={item.link || "/admin/brd"}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-xs font-semibold text-cm-text transition-colors hover:bg-cm-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cm-blue-600"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-cm-border bg-cm-card px-3 py-2 text-xs font-semibold text-cm-text transition-colors hover:border-blue-300 hover:bg-cm-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cm-blue-600"
                     >
                       Review <ArrowUpRight size={14} />
                     </Link>
@@ -318,8 +349,8 @@ function Dashboard() {
             )}
           </section>
 
-          {/* Recent activity */}
-          <section className="min-w-0 rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-6">
+          {/* RECENT ACTIVITY */}
+          <section className="min-w-0 rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm sm:p-6">
             <SectionHeader
               icon={Activity}
               title="Recent Activity"
@@ -347,12 +378,14 @@ function Dashboard() {
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cm-border bg-cm-bg text-cm-text-muted">
                       <CalendarClock size={17} />
                     </div>
+
                     <div className="min-w-0">
                       <p className="text-sm leading-5 text-cm-text">
                         {item.message ??
                           item.description ??
                           "Workspace updated"}
                       </p>
+
                       {(item.date || item.createdAt) && (
                         <p className="mt-1 text-xs text-cm-text-muted">
                           {formatDate(item.date ?? item.createdAt)}
@@ -367,8 +400,10 @@ function Dashboard() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer className="flex items-start gap-2 border-t border-cm-border pt-4 text-xs leading-5 text-cm-text-muted">
         <CalendarClock size={15} className="mt-0.5 shrink-0" />
+
         <p>
           Dashboard metrics reflect the latest data from your connected modules.
         </p>

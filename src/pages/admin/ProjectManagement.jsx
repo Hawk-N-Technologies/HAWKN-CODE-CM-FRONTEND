@@ -133,20 +133,24 @@ function applyServerErrors(error, setError) {
 
 function ProgressBar({ value }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-[120px] items-center gap-3">
       <div
-        className="h-2 w-24 overflow-hidden rounded-full bg-cm-border"
+        className="h-2 w-full max-w-[100px] overflow-hidden rounded-full bg-slate-200"
         role="progressbar"
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className={`h-full rounded-full ${value === 100 ? "bg-green-600" : "bg-blue-600"}`}
+          className={`h-full rounded-full transition-[width] duration-300 ${
+            value === 100 ? "bg-emerald-500" : "bg-blue-600"
+          }`}
           style={{ width: `${value}%` }}
         />
       </div>
-      <span className="text-xs text-cm-text-muted">{value}%</span>
+      <span className="min-w-[34px] text-xs font-semibold tabular-nums text-slate-700">
+        {value}%
+      </span>
     </div>
   );
 }
@@ -779,7 +783,7 @@ function ProjectDetails({ project, onClose, onEdit }) {
             {project.progress}% complete
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-8">
+        <div className="grid grid-cols-1 gap-3 bg-white p-5 sm:grid-cols-2 sm:p-8 lg:grid-cols-4">
           {[
             ["Start date", formatDate(project.startDate)],
             ["Client deadline", formatDate(project.deadline)],
@@ -788,25 +792,29 @@ function ProjectDetails({ project, onClose, onEdit }) {
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded-xl border border-slate-200 bg-white p-4"
+              className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition-colors hover:bg-blue-50/50"
             >
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
                 {label}
               </p>
-              <p className="mt-2 text-sm font-semibold text-cm-navy-950">
+              <p className="mt-2 text-sm font-semibold text-slate-900">
                 {value}
               </p>
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-3 px-5 pb-6 sm:grid-cols-2 sm:px-8">
+        <div className="grid grid-cols-1 gap-3 bg-slate-50/70 px-5 pb-6 sm:grid-cols-2 sm:px-8">
           {DETAIL_SECTIONS.map((item) => (
             <div
               key={item}
-              className="rounded-xl border border-slate-200 bg-white p-4"
+              className="rounded-xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-sm"
             >
-              <p className="text-sm font-bold text-cm-navy-950">{item}</p>
-              <p className="mt-2 break-words text-sm leading-6 text-slate-500">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                <p className="text-sm font-bold text-slate-900">{item}</p>
+              </div>
+
+              <p className="mt-3 break-words text-sm leading-6 text-slate-500">
                 {filled[item] ||
                   `Project ${item.toLowerCase()} will appear here.`}
               </p>
@@ -1094,54 +1102,94 @@ function ProjectManagement() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 border-b border-cm-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cm-blue-700">
-            Delivery workspace
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-cm-navy-950">
-            Project Management
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-cm-text-muted">
-            Manage projects, deadlines, planning, tasks, testing and delivery
-            status.
-          </p>
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
+
+        <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+              <FolderKanban className="h-6 w-6" />
+            </div>
+
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                ADMINISTRATION
+              </span>
+
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+                Project Management
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                Manage project planning, ownership, deadlines, progress and delivery.
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-slate-200">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  Project workspace
+                </span>
+
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-slate-200">
+                  <FolderKanban className="h-3.5 w-3.5 text-blue-200" />
+                  {pagination.total} project records
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 shrink-0">
+            <Button
+              onClick={() => openForm({ mode: "create" })}
+              disabled={isLoading}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Project
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => openForm({ mode: "create" })}
-          disabled={isLoading}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Project
-        </Button>
       </header>
 
       {!loadError && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section
+          aria-label="Project statistics"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
           <StatCard
             label="Total Projects"
             value={isLoading ? "…" : summary.total}
             icon={<FolderKanban className="h-5 w-5" />}
           />
           <StatCard
-            label="Active"
+            label="Active Projects"
             value={isLoading ? "…" : summary.active}
             icon={<PlayCircle className="h-5 w-5" />}
             accent="purple"
           />
           <StatCard
-            label="Completed"
+            label="Completed Projects"
             value={isLoading ? "…" : summary.completed}
             icon={<CheckCircle2 className="h-5 w-5" />}
             accent="success"
           />
           <StatCard
-            label="Overdue"
+            label="Overdue Projects"
             value={isLoading ? "…" : summary.overdue}
             icon={<AlertTriangle className="h-5 w-5" />}
             accent="warning"
           />
-        </div>
+        </section>
       )}
 
       {form && (
@@ -1174,19 +1222,21 @@ function ProjectManagement() {
           />
         </div>
       ) : (
-        <section className="flex flex-col gap-4 rounded-2xl border border-cm-border bg-cm-card p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-4 border-b border-cm-border pb-4 xl:flex-row xl:items-end xl:justify-between">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50/70 px-5 py-5 sm:px-6">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-cm-navy-950">
+              <h2 className="text-base font-bold tracking-tight text-slate-900">
                 Projects
               </h2>
-              <p className="mt-1 text-sm text-cm-text-muted">
+              <p className="mt-1 text-sm text-slate-500">
                 {isLoading
                   ? "Updating project list…"
                   : `Showing ${firstRow}–${lastRow} of ${pagination.total} projects`}
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
+          </div>
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <div className="w-full xl:w-64">
                 <TableSearch
                   value={search}
@@ -1301,7 +1351,7 @@ function ProjectManagement() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-cm-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-cm-text-muted">
               Page {pagination.totalPages ? page : 0} of{" "}
               {pagination.totalPages || 0}

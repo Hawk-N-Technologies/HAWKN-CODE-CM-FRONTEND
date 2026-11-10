@@ -685,29 +685,40 @@ export default function ManualAttendance() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page heading */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium text-cm-text-muted">
-            {getIndiaDate(dayInfo.date)} · India
-          </p>
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        {/* Decorative background elements */}
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
 
-          <h1 className="mt-1 text-xl font-semibold text-cm-text">
-            Manual Attendance
-          </h1>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
 
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Mark and edit employee attendance for each applicable session.
-          </p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Manual Attendance
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Mark and edit employee attendance for each applicable session.
+            </p>
+
+            <p className="mt-3 text-xs font-medium text-slate-400">
+              {getIndiaDate(dayInfo.date)} · India
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={() => fetchToday({ refresh: true })}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
         </div>
-
-        <Button
-          variant="outline"
-          onClick={() => fetchToday({ refresh: true })}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? "Refreshing..." : "Refresh"}
-        </Button>
-      </div>
+      </header>
 
       {/* Error */}
       {error && (
@@ -861,29 +872,42 @@ export default function ManualAttendance() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="attendance-dialog-title"
-            className="w-full max-w-md rounded-xl border border-cm-border bg-cm-card p-6 shadow-xl"
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
           >
-            <h2
-              id="attendance-dialog-title"
-              className="text-lg font-semibold text-cm-text"
-            >
-              {attendanceDialog.isEditing
-                ? "Edit Attendance"
-                : "Mark Employee Absent"}
-            </h2>
+            {/* Modal Header */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6">
+              <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute -right-5 -top-10 h-28 w-28 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 bg-blue-500/10 blur-3xl" />
 
-            <p className="mt-1 text-sm text-cm-text-muted">
-              {getEmployeeName(attendanceDialog.employee)} ·{" "}
-              {attendanceDialog.session === "FIRST_HALF"
-                ? "First Half"
-                : "Second Half"}
-            </p>
+              <div className="relative z-10">
+                <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                  HUMAN RESOURCES
+                </span>
+
+                <h2
+                  id="attendance-dialog-title"
+                  className="mt-3 text-xl font-bold tracking-tight text-white"
+                >
+                  {attendanceDialog.isEditing
+                    ? "Edit Attendance"
+                    : "Mark Employee Absent"}
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-300">
+                  {getEmployeeName(attendanceDialog.employee)} ·{" "}
+                  {attendanceDialog.session === "FIRST_HALF"
+                    ? "First Half"
+                    : "Second Half"}
+                </p>
+              </div>
+            </div>
 
             <form
               onSubmit={
                 attendanceDialog.isEditing ? confirmEdit : confirmAbsent
               }
-              className="mt-5 space-y-4"
+              className="space-y-4 p-6"
             >
               {/* Status selector appears only when editing. */}
               {attendanceDialog.isEditing && (

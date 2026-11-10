@@ -267,40 +267,59 @@ function CompanyPolicies() {
         <span className="font-medium text-cm-navy-950">Company policies</span>
       </nav>
 
-      {/* Page heading */}
-      <header className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#d8e2ef] bg-[#f8faff] text-cm-navy-950 shadow-sm">
-            <ShieldCheck size={26} strokeWidth={1.7} />
-          </div>
+      {/* Standardized Administration Header */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl font-bold tracking-tight text-cm-navy-950 sm:text-[28px]">
-                Company policies
-              </h1>
-              <Badge tone="info" size="sm">
-                Organization
-              </Badge>
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 shadow-sm">
+              <ShieldCheck size={24} strokeWidth={1.7} />
             </div>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#71819b]">
-              Manage workplace guidelines, employee expectations, and company
-              standards from one central place.
-            </p>
-          </div>
-        </div>
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                ADMINISTRATION
+              </span>
 
-        <div className="flex w-fit items-center gap-2.5 rounded-xl border border-[#d8e2ef] bg-[#f8faff] px-3.5 py-2.5">
-          <span
-            className={[
-              "h-2 w-2 rounded-full",
-              isDirty ? "bg-amber-500" : "bg-cm-blue-600",
-            ].join(" ")}
-          />
-          <span className="text-xs font-medium text-cm-navy-950">
-            {isDirty ? "Unsaved changes" : "All changes saved"}
-          </span>
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <h1 className="text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+                  Company policies
+                </h1>
+                <Badge tone="info" size="sm">
+                  Organization
+                </Badge>
+              </div>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                Manage workplace guidelines, employee expectations, and company
+                standards from one central place.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex w-fit shrink-0 items-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.07] px-3.5 py-2.5 backdrop-blur-sm">
+            <span
+              className={[
+                "h-2 w-2 rounded-full",
+                isDirty ? "bg-amber-400" : "bg-blue-400",
+              ].join(" ")}
+            />
+            <span className="text-xs font-medium text-slate-100">
+              {isDirty ? "Unsaved changes" : "All changes saved"}
+            </span>
+          </div>
         </div>
       </header>
 

@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import {
+  BriefcaseBusiness,
+  CalendarDays,
+  CheckCircle2,
+  FileText,
+  FolderKanban,
+  Layers3,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 import Badge from "../../components/common/Badge";
 import DataTable from "../../components/tables/DataTable";
@@ -22,7 +34,10 @@ const STATUS_TONE = {
 const formatDate = (date) => {
   if (!date) return "—";
 
-  const [year, month, day] = String(date).slice(0, 10).split("-").map(Number);
+  const [year, month, day] = String(date)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
 
   if (!year || !month || !day) return "—";
 
@@ -35,9 +50,11 @@ const formatDate = (date) => {
 
 const formatFileSize = (bytes) => {
   const size = Number(bytes);
+
   if (!Number.isFinite(size) || size <= 0) return null;
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
@@ -46,52 +63,34 @@ const shortId = (uuid) => {
   return `PRJ-${String(uuid).slice(0, 6).toUpperCase()}`;
 };
 
-const getProgress = (value) => Math.min(100, Math.max(0, Number(value) || 0));
+const getProgress = (value) =>
+  Math.min(100, Math.max(0, Number(value) || 0));
 
 const getDocumentUrl = (version) =>
   version?.viewUrl ||
   (version?.uuid ? `/api/brds/versions/${version.uuid}/file` : null);
 
 // ---------------------------------------------------------------------------
-// Small UI helpers
+// Small UI Helpers
 // ---------------------------------------------------------------------------
 
 function CloseIcon() {
   return (
-    <svg
+    <X
       aria-hidden="true"
-      viewBox="0 0 24 24"
       className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path strokeLinecap="round" d="m6 6 12 12M18 6 6 18" />
-    </svg>
+      strokeWidth={1.8}
+    />
   );
 }
 
 function FileIcon() {
   return (
-    <svg
+    <FileText
       aria-hidden="true"
-      viewBox="0 0 24 24"
       className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M13 3v7h7M8 15h8M8 18h5"
-      />
-    </svg>
+      strokeWidth={1.8}
+    />
   );
 }
 
@@ -101,7 +100,7 @@ function ProgressBar({ value = 0 }) {
   return (
     <div className="flex min-w-[112px] items-center gap-2">
       <div
-        className="h-2 w-20 overflow-hidden rounded-full bg-cm-border"
+        className="h-2 w-20 overflow-hidden rounded-full bg-slate-100"
         role="progressbar"
         aria-valuenow={progress}
         aria-valuemin={0}
@@ -109,10 +108,11 @@ function ProgressBar({ value = 0 }) {
         aria-label="Project progress"
       >
         <div
-          className="h-full rounded-full bg-cm-navy-950 transition-[width] duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-blue-700 to-indigo-600 transition-[width] duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
+
       <span className="text-xs font-medium tabular-nums text-cm-text-muted">
         {progress}%
       </span>
@@ -120,12 +120,18 @@ function ProgressBar({ value = 0 }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Reusable Modal Shell
+// Shared by Project Details and BRD Document Viewer
+// ---------------------------------------------------------------------------
+
 function ModalShell({
   title,
   subtitle,
   onClose,
   children,
   size = "max-w-4xl",
+  icon: Icon = FileIcon,
 }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -144,7 +150,7 @@ function ModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-cm-navy-950/65 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -153,26 +159,59 @@ function ModalShell({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`flex max-h-[92vh] w-full ${size} flex-col overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-2xl`}
+        className={`flex max-h-[92vh] w-full ${size} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-cm-border bg-cm-card px-5 py-4 sm:px-6">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-bold text-cm-navy-950 sm:text-lg">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-1 text-xs text-cm-text-muted">{subtitle}</p>
-            )}
+        {/* Branded Modal Header */}
+        <header className="relative isolate overflow-hidden border-b border-slate-700 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-6 sm:py-6">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-0 h-48 w-48 bg-blue-500/10 blur-3xl"
+          />
+
+          <div className="relative z-10 flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+                <Icon className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">
+                  CLIENT WORKSPACE
+                </p>
+
+                <h2 className="mt-1 break-words text-lg font-bold tracking-tight text-white sm:text-xl">
+                  {title}
+                </h2>
+
+                {subtitle && (
+                  <p className="mt-1 text-xs leading-5 text-slate-300">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-slate-200 transition hover:border-white/25 hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <CloseIcon />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-cm-text-muted transition hover:bg-cm-bg hover:text-cm-navy-950 focus:outline-none focus:ring-2 focus:ring-cm-navy-950"
-          >
-            <CloseIcon />
-          </button>
         </header>
+
         {children}
       </section>
     </div>
@@ -205,104 +244,157 @@ function ProjectDetailsModal({ project, onClose, onViewDocument }) {
       title={project.name || "Project details"}
       subtitle={`${shortId(project.uuid)} · Project overview`}
       onClose={onClose}
+      icon={FolderKanban}
     >
-      <div className="overflow-y-auto p-5 sm:p-6">
+      <div className="overflow-y-auto bg-white p-5 sm:p-6">
+        {/* Project Status */}
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={STATUS_TONE[project.status] || "neutral"}>
             {project.status || "Unknown"}
           </Badge>
+
           {project.tier && (
-            <span className="rounded-full border border-cm-border px-3 py-1 text-xs font-medium text-cm-text-muted">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
               {project.tier}
             </span>
           )}
         </div>
 
-        <div className="mt-5 rounded-xl border border-cm-border bg-cm-bg/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-            About this project
-          </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-cm-text">
+        {/* Project Description */}
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-800">
+              <BriefcaseBusiness className="h-4 w-4" />
+            </div>
+
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              About this project
+            </p>
+          </div>
+
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
             {project.description || "No project description has been provided."}
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {detailItems.map((item) => (
-            <div
-              key={item.label}
-              className="rounded-xl border border-cm-border p-4"
-            >
-              <p className="text-xs font-medium text-cm-text-muted">
-                {item.label}
-              </p>
-              <p className="mt-1.5 break-words text-sm font-semibold text-cm-text">
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
+        {/* Project Information */}
+        <section className="mt-6">
+          <div className="mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+              Project information
+            </p>
 
-        <div className="mt-5 rounded-xl border border-cm-border p-4">
+            <h3 className="mt-1 text-sm font-bold text-cm-navy-950">
+              Key project details
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {detailItems.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-blue-50/20"
+              >
+                <p className="text-xs font-medium text-slate-500">
+                  {item.label}
+                </p>
+
+                <p className="mt-1.5 break-words text-sm font-semibold text-slate-800">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Overall Progress */}
+        <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-cm-navy-950">
                 Overall progress
               </p>
+
               <p className="mt-1 text-xs text-cm-text-muted">
                 Current project completion
               </p>
             </div>
+
             <span className="text-lg font-bold tabular-nums text-cm-navy-950">
               {progress}%
             </span>
           </div>
-          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-cm-border">
+
+          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-cm-navy-950 transition-[width] duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-blue-700 to-indigo-600 transition-[width] duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
-        </div>
+        </section>
 
+        {/* Business Requirement Document */}
         <section className="mt-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-bold text-cm-navy-950">
-                Business Requirement Document
-              </h3>
-              <p className="mt-1 text-xs text-cm-text-muted">
-                Documents and uploaded versions for this project
-              </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-800">
+                <FileIcon />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-800">
+                  Project documentation
+                </p>
+
+                <h3 className="mt-1 text-sm font-bold text-cm-navy-950">
+                  Business Requirement Document
+                </h3>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Documents and uploaded versions for this project
+                </p>
+              </div>
             </div>
+
             {brd?.status && <Badge tone="neutral">{brd.status}</Badge>}
           </div>
 
           {!brd ? (
-            <div className="mt-3 rounded-xl border border-dashed border-cm-border px-4 py-8 text-center">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-cm-bg text-cm-navy-950">
+            <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-8 text-center">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-800">
                 <FileIcon />
               </div>
-              <p className="mt-3 text-sm font-medium text-cm-text">
+
+              <p className="mt-3 text-sm font-semibold text-slate-700">
                 No BRD uploaded yet
               </p>
-              <p className="mt-1 text-xs text-cm-text-muted">
+
+              <p className="mt-1 text-xs text-slate-500">
                 The document will appear here once it has been uploaded.
               </p>
             </div>
           ) : (
-            <div className="mt-3 rounded-xl border border-cm-border p-4">
-              <p className="text-sm font-semibold text-cm-text">
-                {brd.title || "Business Requirement Document"}
-              </p>
-              {brd.description && (
-                <p className="mt-1 text-xs leading-5 text-cm-text-muted">
-                  {brd.description}
-                </p>
-              )}
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-800">
+                  <FileIcon />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {brd.title || "Business Requirement Document"}
+                  </p>
+
+                  {brd.description && (
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {brd.description}
+                    </p>
+                  )}
+                </div>
+              </div>
 
               {versions.length === 0 ? (
-                <p className="mt-4 rounded-lg bg-cm-bg p-3 text-sm text-cm-text-muted">
+                <p className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-500">
                   No uploaded versions are available.
                 </p>
               ) : (
@@ -314,17 +406,19 @@ function ProjectDetailsModal({ project, onClose, onViewDocument }) {
                     return (
                       <div
                         key={version.uuid || version.version}
-                        className="flex flex-col gap-3 rounded-xl border border-cm-border bg-cm-bg/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition hover:border-blue-200 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cm-card text-cm-navy-950">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-800">
                             <FileIcon />
                           </div>
+
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-cm-text">
+                            <p className="truncate text-sm font-semibold text-slate-800">
                               {version.fileName || `Version ${version.version}`}
                             </p>
-                            <p className="mt-1 text-xs text-cm-text-muted">
+
+                            <p className="mt-1 text-xs text-slate-500">
                               Version {version.version ?? "—"}
                               {version.createdAt || version.uploadedAt
                                 ? ` · ${formatDate(version.uploadedAt || version.createdAt)}`
@@ -338,8 +432,9 @@ function ProjectDetailsModal({ project, onClose, onViewDocument }) {
                           type="button"
                           disabled={!fileUrl}
                           onClick={() => onViewDocument(version)}
-                          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-cm-navy-950 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-cm-navy-950/90 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-cm-navy-950 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
+                          <FileText className="h-3.5 w-3.5" />
                           View document
                         </button>
                       </div>
@@ -352,11 +447,12 @@ function ProjectDetailsModal({ project, onClose, onViewDocument }) {
         </section>
       </div>
 
-      <footer className="flex justify-end border-t border-cm-border bg-cm-bg/50 px-5 py-3 sm:px-6">
+      {/* Project Details Footer */}
+      <footer className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-3 sm:px-6">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-cm-border px-4 py-2 text-sm font-semibold text-cm-text transition hover:bg-cm-bg focus:outline-none focus:ring-2 focus:ring-cm-navy-950"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-cm-navy-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           Done
         </button>
@@ -376,24 +472,28 @@ function DocumentViewerModal({ document, onClose }) {
       subtitle="Secure document preview"
       onClose={onClose}
       size="max-w-6xl"
+      icon={FileText}
     >
-      <div className="flex min-h-[55vh] flex-1 flex-col bg-cm-bg">
+      <div className="flex min-h-[55vh] flex-1 flex-col bg-slate-50">
         {document.loading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
-            <div className="h-9 w-9 animate-spin rounded-full border-4 border-cm-border border-t-cm-navy-950" />
-            <p className="text-sm font-medium text-cm-text">
+            <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-blue-800" />
+
+            <p className="text-sm font-medium text-slate-700">
               Loading document…
             </p>
           </div>
         ) : document.error ? (
           <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cm-card text-cm-navy-950">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-800">
               <FileIcon />
             </div>
-            <p className="mt-4 text-sm font-semibold text-cm-text">
+
+            <p className="mt-4 text-sm font-semibold text-slate-800">
               Couldn't preview this document
             </p>
-            <p className="mt-1 max-w-md text-sm text-cm-text-muted">
+
+            <p className="mt-1 max-w-md text-sm leading-6 text-slate-500">
               {document.error}
             </p>
           </div>
@@ -407,21 +507,25 @@ function DocumentViewerModal({ document, onClose }) {
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cm-card text-cm-navy-950">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-100 bg-white text-blue-800 shadow-sm">
                 <FileIcon />
               </div>
-              <p className="mt-4 text-sm font-semibold text-cm-text">
+
+              <p className="mt-4 text-sm font-semibold text-slate-800">
                 Preview isn't supported for this file type
               </p>
-              <p className="mt-1 max-w-md text-sm text-cm-text-muted">
+
+              <p className="mt-1 max-w-md text-sm leading-6 text-slate-500">
                 This file can still be opened or downloaded using the action
                 below.
               </p>
+
               <a
                 href={document.url}
                 download={document.fileName || "document"}
-                className="mt-5 inline-flex items-center rounded-lg bg-cm-navy-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cm-navy-950/90"
+                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-cm-navy-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2"
               >
+                <FileText className="h-4 w-4" />
                 Download document
               </a>
             </div>
@@ -429,14 +533,16 @@ function DocumentViewerModal({ document, onClose }) {
         ) : null}
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-cm-border bg-cm-card px-5 py-3 sm:px-6">
-        <p className="min-w-0 truncate text-xs text-cm-text-muted">
+      {/* Document Viewer Footer */}
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-3 sm:px-6">
+        <p className="min-w-0 truncate text-xs font-medium text-slate-500">
           {document.fileName || "BRD document"}
         </p>
+
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg bg-cm-navy-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cm-navy-950/90 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2"
+          className="rounded-lg bg-cm-navy-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2"
         >
           Close viewer
         </button>
@@ -462,9 +568,11 @@ export default function ProjectDetails() {
   // Revoke the temporary authenticated-file URL whenever it changes or closes.
   useEffect(() => {
     if (!document?.url) return undefined;
+
     return () => URL.revokeObjectURL(document.url);
   }, [document?.url]);
 
+  // Fetch client projects.
   useEffect(() => {
     let ignore = false;
 
@@ -478,6 +586,7 @@ export default function ProjectDetails() {
         });
 
         const responseData = response.data?.data;
+
         const projectList = Array.isArray(responseData)
           ? responseData
           : responseData?.projects ||
@@ -510,8 +619,10 @@ export default function ProjectDetails() {
     setReloadKey((key) => key + 1);
   };
 
+  // Search projects.
   const filteredProjects = useMemo(() => {
     const query = search.trim().toLowerCase();
+
     if (!query) return projects;
 
     return projects.filter((project) =>
@@ -527,8 +638,10 @@ export default function ProjectDetails() {
     );
   }, [projects, search]);
 
+  // Open a BRD version using the authenticated Axios request.
   const openDocument = async (version) => {
     const fileUrl = getDocumentUrl(version);
+
     if (!fileUrl) return;
 
     setDocument({
@@ -540,11 +653,12 @@ export default function ProjectDetails() {
     });
 
     try {
-      // Axios is used instead of a plain anchor so configured Bearer-token
-      // interceptors are applied to the authenticated file request.
+      // Axios applies the configured Bearer-token interceptors.
       const response = await axios.get(fileUrl, { responseType: "blob" });
+
       const mimeType =
         version.mimeType || response.data?.type || "application/octet-stream";
+
       const blob = new Blob([response.data], { type: mimeType });
       const url = URL.createObjectURL(blob);
 
@@ -553,6 +667,7 @@ export default function ProjectDetails() {
           URL.revokeObjectURL(url);
           return current;
         }
+
         return { ...current, loading: false, error: null, url, mimeType };
       });
     } catch (error) {
@@ -571,6 +686,10 @@ export default function ProjectDetails() {
   };
 
   const closeDocument = () => setDocument(null);
+
+  // -------------------------------------------------------------------------
+  // Project Table Columns
+  // -------------------------------------------------------------------------
 
   const columns = [
     {
@@ -628,7 +747,7 @@ export default function ProjectDetails() {
         <button
           type="button"
           onClick={() => setSelectedProject(row)}
-          className="inline-flex items-center justify-center rounded-lg bg-cm-navy-950 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cm-navy-950/90 focus:outline-none focus:ring-2 focus:ring-cm-navy-950 focus:ring-offset-2"
+          className="inline-flex items-center justify-center rounded-lg bg-cm-navy-950 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2"
         >
           View details
         </button>
@@ -636,81 +755,129 @@ export default function ProjectDetails() {
     },
   ];
 
-  if (loadError) {
-    return (
-      <div className="rounded-2xl border border-cm-border bg-cm-card p-2">
-        <ErrorState
-          title="Couldn't load projects"
-          description={loadError}
-          onRetry={reload}
-        />
-      </div>
-    );
-  }
+  // -------------------------------------------------------------------------
+  // Main Page
+  // -------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 border-b border-cm-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-cm-navy-950">
-            Client workspace
-          </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-cm-navy-950 sm:text-3xl">
-            My Projects
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-cm-text-muted">
-            Track project progress, key dates, ownership and your business
-            requirement documents in one place.
-          </p>
-        </div>
+    <div className="flex flex-col gap-6 pb-8">
+      {/* Client Projects Page Header */}
+      <header className="relative isolate overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 text-white shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
 
-        <div className="rounded-xl border border-cm-border bg-cm-card px-4 py-3 shadow-sm">
-          <p className="text-xs font-medium text-cm-text-muted">
-            Projects found
-          </p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-cm-navy-950">
-            {isLoading ? "—" : projects.length}
-          </p>
-        </div>
-      </header>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
 
-      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-cm-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div>
-            <h2 className="text-base font-bold text-cm-navy-950">
-              Project portfolio
-            </h2>
-            <p className="mt-1 text-xs text-cm-text-muted">
-              Select a project to view its details and BRD versions.
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0 max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              CLIENT WORKSPACE
+            </span>
+
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              My Projects
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Track project progress, key dates, ownership and your business
+              requirement documents in one place.
             </p>
           </div>
 
-          <div className="w-full sm:w-80">
-            <TableSearch
-              value={search}
-              onChange={setSearch}
-              placeholder="Search projects..."
-            />
+          <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-white">
+                Project portfolio
+              </p>
+
+              <p className="mt-0.5 text-[11px] text-slate-300">
+                {isLoading ? "Loading projects…" : `${projects.length} projects found`}
+              </p>
+            </div>
           </div>
         </div>
+      </header>
 
-        <div className="p-3 sm:p-5">
-          <DataTable
-            columns={columns}
-            rows={filteredProjects.map((project) => ({
-              ...project,
-              id: project.uuid,
-            }))}
-            isLoading={isLoading}
-            emptyMessage={
-              search
-                ? "No projects match your search."
-                : "No projects assigned to you yet."
-            }
+      {/* Error State */}
+      {loadError ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <ErrorState
+            title="Couldn't load projects"
+            description={loadError}
+            onRetry={reload}
           />
         </div>
-      </section>
+      ) : (
+        <>
+          {/* Project Portfolio */}
+          <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
+            {/* Portfolio Section Header */}
+            <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-800">
+                  <Layers3 className="h-5 w-5" />
+                </div>
 
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-800">
+                    Delivery tracker
+                  </p>
+
+                  <h2 className="mt-1 text-base font-bold text-cm-navy-950">
+                    Project portfolio
+                  </h2>
+
+                  <p className="mt-1 text-xs text-cm-text-muted">
+                    Select a project to view its details and BRD versions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-80">
+                <TableSearch
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search projects..."
+                />
+              </div>
+            </div>
+
+            {/* Project Table */}
+            <div className="p-3 sm:p-5">
+              <DataTable
+                columns={columns}
+                rows={filteredProjects.map((project) => ({
+                  ...project,
+                  id: project.uuid,
+                }))}
+                isLoading={isLoading}
+                emptyMessage={
+                  search
+                    ? "No projects match your search."
+                    : "No projects assigned to you yet."
+                }
+              />
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* Project Details Modal */}
       {selectedProject && (
         <ProjectDetailsModal
           project={selectedProject}
@@ -719,8 +886,12 @@ export default function ProjectDetails() {
         />
       )}
 
+      {/* BRD Document Viewer Modal */}
       {document && (
-        <DocumentViewerModal document={document} onClose={closeDocument} />
+        <DocumentViewerModal
+          document={document}
+          onClose={closeDocument}
+        />
       )}
     </div>
   );

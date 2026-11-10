@@ -113,6 +113,7 @@ const LeaveLOP = () => {
 
     return () => clearTimeout(timeoutId);
   }, [activeTab, search, page, limit, sortBy, sortOrder]);
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -306,7 +307,7 @@ const LeaveLOP = () => {
       header: "Actions",
       render: (row) =>
         activeTab === "PENDING" && row.leaveStatus === "PENDING" ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => startEditing(row)}>
               Edit
             </Button>
@@ -330,259 +331,375 @@ const LeaveLOP = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Page heading and Apply Leave action */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">Leave & LOP</h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Manage leave requests, approvals and LOP.
-          </p>
+      {/* Standardized HR page heading */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+              HUMAN RESOURCES
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+              Leave &amp; LOP
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Manage employee leave requests, approvals, leave history and loss
+              of pay.
+            </p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
+                <span className="h-2 w-2 rounded-full bg-blue-300" />
+                Leave management
+              </span>
+
+              <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
+                {pagination.total} records
+              </span>
+            </div>
+          </div>
+
+          <div className="relative shrink-0">
+            <Button
+              onClick={() => {
+                setEditingLeave(null);
+                setShowForm(true);
+              }}
+            >
+              Apply Leave
+            </Button>
+          </div>
         </div>
+      </header>
 
-        <Button
-          onClick={() => {
-            setEditingLeave(null);
-            setShowForm((value) => !value);
-          }}
-        >
-          {showForm ? "Close Form" : "Apply Leave"}
-        </Button>
-      </div>
-
-      {/* Apply Leave form */}
+      {/* Apply Leave modal */}
       {showForm && (
-        <div className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-          <div className="relative isolate overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5">
-            <div className="pointer-events-none absolute -right-8 -top-16 h-44 w-44 rounded-full border border-white/10" />
-            <div className="pointer-events-none absolute -right-1 top-4 h-28 w-28 rounded-full border border-white/10" />
-
-            <div className="relative flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white">
-                <svg
-                  width="25"
-                  height="25"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="5" width="18" height="16" rx="2" />
-                  <path d="M16 3v4M8 3v4M3 10h18M12 14v4M10 16h4" />
-                </svg>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Apply for Leave
-                </h2>
-                <p className="mt-1 text-sm text-blue-100/75">
-                  Submit a new employee leave request.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <form
-            onSubmit={addLeave}
-            className="grid grid-cols-1 gap-4 p-6 md:grid-cols-3"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:p-6"
+          onClick={() => setShowForm(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="apply-leave-modal-title"
+            className="relative my-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
           >
-            <Input
-              label="Employee ID"
-              required
-              value={form.employee}
-              onChange={(e) => setForm({ ...form, employee: e.target.value })}
-            />
+            {/* Standardized modal header */}
+            <header className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-8 sm:py-6">
+              <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute -right-1 -top-16 h-44 w-44 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 bg-blue-500/10 blur-3xl" />
 
-            <Select
-              label="Leave Type"
-              value={form.type}
-              options={LEAVE_TYPE_OPTIONS}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-            />
-
-            <Select
-              label="Session"
-              value={form.session}
-              options={SESSION_OPTIONS}
-              onChange={(e) => setForm({ ...form, session: e.target.value })}
-            />
-
-            <Input
-              label="From"
-              type="date"
-              required
-              value={form.from}
-              onChange={(e) => setForm({ ...form, from: e.target.value })}
-            />
-
-            <Input
-              label="To"
-              type="date"
-              required
-              value={form.to}
-              onChange={(e) => setForm({ ...form, to: e.target.value })}
-            />
-
-            <Input
-              label="Reason"
-              value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            />
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isPaid}
-                onChange={(e) => setForm({ ...form, isPaid: e.target.checked })}
-              />
-              <span className="text-sm text-cm-text">Paid Leave</span>
-            </div>
-
-            <div className="flex justify-end gap-3 md:col-span-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowForm(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Submit Leave Request</Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Edit Leave form - inline, not a popup */}
-      {editingLeave && (
-        <div className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
-          <div className="relative isolate overflow-hidden bg-gradient-to-r from-[#0b1833] via-[#122b4d] to-[#1c4168] px-6 py-5">
-            <div className="pointer-events-none absolute -right-8 -top-16 h-44 w-44 rounded-full border border-white/10" />
-            <div className="pointer-events-none absolute -right-1 top-4 h-28 w-28 rounded-full border border-white/10" />
-
-            <div className="relative flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white">
-                  <svg
-                    width="25"
-                    height="25"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="3" y="5" width="18" height="16" rx="2" />
-                    <path d="M16 3v4M8 3v4M3 10h18" />
-                    <path d="m9 16 2 2 4-4" />
-                  </svg>
-                </div>
-
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold text-white">
-                      Edit Leave Request
-                    </h2>
-                    <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
-                      Update
-                    </span>
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 sm:h-12 sm:w-12">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="5" width="18" height="16" rx="2" />
+                      <path d="M16 3v4M8 3v4M3 10h18M12 14v4M10 16h4" />
+                    </svg>
                   </div>
-                  <p className="mt-1 text-sm text-blue-100/75">
-                    Update the leave details before approving the request.
-                  </p>
+
+                  <div className="min-w-0">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                      HUMAN RESOURCES
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2
+                        id="apply-leave-modal-title"
+                        className="text-xl font-bold tracking-tight sm:text-2xl"
+                      >
+                        Apply for Leave
+                      </h2>
+
+                      <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+                        New request
+                      </span>
+                    </div>
+
+                    <p className="mt-1.5 text-sm leading-5 text-slate-300">
+                      Submit a new employee leave request.
+                    </p>
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  aria-label="Close apply leave form"
+                  onClick={() => setShowForm(false)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  ×
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setEditingLeave(null)}
-                aria-label="Close edit leave form"
-                className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
+              <div className="relative mt-5 flex items-center gap-2 text-xs text-blue-100/90">
+                <span className="h-2 w-2 rounded-full bg-blue-300" />
+                Employee leave details
+                <span className="text-white/40">/</span>
+                Dates and leave type
+              </div>
+            </header>
 
-          <div className="p-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <form
+              onSubmit={addLeave}
+              className="grid grid-cols-1 gap-5 p-5 sm:p-7 md:grid-cols-2"
+            >
+              <Input
+                label="Employee ID"
+                required
+                value={form.employee}
+                onChange={(e) =>
+                  setForm({ ...form, employee: e.target.value })
+                }
+              />
+
               <Select
                 label="Leave Type"
-                value={editingLeave.leaveType}
+                value={form.type}
                 options={LEAVE_TYPE_OPTIONS}
-                onChange={(e) =>
-                  setEditingLeave({
-                    ...editingLeave,
-                    leaveType: e.target.value,
-                  })
-                }
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
               />
 
               <Select
                 label="Session"
-                value={editingLeave.leaveSession}
+                value={form.session}
                 options={SESSION_OPTIONS}
                 onChange={(e) =>
-                  setEditingLeave({
-                    ...editingLeave,
-                    leaveSession: e.target.value,
-                  })
+                  setForm({ ...form, session: e.target.value })
                 }
               />
 
               <Input
-                label="Leave Date"
+                label="From"
                 type="date"
                 required
-                value={editingLeave.leaveDate}
-                onChange={(e) =>
-                  setEditingLeave({
-                    ...editingLeave,
-                    leaveDate: e.target.value,
-                  })
-                }
+                value={form.from}
+                onChange={(e) => setForm({ ...form, from: e.target.value })}
               />
 
-              <div className="flex items-center gap-2">
+              <Input
+                label="To"
+                type="date"
+                required
+                value={form.to}
+                onChange={(e) => setForm({ ...form, to: e.target.value })}
+              />
+
+              <Input
+                label="Reason"
+                value={form.reason}
+                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              />
+
+              <div className="flex items-center gap-3 md:col-span-2">
                 <input
+                  id="apply-leave-paid"
                   type="checkbox"
-                  checked={editingLeave.isPaid}
+                  checked={form.isPaid}
+                  onChange={(e) =>
+                    setForm({ ...form, isPaid: e.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label
+                  htmlFor="apply-leave-paid"
+                  className="text-sm font-medium text-slate-700"
+                >
+                  Paid Leave
+                </label>
+              </div>
+
+              <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-5 sm:flex-row md:col-span-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowForm(false)}
+                >
+                  Cancel
+                </Button>
+
+                <Button type="submit">Submit Leave Request</Button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {/* Edit Leave modal */}
+      {editingLeave && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:p-6"
+          onClick={() => setEditingLeave(null)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-leave-modal-title"
+            className="relative my-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {/* Standardized modal header */}
+            <header className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-8 sm:py-6">
+              <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute -right-1 -top-16 h-44 w-44 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 bg-blue-500/10 blur-3xl" />
+
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 sm:h-12 sm:w-12">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="5" width="18" height="16" rx="2" />
+                      <path d="M16 3v4M8 3v4M3 10h18" />
+                      <path d="m9 16 2 2 4-4" />
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                      HUMAN RESOURCES
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2
+                        id="edit-leave-modal-title"
+                        className="text-xl font-bold tracking-tight sm:text-2xl"
+                      >
+                        Edit Leave Request
+                      </h2>
+
+                      <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+                        Update
+                      </span>
+                    </div>
+
+                    <p className="mt-1.5 text-sm leading-5 text-slate-300">
+                      Update the leave details before approving the request.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingLeave(null)}
+                  aria-label="Close edit leave form"
+                  disabled={savingEdit}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="relative mt-5 flex items-center gap-2 text-xs text-blue-100/90">
+                <span className="h-2 w-2 rounded-full bg-blue-300" />
+                Leave request details
+                <span className="text-white/40">/</span>
+                Review and update
+              </div>
+            </header>
+
+            <div className="p-5 sm:p-7">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <Select
+                  label="Leave Type"
+                  value={editingLeave.leaveType}
+                  options={LEAVE_TYPE_OPTIONS}
                   onChange={(e) =>
                     setEditingLeave({
                       ...editingLeave,
-                      isPaid: e.target.checked,
+                      leaveType: e.target.value,
                     })
                   }
                 />
-                <span className="text-sm text-cm-text">Paid Leave</span>
+
+                <Select
+                  label="Session"
+                  value={editingLeave.leaveSession}
+                  options={SESSION_OPTIONS}
+                  onChange={(e) =>
+                    setEditingLeave({
+                      ...editingLeave,
+                      leaveSession: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  label="Leave Date"
+                  type="date"
+                  required
+                  value={editingLeave.leaveDate}
+                  onChange={(e) =>
+                    setEditingLeave({
+                      ...editingLeave,
+                      leaveDate: e.target.value,
+                    })
+                  }
+                />
+
+                <div className="flex items-center gap-3">
+                  <input
+                    id="edit-leave-paid"
+                    type="checkbox"
+                    checked={editingLeave.isPaid}
+                    onChange={(e) =>
+                      setEditingLeave({
+                        ...editingLeave,
+                        isPaid: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="edit-leave-paid"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Paid Leave
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-5 sm:flex-row">
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditingLeave(null)}
+                  disabled={savingEdit}
+                >
+                  Cancel
+                </Button>
+
+                <Button onClick={updateLeave} disabled={savingEdit}>
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
             </div>
-
-            <div className="mt-5 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setEditingLeave(null)}>
-                Cancel
-              </Button>
-              <Button onClick={updateLeave} disabled={savingEdit}>
-                {savingEdit ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </div>
+          </section>
         </div>
       )}
 

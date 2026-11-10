@@ -873,55 +873,82 @@ function HRMS() {
 
   return (
     <div className="flex flex-col gap-6 text-cm-text">
-      <header className="relative overflow-hidden rounded-2xl border border-cm-border bg-gradient-to-br from-cm-card via-cm-card to-cm-navy-950/[0.06] p-5 shadow-sm sm:p-6">
-        <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-cm-navy-950/[0.04] blur-2xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cm-navy-950 text-white shadow-sm">
-              <Eye className="h-5 w-5" aria-hidden="true" />
+      {/* Page header */}
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
+        />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
+              <Eye className="h-6 w-6" aria-hidden="true" />
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-cm-text">
+
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                ADMINISTRATION
+              </span>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-bold tracking-tight text-white sm:text-[34px]">
                   HRMS
                 </h1>
-                <span className="inline-flex items-center rounded-full border border-cm-border bg-cm-card px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-cm-text-muted">
-                  Read only
+
+                <span className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.07] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-200">
+                  Read Only
                 </span>
               </div>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-cm-text-muted">
-                A live overview of employees, attendance, leave, payroll and
-                people operations.
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                A centralized live overview of employees, attendance, leave,
+                payroll and people operations.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-cm-text-muted">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-300">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
                   Auto-refreshes every minute
                 </span>
+
                 {summary.updatedAt && (
-                  <span>
-                    Last updated{" "}
-                    {summary.updatedAt.toLocaleTimeString("en-IN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="text-slate-400">Last updated:</span>
+                    <span className="font-medium text-white">
+                      {summary.updatedAt.toLocaleTimeString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
                   </span>
                 )}
               </div>
             </div>
           </div>
+
           <Button
             size="sm"
             variant="outline"
             onClick={refresh}
             aria-label="Refresh HRMS data"
+            className="border-white/20 bg-white/10 text-white hover:bg-white/15"
           >
-            <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" /> Refresh
-            data
+            <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Refresh data
           </Button>
         </div>
       </header>
 
+      {/* HRMS summary */}
       {summary.error && !s ? (
         <div className="rounded-2xl border border-cm-border bg-cm-card shadow-sm">
           <ErrorState
@@ -931,7 +958,10 @@ function HRMS() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section
+          aria-label="HRMS summary"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
           <StatCard
             label="Present Today"
             value={s ? s.today.presentToday : "…"}
@@ -942,15 +972,19 @@ function HRMS() {
             value={s ? s.today.onLeaveToday : "…"}
             accent="warning"
           />
-          <StatCard label="Interns" value={s ? s.employees.interns : "…"} />
+          <StatCard
+            label="Interns"
+            value={s ? s.employees.interns : "…"}
+          />
           <StatCard
             label="Probation"
             value={s ? s.employees.probation : "…"}
             accent="purple"
           />
-        </div>
+        </section>
       )}
 
+      {/* Section navigation */}
       <nav
         aria-label="HRMS sections"
         className="rounded-2xl border border-cm-border bg-cm-card p-2 shadow-sm"
@@ -964,20 +998,24 @@ function HRMS() {
                 type="button"
                 aria-current={active ? "page" : undefined}
                 onClick={() => setActiveSection(value)}
-                className={`shrink-0 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-cm-navy-700/20 ${
+                className={`relative shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
                   active
-                    ? "bg-cm-navy-950 text-white shadow-sm"
-                    : "text-cm-text-muted hover:bg-cm-navy-950/[0.05] hover:text-cm-text"
+                    ? "bg-[#101a3b] text-white shadow-sm"
+                    : "text-cm-text-muted hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
                 {label}
+                {active && (
+                  <span className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full bg-blue-300" />
+                )}
               </button>
             );
           })}
         </div>
       </nav>
 
-      <div className="min-w-0">
+      {/* Active section */}
+      <main className="min-w-0">
         {activeSection === "overview" && <OverviewTab summary={summary} />}
         {activeSection === "employees" && (
           <EmployeesTab tick={tick} onRetry={refresh} />
@@ -998,7 +1036,7 @@ function HRMS() {
           <HierarchyTab tick={tick} onRetry={refresh} />
         )}
         {activeSection === "sops" && <SopsTab />}
-      </div>
+      </main>
     </div>
   );
 }
