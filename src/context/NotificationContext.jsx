@@ -15,11 +15,15 @@ import {
 
 const NotificationContext = createContext(null);
 
-const SOCKET_URL =
+const rawSocketUrl =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV
-    ? window.location.origin
-    : "https://clientportalapi.hawkntechnologies.com");
+  (typeof window !== "undefined" ? window.location.origin : "");
+
+const SOCKET_URL = rawSocketUrl
+  ? rawSocketUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "")
+  : "";
 
 export function NotificationProvider({ enabled, children }) {
   const [notifications, setNotifications] = useState([]);
