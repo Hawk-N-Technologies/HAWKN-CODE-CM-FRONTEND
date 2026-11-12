@@ -1,0 +1,1392 @@
+import { useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import {
+  CalendarDays,
+  Search,
+  X,
+  Wallet,
+  Users,
+  Clock3,
+  CheckCircle2,
+  Plus,
+  ArrowRight,
+  Calculator,
+  CreditCard,
+} from "lucide-react";
+import Badge from "../../components/common/Badge";
+import Button from "../../components/common/Button";
+import Input from "../../components/common/Input";
+import Select from "../../components/common/Select";
+import ErrorState from "../../components/common/ErrorState";
+import DataTable from "../../components/tables/DataTable";
+import EmployeeAutocomplete from "../../components/payroll/EmployeeAutocomplete";
+import SalaryStructure from "../../components/payroll/SalaryStructure";
+import { showToast } from "../../components/common/Toast";
+import {
+  createPayroll,
+  getErrorMessage,
+  getFieldErrors,
+  getPayroll,
+  processPayroll,
+} from "../../services/payrollService";
+import axios from "axios";
+import PayslipDownloadButton from "../../components/hr/PayslipDownloadButton";
+
+// ---------------------------------------------------------------------------
+// Constants + helpers
+// ---------------------------------------------------------------------------
+
+const PAYMENT_METHODS = ["Bank Transfer", "UPI", "Cheque", "Cash"];
+
+const PAYMENT_BANKS = [
+  "SBI",
+  "BOB",
+  "Kotak",
+  "HDFC",
+  "ICICI",
+  "Axis",
+  "PNB",
+  "Yes Bank",
+  "IndusInd",
+  "Other",
+];
+
+const currentMonth = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const formatMoney = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })}`;
+
+const formatMonth = (yyyyMm) => {
+  if (!yyyyMm) return "—";
+  const [year, month] = yyyyMm.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const formatDate = (yyyyMmDd) => {
+  if (!yyyyMmDd) return "—";
+  const [year, month, day] = yyyyMmDd.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const toNumber = (value) =>
+  value === "" || value === null ? 0 : Number(value);
+
+const EMPTY_FILTERS = {
+  employee: null,
+  startDate: "",
+  endDate: "",
+};
+
+const FORM_DEFAULTS = () => ({
+  payPeriod: currentMonth(),
+  baseSalary: "",
+  lopDays: 0,
+  lopDeduction: 0,
+  bonus: 0,
+  paymentMethod: "Bank Transfer",
+  paymentBank: "SBI",
+});
+
+// ---------------------------------------------------------------------------
+// Reusable UI
+// ---------------------------------------------------------------------------
+
+
+function SectionHeading({ eyebrow, title, description, action }) {
+  return (
+    <div className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+      <div className="min-w-0">
+        {eyebrow && (
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+            {eyebrow}
+          </p>
+        )}
+
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
+          {title}
+        </h1>
+
+        {description && (
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+            {description}
+          </p>
+        )}
+      </div>
+
+      {action}
+    </div>
+  );
+}
+
+
+function MetricCard({ label, value, detail, icon: Icon, tone }) {
+  const tones = {
+    navy: "bg-slate-900 text-white",
+    blue: "bg-blue-50 text-blue-700 ring-blue-100",
+    amber: "bg-amber-50 text-amber-700 ring-amber-100",
+    green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  };
+
+  return (
+    <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-3 break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {value}
+          </p>
+        </div>
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+            tone === "navy" ? tones.navy : `ring-1 ${tones[tone] || tones.blue}`
+          }`}
+        >
+          <Icon size={20} />
+        </span>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
+    </article>
+  );
+}
+
+
+function PayrollModal({ title, description, onClose, children }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:p-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payroll-modal-title"
+        className="my-auto flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+      >
+        {/* STANDARDIZED HR MODAL HEADER */}
+
+        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 text-white sm:px-8 sm:py-6">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border border-white/10"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-1 -top-16 h-44 w-44 rounded-full border border-white/10"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-0 h-56 w-56 bg-blue-500/10 blur-3xl"
+          />
+
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 sm:h-12 sm:w-12">
+                <Wallet size={21} />
+              </span>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                  HUMAN RESOURCES
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="payroll-modal-title"
+                    className="text-xl font-bold tracking-tight text-white sm:text-2xl"
+                  >
+                    {title}
+                  </h2>
+
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+                    Payroll
+                  </span>
+                </div>
+
+                {description && (
+                  <p className="mt-1.5 max-w-2xl text-sm leading-5 text-slate-300">
+                    {description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Close dialog"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <X size={17} />
+            </button>
+          </div>
+
+          <div className="relative mt-5 flex flex-wrap items-center gap-2 text-xs text-blue-100/90">
+            <span className="h-2 w-2 rounded-full bg-blue-300" />
+            Payroll operations
+            <span className="text-white/40">/</span>
+            Employee salary and payment details
+          </div>
+        </header>
+
+        <div className="overflow-y-auto p-5 sm:p-7">{children}</div>
+      </section>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Create Payroll form
+// ---------------------------------------------------------------------------
+
+function CreatePayrollForm({ onCreated, onCancel }) {
+  const [employee, setEmployee] = useState(null);
+  const [employeeError, setEmployeeError] = useState("");
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [calculationError, setCalculationError] = useState("");
+  const [calculation, setCalculation] = useState(null);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setError,
+    setValue,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({ defaultValues: FORM_DEFAULTS() });
+
+  const [baseSalary, lopDays, lopDeduction, bonus, payPeriod] = useWatch({
+    control,
+    name: ["baseSalary", "lopDays", "lopDeduction", "bonus", "payPeriod"],
+  });
+
+  // Daily rate = current base salary / working days from the calculation.
+  const workingDays = Number(calculation?.workingDays) || 30;
+  const dailySalary = toNumber(baseSalary) / workingDays;
+
+  // LOP deduction is read-only — it always follows the manually entered days.
+  useEffect(() => {
+    const days = Math.max(0, toNumber(lopDays));
+    const deduction = Math.round(days * dailySalary * 100) / 100;
+
+    setValue("lopDeduction", deduction, { shouldValidate: true });
+  }, [lopDays, dailySalary, setValue]);
+
+  const calculatePayroll = async (pickedEmployee, selectedPayPeriod) => {
+    if (!pickedEmployee?.uuid) return;
+
+    setIsCalculating(true);
+    setCalculationError("");
+
+    try {
+      const response = await axios.post("/api/payroll/calculate", {
+        userUuid: pickedEmployee.uuid,
+        payPeriod: selectedPayPeriod || currentMonth(),
+      });
+
+      const data = response.data?.data ?? response.data;
+      const salary = data.salary?.salary ?? 0;
+      const calculationData = data.calculation ?? {};
+
+      setCalculation(calculationData);
+
+      setValue(
+        "payPeriod",
+        data.payPeriod
+          ? data.payPeriod.substring(0, 7)
+          : selectedPayPeriod || currentMonth(),
+        { shouldValidate: true },
+      );
+
+      setValue("baseSalary", salary, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+
+      const derivedLopDays =
+        calculationData.lopUnits ??
+        (Number(calculationData.dailySalary) > 0
+          ? Number(calculationData.lopDeduction || 0) /
+            Number(calculationData.dailySalary)
+          : 0);
+
+      setValue("lopDays", Math.round(derivedLopDays * 100) / 100, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+
+      setValue("bonus", calculationData.bonus ?? 0, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Couldn't calculate payroll.";
+
+      setCalculationError(message);
+      setCalculation(null);
+      showToast.error(message);
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const handleEmployeeSelect = (picked) => {
+    setEmployee(picked);
+    setEmployeeError("");
+    setCalculationError("");
+    setCalculation(null);
+
+    if (!picked) {
+      setValue("baseSalary", "");
+      setValue("lopDays", 0);
+      setValue("lopDeduction", 0);
+      setValue("bonus", 0);
+      return;
+    }
+
+    calculatePayroll(picked, payPeriod || currentMonth());
+  };
+
+  const handlePayPeriodChange = (event) => {
+    const selectedMonth = event.target.value;
+
+    setValue("payPeriod", selectedMonth, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+
+    if (employee?.uuid && selectedMonth) {
+      calculatePayroll(employee, selectedMonth);
+    }
+  };
+
+  const onSubmit = async (values) => {
+    if (!employee) {
+      setEmployeeError("Select an employee from the suggestions");
+      return;
+    }
+
+    try {
+      const record = await createPayroll({
+        userUuid: employee.uuid,
+        payPeriod: values.payPeriod,
+        baseSalary: toNumber(values.baseSalary),
+        lopDeduction: toNumber(lopDeduction),
+        bonus: toNumber(values.bonus),
+        paymentMethod: values.paymentMethod,
+        paymentBank: values.paymentBank,
+      });
+
+      showToast.success(
+        `Payroll created for ${record.employee.fullName} (${formatMonth(
+          record.payPeriod,
+        )}).`,
+      );
+
+      reset(FORM_DEFAULTS());
+      setEmployee(null);
+      setCalculation(null);
+      setCalculationError("");
+      onCreated(record);
+    } catch (error) {
+      const fieldErrors = getFieldErrors(error);
+
+      if (fieldErrors) {
+        Object.entries(fieldErrors).forEach(([field, message]) => {
+          if (field === "userUuid") {
+            setEmployeeError(message);
+          } else {
+            setError(field, { type: "server", message });
+          }
+        });
+      }
+
+      showToast.error(getErrorMessage(error, "Couldn't create payroll."));
+    }
+  };
+
+  const netSalary = Math.max(
+    0,
+    toNumber(baseSalary) - toNumber(lopDeduction) + toNumber(bonus),
+  );
+
+  return (
+    <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-2">
+          <EmployeeAutocomplete
+            label="Employee"
+            required
+            selected={employee}
+            onSelect={handleEmployeeSelect}
+            error={employeeError}
+            placeholder="Start typing a name..."
+          />
+          {isCalculating && (
+            <p className="text-xs text-blue-700">
+              Calculating from salary, attendance and leave records...
+            </p>
+          )}
+          {calculationError && (
+            <p className="text-xs text-rose-600">{calculationError}</p>
+          )}
+          {employee && !isCalculating && !calculationError && (
+            <p className="text-xs text-slate-500">
+              Salary values are populated from the calculation API.
+            </p>
+          )}
+        </div>
+
+        <Input
+          label="Pay Month"
+          type="month"
+          required
+          error={errors.payPeriod?.message}
+          {...register("payPeriod", {
+            required: "Month is required",
+          })}
+          onChange={handlePayPeriodChange}
+        />
+
+        <Input
+          label="Base Salary (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          required
+          error={errors.baseSalary?.message}
+          {...register("baseSalary", {
+            required: "Base salary is required",
+            validate: (value) =>
+              toNumber(value) > 0 || "Base salary must be more than 0",
+          })}
+        />
+
+        <Input
+          label="LOP Days"
+          type="number"
+          min="0"
+          step="0.5"
+          error={errors.lopDays?.message}
+          helperText="Enter leave-without-pay days manually"
+          {...register("lopDays", {
+            validate: {
+              notNegative: (value) =>
+                toNumber(value) >= 0 || "Can't be negative",
+              withinWorkingDays: (value) =>
+                !calculation?.workingDays ||
+                toNumber(value) <= Number(calculation.workingDays) ||
+                "LOP days can't exceed working days",
+            },
+          })}
+        />
+
+        <Input
+          label="LOP Deduction (₹)"
+          readOnly
+          value={formatMoney(lopDeduction)}
+          helperText="Auto-calculated from LOP days"
+          containerClassName="pointer-events-none"
+        />
+        <input type="hidden" {...register("lopDeduction")} />
+
+        <Input
+          label="Bonus (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          error={errors.bonus?.message}
+          {...register("bonus", {
+            validate: (value) => toNumber(value) >= 0 || "Can't be negative",
+          })}
+        />
+
+        <Select
+          label="Payment Method"
+          required
+          options={PAYMENT_METHODS.map((method) => ({
+            value: method,
+            label: method,
+          }))}
+          error={errors.paymentMethod?.message}
+          {...register("paymentMethod", {
+            required: "Payment method is required",
+          })}
+        />
+
+        <Select
+          label="Payment Bank"
+          options={PAYMENT_BANKS.map((bank) => ({
+            value: bank,
+            label: bank,
+          }))}
+          error={errors.paymentBank?.message}
+          {...register("paymentBank")}
+        />
+      </div>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <Calculator size={19} />
+            </span>
+            <div>
+              <h3 className="font-semibold text-slate-900">
+                Salary calculation
+              </h3>
+              <p className="text-xs text-slate-500">
+                Review the calculated payroll breakdown.
+              </p>
+            </div>
+          </div>
+          {isCalculating && <Badge tone="info">Calculating...</Badge>}
+        </div>
+
+        <div className="p-5">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm text-slate-500">Net salary payable</p>
+              <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+                {formatMoney(netSalary)}
+              </p>
+            </div>
+            <Badge tone="success">Estimated amount</Badge>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              {
+                label: "Base salary",
+                value: formatMoney(baseSalary),
+              },
+              {
+                label: "LOP deduction",
+                value: formatMoney(lopDeduction),
+              },
+              {
+                label: "Bonus",
+                value: formatMoney(bonus),
+              },
+              {
+                label: "Daily salary",
+                value: formatMoney(dailySalary),
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl border border-slate-200 bg-white p-3"
+              >
+                <p className="text-xs text-slate-500">{item.label}</p>
+                <p className="mt-2 break-words text-sm font-semibold text-slate-800">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {calculation && (
+            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-200 pt-4">
+              {[
+                ["Paid units", calculation.paidUnits ?? 0],
+                ["LOP days", toNumber(lopDays)],
+                ["Working days", calculation.workingDays ?? 0],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-xs text-slate-500">{label}</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-4 text-xs leading-5 text-slate-500">
+            Base salary − LOP deduction + bonus. The backend recalculates net
+            salary when the payroll record is created.
+          </p>
+        </div>
+      </section>
+
+      <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSubmitting || isCalculating}
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" loading={isSubmitting} disabled={isCalculating}>
+          <span className="inline-flex items-center gap-2">
+            <Plus size={16} />
+            Save Payroll
+          </span>
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Payroll Runs tab
+// ---------------------------------------------------------------------------
+
+export default function PayrollRuns() {
+  const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [processingUuid, setProcessingUuid] = useState(null);
+
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [employeeText, setEmployeeText] = useState("");
+  const [filterError, setFilterError] = useState("");
+
+  const [applied, setApplied] = useState(EMPTY_FILTERS);
+
+  // Server-side filters
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Server-side pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Server-side sorting
+  const [sortBy, setSortBy] = useState("payPeriod");
+  const [sortOrder, setSortOrder] = useState("DESC");
+
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
+
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!showForm) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setShowForm(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showForm]);
+
+  // --------------------------------------------------
+  // FETCH PAYROLL
+  // --------------------------------------------------
+
+  useEffect(() => {
+    let ignore = false;
+
+    setIsLoading(true);
+    setLoadError(null);
+
+    getPayroll({
+      userUuid: applied.employee?.uuid || undefined,
+      startDate: applied.startDate || undefined,
+      endDate: applied.endDate || undefined,
+      status: status || undefined,
+      search: search.trim() || undefined,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    })
+      .then((response) => {
+        if (ignore) return;
+
+        setRecords(response.data || []);
+
+        setPagination(
+          response.pagination || {
+            total: 0,
+            page: 1,
+            limit,
+            totalPages: 0,
+          },
+        );
+      })
+      .catch((error) => {
+        if (ignore) return;
+
+        setLoadError(getErrorMessage(error, "Couldn't load payroll."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [applied, status, search, page, limit, sortBy, sortOrder, reloadKey]);
+
+  // --------------------------------------------------
+  // FILTERS
+  // --------------------------------------------------
+
+  const hasActiveFilters = Boolean(
+    applied.employee ||
+    applied.startDate ||
+    applied.endDate ||
+    status ||
+    search.trim(),
+  );
+
+  const runSearch = (event) => {
+    event?.preventDefault();
+
+    if (employeeText.trim() && !draft.employee) {
+      setFilterError("Pick a name from the suggestions list.");
+      return;
+    }
+
+    if (draft.startDate && draft.endDate && draft.endDate < draft.startDate) {
+      setFilterError("End date can't be before start date.");
+      return;
+    }
+
+    setFilterError("");
+    setPage(1);
+    setApplied({ ...draft });
+  };
+
+  const clearFilters = () => {
+    setDraft(EMPTY_FILTERS);
+    setEmployeeText("");
+    setFilterError("");
+    setStatus("");
+    setSearch("");
+    setPage(1);
+    setApplied(EMPTY_FILTERS);
+  };
+
+  const retry = () => {
+    setLoadError(null);
+    setReloadKey((key) => key + 1);
+  };
+
+  const handleCreated = () => {
+    setShowForm(false);
+    setPage(1);
+    retry();
+  };
+
+  // --------------------------------------------------
+  // PROCESS PAYROLL
+  // --------------------------------------------------
+
+  const handleProcess = async (row) => {
+    setProcessingUuid(row.uuid);
+
+    try {
+      const updated = await processPayroll(row.uuid);
+
+      setRecords((previous) =>
+        previous.map((record) =>
+          record.uuid === updated.uuid ? updated : record,
+        ),
+      );
+
+      showToast.success(`Payroll processed for ${updated.employee.fullName}.`);
+    } catch (error) {
+      showToast.error(getErrorMessage(error, "Couldn't process payroll."));
+    } finally {
+      setProcessingUuid(null);
+    }
+  };
+
+  // --------------------------------------------------
+  // SUMMARY
+  // --------------------------------------------------
+
+  const summary = {
+    total: pagination.total,
+    processed: records.filter((record) => record.status === "Processed").length,
+    pending: records.filter((record) => record.status === "Pending").length,
+    net: records.reduce(
+      (sum, record) => sum + Number(record.netSalary || 0),
+      0,
+    ),
+  };
+
+  // --------------------------------------------------
+  // TABLE COLUMNS
+  // --------------------------------------------------
+
+  const columns = [
+    {
+      key: "employee",
+      header: "Employee",
+      render: (row) => (
+        <div className="min-w-[140px]">
+          <p className="font-semibold text-slate-800">
+            {row.employee?.fullName ?? "—"}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {row.employee?.email ?? ""}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "month",
+      header: "Pay Month",
+      render: (row) => (
+        <span className="whitespace-nowrap text-slate-600">
+          {formatMonth(row.payPeriod)}
+        </span>
+      ),
+    },
+    {
+      key: "base",
+      header: "Base Salary",
+      render: (row) => formatMoney(row.baseSalary),
+    },
+    {
+      key: "lop",
+      header: "LOP",
+      render: (row) => (
+        <span
+          className={
+            Number(row.lopDeduction) > 0 ? "text-rose-600" : "text-slate-500"
+          }
+        >
+          {formatMoney(row.lopDeduction)}
+        </span>
+      ),
+    },
+    {
+      key: "bonus",
+      header: "Bonus",
+      render: (row) => formatMoney(row.bonus),
+    },
+    {
+      key: "net",
+      header: "Net Salary",
+      render: (row) => (
+        <span className="whitespace-nowrap font-semibold text-slate-900">
+          {formatMoney(row.netSalary)}
+        </span>
+      ),
+    },
+    {
+      key: "method",
+      header: "Payment",
+      render: (row) => (
+        <div className="whitespace-nowrap">
+          <span className="text-slate-600">{row.paymentMethod}</span>
+          {row.paymentBank && (
+            <p className="text-xs text-slate-400">{row.paymentBank}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => (
+        <Badge tone={row.status === "Processed" ? "success" : "warning"}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (row) =>
+        row.status === "Pending" ? (
+          <Button
+            size="sm"
+            loading={processingUuid === row.uuid}
+            disabled={processingUuid !== null && processingUuid !== row.uuid}
+            onClick={() => handleProcess(row)}
+          >
+            Process
+          </Button>
+        ) : row.status === "Processed" ? (
+          <PayslipDownloadButton payroll={row} />
+        ) : (
+          <span className="text-xs text-slate-400">Not available</span>
+        ),
+    },
+  ];
+
+  const rows = records.map((record) => ({
+    ...record,
+    id: record.uuid,
+  }));
+
+  // --------------------------------------------------
+  // RENDER
+  // --------------------------------------------------
+
+  return (
+    <div className="min-w-0 space-y-6">
+      {/* STANDARDIZED HR PAGE HEADER */}
+
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl" />
+
+        <SectionHeading
+          eyebrow="HUMAN RESOURCES"
+          title="Payroll Runs"
+          description="Create payroll records, review salary calculations, filter employee records and process pending payments."
+          action={
+            <Button onClick={() => setShowForm(true)}>
+              <span className="inline-flex items-center gap-2">
+                <Plus size={16} />
+                Create Payroll
+              </span>
+            </Button>
+          }
+        />
+      </header>
+
+      {/* SUMMARY CARDS */}
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Payroll records"
+          value={summary.total}
+          detail="Total matching records"
+          icon={Wallet}
+          tone="navy"
+        />
+
+        <MetricCard
+          label="Processed"
+          value={summary.processed}
+          detail="Processed on current page"
+          icon={CheckCircle2}
+          tone="green"
+        />
+
+        <MetricCard
+          label="Pending"
+          value={summary.pending}
+          detail="Pending on current page"
+          icon={Clock3}
+          tone="amber"
+        />
+
+        <MetricCard
+          label="Net payroll"
+          value={formatMoney(summary.net)}
+          detail="Net salary on current page"
+          icon={CreditCard}
+          tone="blue"
+        />
+      </section>
+
+      {/* CREATE PAYROLL MODAL */}
+
+      {showForm && (
+        <PayrollModal
+          title="Create payroll"
+          description="Select an employee and review the calculated salary before creating the payroll record."
+          onClose={() => setShowForm(false)}
+        >
+          <CreatePayrollForm
+            onCreated={handleCreated}
+            onCancel={() => setShowForm(false)}
+          />
+        </PayrollModal>
+      )}
+
+      {/* FILTERS */}
+
+      {/* PAYROLL FILTER SECTION */}
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* STANDARDIZED FILTER HEADER */}
+
+        <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-5 py-5 sm:px-6">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-2 -top-12 h-40 w-40 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 bg-blue-500/10 blur-3xl" />
+
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-semibold text-white">
+                  Filter Payroll
+                </h3>
+
+                <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-100">
+                  Search
+                </span>
+              </div>
+
+              <p className="mt-1 text-sm leading-5 text-slate-300">
+                Find payroll records using employees, date range and payment
+                status.
+              </p>
+            </div>
+
+            <div className="relative text-right">
+              <p className="text-xl font-bold text-white">
+                {pagination.total}
+              </p>
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">
+                Total records
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FILTER BODY */}
+
+        <div className="p-5 sm:p-6">
+          <form
+            onSubmit={runSearch}
+            role="search"
+            aria-label="Filter payroll"
+            className="space-y-5"
+          >
+            {/* SEARCH FIELDS */}
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+              {/* EMPLOYEE */}
+
+              <div className="min-w-0 lg:col-span-5">
+                <EmployeeAutocomplete
+                  label="Search"
+                  selected={draft.employee}
+                  onSelect={(employee) => {
+                    setDraft((prev) => ({
+                      ...prev,
+                      employee,
+                    }));
+                    setFilterError("");
+                  }}
+                  onTextChange={(value) => {
+                    setEmployeeText(value);
+                    if (!value.trim()) {
+                      setDraft((prev) => ({
+                        ...prev,
+                        employee: null,
+                      }));
+                    }
+                    setFilterError("");
+                  }}
+                  placeholder="Search employee by name..."
+                  className="w-full"
+                />
+
+                <p className="mt-1.5 text-[11px] text-slate-400">
+                  Search using employee name
+                </p>
+              </div>
+
+              {/* DATE RANGE */}
+
+              <div className="min-w-0 lg:col-span-7">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    label="Start Date"
+                    type="date"
+                    name="startDate"
+                    value={draft.startDate}
+                    max={draft.endDate || undefined}
+                    onChange={(event) => {
+                      setDraft((prev) => ({
+                        ...prev,
+                        startDate: event.target.value,
+                      }));
+                      setFilterError("");
+                    }}
+                    className="h-9"
+                  />
+
+                  <Input
+                    label="End Date"
+                    type="date"
+                    name="endDate"
+                    value={draft.endDate}
+                    min={draft.startDate || undefined}
+                    onChange={(event) => {
+                      setDraft((prev) => ({
+                        ...prev,
+                        endDate: event.target.value,
+                      }));
+                      setFilterError("");
+                    }}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* STATUS + ACTIONS */}
+
+            <div className="flex flex-col justify-between gap-4 border-t border-slate-100 pt-5 xl:flex-row xl:items-end">
+              {/* STATUS */}
+
+              <div className="w-full xl:max-w-md">
+                <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <CreditCard size={15} className="text-blue-600" />
+                  Payroll Status
+                </label>
+
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-100/80 p-1">
+                  {[
+                    { value: "", label: "All", icon: Wallet },
+                    { value: "Pending", label: "Pending", icon: Clock3 },
+                    {
+                      value: "Processed",
+                      label: "Processed",
+                      icon: CheckCircle2,
+                    },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const active = status === item.value;
+
+                    return (
+                      <button
+                        key={item.value || "all"}
+                        type="button"
+                        onClick={() => {
+                          setStatus(item.value);
+                          setPage(1);
+                        }}
+                        className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all ${
+                          active
+                            ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ACTION BUTTONS */}
+
+              <div className="flex flex-wrap items-center gap-2">
+                {hasActiveFilters && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={clearFilters}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <X size={15} />
+                      Clear all
+                    </span>
+                  </Button>
+                )}
+
+                <Button type="submit">
+                  <span className="inline-flex items-center gap-2">
+                    <Search size={15} />
+                    Apply Filters
+                  </span>
+                </Button>
+              </div>
+            </div>
+
+            {/* VALIDATION */}
+
+            {filterError && (
+              <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                <X size={15} />
+                {filterError}
+              </div>
+            )}
+          </form>
+
+          {/* ACTIVE FILTERS */}
+
+          {hasActiveFilters && (
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Active filters
+                </span>
+
+                {applied.employee && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700">
+                    <Users size={12} />
+                    {applied.employee.fullName}
+                  </span>
+                )}
+
+                {applied.startDate && (
+                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                    From: {formatDate(applied.startDate)}
+                  </span>
+                )}
+
+                {applied.endDate && (
+                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                    To: {formatDate(applied.endDate)}
+                  </span>
+                )}
+
+                {status && (
+                  <span
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                      status === "Processed"
+                        ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                        : "border-amber-100 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {status}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* FOOTER */}
+
+          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isLoading ? "animate-pulse bg-blue-500" : "bg-emerald-500"
+                }`}
+              />
+              <span className="text-xs text-slate-500">
+                {isLoading
+                  ? "Loading payroll records..."
+                  : "Ready to view payroll records"}
+              </span>
+            </div>
+
+            <span className="text-xs font-medium text-slate-400">
+              {pagination.total} results
+            </span>
+          </div>
+        </div>
+      </section>
+      {/* PAYROLL TABLE */}
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div>
+            <h3 className="font-semibold text-slate-900">Payroll register</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Employee-level payroll and payment status.
+            </p>
+          </div>
+
+          <Badge tone="neutral">{pagination.total} records</Badge>
+        </div>
+
+        {/* SORTING */}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
+          <p className="text-xs text-slate-500">Sort payroll records</p>
+
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(event) => {
+                setSortBy(event.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="payPeriod">Pay Month</option>
+              <option value="createdAt">Created Date</option>
+              <option value="updatedAt">Updated Date</option>
+              <option value="status">Status</option>
+            </select>
+
+            <select
+              value={sortOrder}
+              onChange={(event) => {
+                setSortOrder(event.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="DESC">Descending</option>
+              <option value="ASC">Ascending</option>
+            </select>
+          </div>
+        </div>
+
+        {loadError ? (
+          <div className="m-4 rounded-xl border border-slate-200 sm:m-5">
+            <ErrorState
+              title="Couldn't load payroll"
+              description={loadError}
+              onRetry={retry}
+            />
+          </div>
+        ) : (
+          <div className="min-w-0 overflow-x-auto px-3 pb-3 sm:px-5">
+            <DataTable
+              columns={columns}
+              rows={rows}
+              isLoading={isLoading}
+              emptyMessage={
+                hasActiveFilters
+                  ? "No payroll records match these filters."
+                  : "No payroll records yet."
+              }
+              pagination={pagination}
+              onPageChange={setPage}
+              onPageSizeChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              pageSizeOptions={[10, 25, 50, 100]}
+            />
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

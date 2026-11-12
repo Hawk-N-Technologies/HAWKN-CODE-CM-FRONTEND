@@ -1,0 +1,65 @@
+import axios from "axios";
+
+/**
+ * Admin → Project Management API calls.
+ * withCredentials sends the HttpOnly login cookie with every request.
+ */
+const BASE = "/api/admin/projects";
+const config = { withCredentials: true };
+
+// Dropdown data for the form: { clients: [...], projectLeads: [...] }
+export async function getProjectOptions() {
+  const res = await axios.get(`${BASE}/options`, config);
+  return res.data.data;
+}
+
+/**
+ * Fetch projects with optional query parameters.
+ * Example: /api/admin/projects?page=1&limit=10&search=test
+ */
+export async function getProjects({
+  page = 1,
+  limit = 10,
+  search = "",
+  status = "",
+  sortBy = "createdAt",
+  sortOrder = "desc",
+} = {}) {
+  const res = await axios.get(BASE, {
+    ...config,
+    params: {
+      page,
+      limit,
+      ...(search && { search }),
+      ...(status && { status }),
+      sortBy,
+      sortOrder,
+    },
+  });
+
+  return res.data.data;
+}
+export async function createProject(formData) {
+  console.log("Is FormData:", formData instanceof FormData);
+
+  for (const [key, value] of formData.entries()) {
+    console.log("Sending:", key, value);
+  }
+
+  const res = await axios.post(BASE, formData, {
+    ...config,
+    transformRequest: [(data) => data],
+  });
+
+  return res.data;
+}
+// Edit sends every field again (same shape as create)
+export async function updateProject(uuid, payload) {
+  const res = await axios.put(`${BASE}/${uuid}`, payload, config);
+  return res.data;
+}
+
+// Only Planning / Cancelled projects can be deleted
+export async function deleteProject(uuid) {
+  await axios.delete(`${BASE}/${uuid}`, config);
+}

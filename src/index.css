@@ -1,1 +1,21 @@
 @import "tailwindcss";
+@import "./styles/variables.css";
+@import "react-toastify/dist/ReactToastify.css";
+
+body {
+  @apply bg-cm-bg text-cm-text antialiased;
+  font-family: var(--font-sans);
+  min-width: 320px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background-color: var(--color-cm-blue-100);
+  color: var(--color-cm-navy-950);
+}
