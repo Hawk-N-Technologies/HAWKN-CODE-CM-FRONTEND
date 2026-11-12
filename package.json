@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generate-nginx-conf.js && vite build",
+    "generate:nginx": "node scripts/generate-nginx-conf.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
