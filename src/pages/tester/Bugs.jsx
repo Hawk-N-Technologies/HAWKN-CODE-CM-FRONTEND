@@ -505,8 +505,8 @@ export default function Bugs() {
 
     const payload = {
       ...form,
-      projectId: Number(form.projectId),
-      moduleId: form.moduleId ? Number(form.moduleId) : null,
+      projectId: form.projectId,
+      moduleId: form.moduleId || null,
       title: form.title.trim(),
       description: form.description.trim() || null,
     };
