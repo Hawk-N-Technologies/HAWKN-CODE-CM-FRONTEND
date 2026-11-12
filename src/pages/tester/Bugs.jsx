@@ -60,6 +60,23 @@ const STATUSES = [
   "Rejected",
 ];
 
+// What a tester may change a bug's status to (same rules as the backend):
+// a fix waiting for retest → Closed (passed) / Reopened (failed, back to the
+// project lead); a new Open bug → Rejected (withdrawn).
+const TESTER_TRANSITIONS = {
+  "Ready for Retest": ["Closed", "Reopened"],
+  Open: ["Rejected"],
+};
+
+// New bugs always start as Open; when editing: current status + allowed moves
+const testerStatusOptions = (isEditing, currentStatus) => {
+  const values = isEditing
+    ? [currentStatus, ...(TESTER_TRANSITIONS[currentStatus] || [])]
+    : ["Open"];
+
+  return values.filter(Boolean).map((value) => ({ value, label: value }));
+};
+
 const DISCOVERY_SOURCES = [
   "Client",
   "Testing",
@@ -747,10 +764,7 @@ export default function Bugs() {
           label="Status *"
           name="status"
           value={values.status}
-          options={STATUSES.map((value) => ({
-            value,
-            label: value,
-          }))}
+          options={testerStatusOptions(isEditing, editingBug?.status)}
           onChange={(event) => onChange("status", event.target.value)}
         />
 
