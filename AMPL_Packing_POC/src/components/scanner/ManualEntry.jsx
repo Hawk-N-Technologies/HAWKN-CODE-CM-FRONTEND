@@ -4,7 +4,13 @@ import { useState } from "react";
  * Type a UID, or use a USB/Bluetooth barcode scanner (they "type" the code
  * and press Enter). Fallback when the camera is not available.
  */
-export default function ManualEntry({ onSubmit, disabled }) {
+export default function ManualEntry({
+  onSubmit,
+  disabled,
+  placeholder = "Type or scan UID",
+  inputMode = "numeric",
+  label = "Type product UID",
+}) {
   const [value, setValue] = useState("");
 
   const handleSubmit = (event) => {
@@ -17,13 +23,14 @@ export default function ManualEntry({ onSubmit, disabled }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
-      <label htmlFor="manual-uid" className="sr-only">Type product UID</label>
+      <label htmlFor="manual-uid" className="sr-only">{label}</label>
       <input
         id="manual-uid"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Type or scan UID"
-        inputMode="numeric"
+        placeholder={placeholder}
+        inputMode={inputMode}
+        autoCapitalize="characters"
         autoComplete="off"
         autoCorrect="off"
         spellCheck="false"

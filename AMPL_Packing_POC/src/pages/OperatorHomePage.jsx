@@ -39,6 +39,13 @@ export default function OperatorHomePage() {
         </p>
       )}
 
+      <Link
+        to="/verify"
+        className="mt-6 flex h-14 items-center justify-center rounded-cm-xl border-2 border-cm-blue-600 bg-cm-card text-lg font-semibold text-cm-blue-700 hover:bg-cm-blue-50"
+      >
+        Verify a box
+      </Link>
+
       <ul className="mt-6 space-y-3">
         {data.sections.map((section) => (
           <li key={section.id}>

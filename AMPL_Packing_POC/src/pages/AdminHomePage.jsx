@@ -115,6 +115,20 @@ export default function AdminHomePage() {
           </p>
         </a>
         <Link
+          to="/verify"
+          className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm hover:border-cm-blue-500"
+        >
+          <h2 className="font-semibold text-cm-blue-700">Verify a box</h2>
+          <p className="mt-1 text-sm text-cm-text-muted">Scan a box label and record the check.</p>
+        </Link>
+        <Link
+          to="/op"
+          className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm hover:border-cm-blue-500"
+        >
+          <h2 className="font-semibold text-cm-blue-700">Packing sections</h2>
+          <p className="mt-1 text-sm text-cm-text-muted">Open the packing screen for any section.</p>
+        </Link>
+        <Link
           to="/status"
           className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm hover:border-cm-blue-500"
         >

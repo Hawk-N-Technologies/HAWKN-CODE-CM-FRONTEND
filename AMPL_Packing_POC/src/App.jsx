@@ -12,6 +12,7 @@ import PackingPage from "./pages/PackingPage";
 import BatchLabelsPrintPage from "./pages/print/BatchLabelsPrintPage";
 import BoxLabelPrintPage from "./pages/print/BoxLabelPrintPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
+import VerifyPage from "./pages/VerifyPage";
 
 export default function App() {
   return (
@@ -44,6 +45,14 @@ export default function App() {
               element={
                 <RequireAuth roles={[ROLES.OPERATOR, ROLES.ADMIN]}>
                   <PackingPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/verify"
+              element={
+                <RequireAuth roles={[ROLES.OPERATOR, ROLES.ADMIN]}>
+                  <VerifyPage />
                 </RequireAuth>
               }
             />

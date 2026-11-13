@@ -22,6 +22,7 @@ Check: open <http://localhost:5180>. You are sent to the sign-in page.
 | `/manage` | Admin | Admin home (UID capacity, links) |
 | `/op` | Operator (and admin) | Choose packing section |
 | `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
+| `/verify` | Operator (and admin) | Scan a box label, see its record, save the check |
 | `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
 | `/print/box/:publicId` | Operator (and admin) | 1 x 1 inch box label |
 | `/status` | Everyone | Frontend / backend / database health |
