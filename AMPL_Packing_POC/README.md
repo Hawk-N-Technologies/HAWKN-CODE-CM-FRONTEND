@@ -19,7 +19,12 @@ Check: open <http://localhost:5180>. You are sent to the sign-in page.
 | Route | Who | What |
 | --- | --- | --- |
 | `/login` | Everyone | Sign in |
-| `/manage` | Admin | Admin home (UID capacity, links) |
+| `/manage` | Admin | Admin home (UID capacity, recent batches, links) |
+| `/manage/skus` | Admin | Add/edit SKUs, generate UIDs |
+| `/manage/batches` | Admin | All UID batches: print labels, CSV |
+| `/manage/configurations` | Admin | Box configurations and their versions |
+| `/manage/sections` | Admin | Sections, their configuration and operators |
+| `/manage/users` | Admin | Add users, reset passwords, activate/deactivate |
 | `/op` | Operator (and admin) | Choose packing section |
 | `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
 | `/verify` | Operator (and admin) | Scan a box label, see its record, save the check |

@@ -28,7 +28,10 @@ function readCookie(name) {
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
-export async function apiRequest(path, { method = "GET", body, signal } = {}) {
+/**
+ * full: true returns the whole response ({data, pagination, message}) instead of only `data`.
+ */
+export async function apiRequest(path, { method = "GET", body, signal, full = false } = {}) {
   const upperMethod = method.toUpperCase();
   const headers = { Accept: "application/json" };
 
@@ -62,6 +65,7 @@ export async function apiRequest(path, { method = "GET", body, signal } = {}) {
   const payload = isJson ? await response.json().catch(() => null) : null;
 
   if (response.ok && payload?.success !== false) {
+    if (full) return payload;
     return payload?.data ?? payload;
   }
 
