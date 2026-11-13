@@ -264,9 +264,14 @@ export default function PackingPage() {
               {box.progress.total_scanned} products · {box.config?.label}
             </p>
           </section>
-          <p className="rounded-cm-lg bg-cm-blue-50 px-4 py-3 text-sm text-cm-blue-700">
-            Write down or note the box ID. Printing the 1 × 1 inch box label is added in the next update (M5).
-          </p>
+          <a
+            href={`/print/box/${box.public_id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-12 w-full items-center justify-center rounded-cm-lg border-2 border-cm-blue-600 bg-cm-card font-semibold text-cm-blue-700 hover:bg-cm-blue-50"
+          >
+            Print box label (1 × 1 inch)
+          </a>
           <ScannedItems items={box.items} />
           <button type="button" onClick={handleStart} disabled={busy} className={primaryButton}>
             {busy ? "Starting…" : "Start next box"}

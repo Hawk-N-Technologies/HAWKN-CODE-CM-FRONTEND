@@ -22,6 +22,8 @@ Check: open <http://localhost:5180>. You are sent to the sign-in page.
 | `/manage` | Admin | Admin home (UID capacity, links) |
 | `/op` | Operator (and admin) | Choose packing section |
 | `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
+| `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
+| `/print/box/:publicId` | Operator (and admin) | 1 x 1 inch box label |
 | `/status` | Everyone | Frontend / backend / database health |
 
 The Django admin console is reachable through this app at `/admin/`.
@@ -53,6 +55,12 @@ src/
   pages/        one file per screen
   styles/       tokens.css (Hawk N colours, copied), app.css
 ```
+
+## Printing
+
+Print from Chrome or Edge on a computer.
+- Box label: paper 1 x 1 in (25 x 25 mm), scale 100%, margins None.
+- Product sheets: paper A4, scale 100%, margins Default, headers/footers off. Test on plain paper first.
 
 ## Testing on a phone (camera needs https)
 
