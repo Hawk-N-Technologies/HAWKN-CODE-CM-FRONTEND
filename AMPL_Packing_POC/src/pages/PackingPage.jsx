@@ -272,6 +272,12 @@ export default function PackingPage() {
           >
             Print box label (1 × 1 inch)
           </a>
+          <Link
+            to={`/verify?code=${box.box_uid}`}
+            className="flex h-12 w-full items-center justify-center rounded-cm-lg border border-cm-border bg-cm-card font-semibold text-cm-navy-950 hover:bg-cm-blue-50"
+          >
+            Verify this box
+          </Link>
           <ScannedItems items={box.items} />
           <button type="button" onClick={handleStart} disabled={busy} className={primaryButton}>
             {busy ? "Starting…" : "Start next box"}
