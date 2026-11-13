@@ -8,3 +8,6 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Local HTTPS certificate for phone testing
+.cert/
