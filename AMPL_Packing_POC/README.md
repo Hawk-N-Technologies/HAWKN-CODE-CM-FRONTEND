@@ -20,7 +20,8 @@ Check: open <http://localhost:5180>. You are sent to the sign-in page.
 | --- | --- | --- |
 | `/login` | Everyone | Sign in |
 | `/manage` | Admin | Admin home (UID capacity, links) |
-| `/op` | Operator (and admin) | Operator home (assigned sections) |
+| `/op` | Operator (and admin) | Choose packing section |
+| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
 | `/status` | Everyone | Frontend / backend / database health |
 
 The Django admin console is reachable through this app at `/admin/`.
@@ -53,4 +54,17 @@ src/
   styles/       tokens.css (Hawk N colours, copied), app.css
 ```
 
-Phone camera scanning needs HTTPS; that is set up in M4.
+## Testing on a phone (camera needs https)
+
+1. Mac IP address: `ipconfig getifaddr en0` (e.g. `192.168.1.20`). Phone on the same Wi-Fi.
+2. Create a local certificate once, inside `AMPL_Packing_POC/`:
+   ```bash
+   mkdir -p .cert
+   openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout .cert/key.pem -out .cert/cert.pem -subj "/CN=ampl-dev"
+   ```
+3. In `.env` (copy from `.env.example`): `VITE_DEV_HTTPS=true`
+4. In the backend `.env`, add to `DJANGO_CSRF_TRUSTED_ORIGINS`: `https://localhost:5180,https://192.168.1.20:5180`, then restart the backend.
+5. `npm run dev`, then open `https://192.168.1.20:5180` on the phone and accept the certificate warning
+   (Android Chrome: Advanced → Proceed; iPhone Safari: Show Details → visit this website).
+
+`.cert/` is git-ignored. If the Mac asks whether to allow incoming connections for node, allow it.

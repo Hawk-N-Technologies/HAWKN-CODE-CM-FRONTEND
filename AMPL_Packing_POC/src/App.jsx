@@ -8,6 +8,7 @@ import HomeRedirect from "./pages/HomeRedirect";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OperatorHomePage from "./pages/OperatorHomePage";
+import PackingPage from "./pages/PackingPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
 
 export default function App() {
@@ -33,6 +34,14 @@ export default function App() {
               element={
                 <RequireAuth roles={[ROLES.OPERATOR, ROLES.ADMIN]}>
                   <OperatorHomePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/op/pack/:sectionId"
+              element={
+                <RequireAuth roles={[ROLES.OPERATOR, ROLES.ADMIN]}>
+                  <PackingPage />
                 </RequireAuth>
               }
             />
