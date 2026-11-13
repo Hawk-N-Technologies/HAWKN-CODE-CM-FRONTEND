@@ -4,6 +4,12 @@ import RequireAuth from "./auth/RequireAuth";
 import { ROLES } from "./auth/roles";
 import AppHeader from "./components/AppHeader";
 import AdminHomePage from "./pages/AdminHomePage";
+import AdminLayout from "./layouts/AdminLayout";
+import BatchesPage from "./pages/admin/BatchesPage";
+import ConfigurationsPage from "./pages/admin/ConfigurationsPage";
+import SectionsPage from "./pages/admin/SectionsPage";
+import SkusPage from "./pages/admin/SkusPage";
+import UsersPage from "./pages/admin/UsersPage";
 import HomeRedirect from "./pages/HomeRedirect";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -28,10 +34,17 @@ export default function App() {
               path="/manage"
               element={
                 <RequireAuth roles={[ROLES.ADMIN]}>
-                  <AdminHomePage />
+                  <AdminLayout />
                 </RequireAuth>
               }
-            />
+            >
+              <Route index element={<AdminHomePage />} />
+              <Route path="skus" element={<SkusPage />} />
+              <Route path="batches" element={<BatchesPage />} />
+              <Route path="configurations" element={<ConfigurationsPage />} />
+              <Route path="sections" element={<SectionsPage />} />
+              <Route path="users" element={<UsersPage />} />
+            </Route>
             <Route
               path="/op"
               element={

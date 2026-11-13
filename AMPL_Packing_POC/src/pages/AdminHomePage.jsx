@@ -34,7 +34,7 @@ export default function AdminHomePage() {
     capacity.data && capacity.data.total ? (capacity.data.used / capacity.data.total) * 100 : 0;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-10">
+    <main className="w-full p-4 sm:p-6">
       <h1 className="text-2xl font-bold text-cm-navy-950 sm:text-3xl">Welcome, {user.display_name}</h1>
       <p className="mt-1 text-cm-text-muted">Administration</p>
 
@@ -109,9 +109,9 @@ export default function AdminHomePage() {
           rel="noreferrer"
           className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm hover:border-cm-blue-500"
         >
-          <h2 className="font-semibold text-cm-blue-700">Admin console ↗</h2>
+          <h2 className="font-semibold text-cm-blue-700">Advanced: Django admin console ↗</h2>
           <p className="mt-1 text-sm text-cm-text-muted">
-            SKUs, box configurations, sections and operators. Replaced by in-app screens in M7.
+            Raw records and audit logs. Everyday setup uses the menu on the left.
           </p>
         </a>
         <Link
