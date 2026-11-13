@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getUidCapacity } from "../api/catalog";
+import { batchCsvUrl, getUidBatches, getUidCapacity } from "../api/catalog";
 import { useAuth } from "../auth/useAuth";
 
 const number = (value) => Number(value).toLocaleString("en-IN");
@@ -13,6 +13,7 @@ const number = (value) => Number(value).toLocaleString("en-IN");
 export default function AdminHomePage() {
   const { user } = useAuth();
   const [capacity, setCapacity] = useState({ state: "loading", data: null, error: null });
+  const [batches, setBatches] = useState({ state: "loading", rows: [], error: null });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -20,6 +21,11 @@ export default function AdminHomePage() {
       .then((data) => setCapacity({ state: "ok", data, error: null }))
       .catch((error) => {
         if (error.name !== "AbortError") setCapacity({ state: "error", data: null, error });
+      });
+    getUidBatches({ signal: controller.signal })
+      .then((rows) => setBatches({ state: "ok", rows, error: null }))
+      .catch((error) => {
+        if (error.name !== "AbortError") setBatches({ state: "error", rows: [], error });
       });
     return () => controller.abort();
   }, []);
@@ -54,6 +60,45 @@ export default function AdminHomePage() {
             </div>
             <p className="mt-2 text-sm text-cm-text-muted">{number(capacity.data.used)} generated so far.</p>
           </>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm">
+        <h2 className="font-semibold">Recent UID batches</h2>
+        {batches.state === "loading" && <p className="mt-2 text-cm-text-muted">Loading…</p>}
+        {batches.state === "error" && (
+          <p role="alert" className="mt-2 text-cm-danger-600">{batches.error.message}</p>
+        )}
+        {batches.state === "ok" && batches.rows.length === 0 && (
+          <p className="mt-2 text-sm text-cm-text-muted">No UIDs generated yet.</p>
+        )}
+        {batches.rows.length > 0 && (
+          <ul className="mt-3 divide-y divide-cm-border">
+            {batches.rows.map((batch) => (
+              <li key={batch.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                <span>
+                  <span className="font-semibold">#{batch.id}</span> · {batch.sku.code} × {batch.quantity}
+                  <span className="ml-2 text-sm text-cm-text-muted">
+                    {new Date(batch.created_at).toLocaleString()}
+                  </span>
+                </span>
+                <span className="flex gap-2">
+                  <Link
+                    to={`/print/batch/${batch.id}`}
+                    className="rounded-cm-md bg-cm-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-cm-blue-700"
+                  >
+                    Print labels
+                  </Link>
+                  <a
+                    href={batchCsvUrl(batch.id)}
+                    className="rounded-cm-md border border-cm-border px-3 py-1.5 text-sm font-semibold hover:bg-cm-blue-50"
+                  >
+                    CSV
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

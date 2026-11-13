@@ -24,3 +24,11 @@ textarea {
   outline: 3px solid var(--color-cm-focus);
   outline-offset: 2px;
 }
+
+/* Printing: white page, no app chrome (elements marked print:hidden). */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+}
