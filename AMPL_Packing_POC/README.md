@@ -14,7 +14,16 @@ npm install          # creates package-lock.json; commit it
 npm run dev          # http://localhost:5180
 ```
 
-Check: open <http://localhost:5180>. All three rows (Frontend, Backend API, Database) should show **OK**.
+Check: open <http://localhost:5180>. You are sent to the sign-in page.
+
+| Route | Who | What |
+| --- | --- | --- |
+| `/login` | Everyone | Sign in |
+| `/manage` | Admin | Admin home (UID capacity, links) |
+| `/op` | Operator (and admin) | Operator home (assigned sections) |
+| `/status` | Everyone | Frontend / backend / database health |
+
+The Django admin console is reachable through this app at `/admin/`.
 
 Other commands:
 
@@ -38,6 +47,7 @@ Defaults work for local development. To change them, copy `.env.example` to `.en
 ```
 src/
   api/          client.js (all backend calls go through here), one file per area
+  auth/         AuthProvider (who is logged in), RequireAuth (route guard), roles
   components/   shared UI pieces
   pages/        one file per screen
   styles/       tokens.css (Hawk N colours, copied), app.css
