@@ -1,0 +1,82 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getUidCapacity } from "../api/catalog";
+import { useAuth } from "../auth/useAuth";
+
+const number = (value) => Number(value).toLocaleString("en-IN");
+
+/**
+ * Admin landing page. The full admin screens (SKUs, UID generation,
+ * configurations, sections) arrive in M7; until then the admin console
+ * (Django admin) and the API are used.
+ */
+export default function AdminHomePage() {
+  const { user } = useAuth();
+  const [capacity, setCapacity] = useState({ state: "loading", data: null, error: null });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getUidCapacity({ signal: controller.signal })
+      .then((data) => setCapacity({ state: "ok", data, error: null }))
+      .catch((error) => {
+        if (error.name !== "AbortError") setCapacity({ state: "error", data: null, error });
+      });
+    return () => controller.abort();
+  }, []);
+
+  const usedPercent =
+    capacity.data && capacity.data.total ? (capacity.data.used / capacity.data.total) * 100 : 0;
+
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-10">
+      <h1 className="text-2xl font-bold text-cm-navy-950 sm:text-3xl">Welcome, {user.display_name}</h1>
+      <p className="mt-1 text-cm-text-muted">Administration</p>
+
+      <section className="mt-6 rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-md">
+        <h2 className="font-semibold">Product UID capacity (6-digit range)</h2>
+        {capacity.state === "loading" && <p className="mt-2 text-cm-text-muted">Loading…</p>}
+        {capacity.state === "error" && (
+          <p role="alert" className="mt-2 text-cm-danger-600">{capacity.error.message}</p>
+        )}
+        {capacity.state === "ok" && (
+          <>
+            <p className="mt-2 text-3xl font-bold text-cm-navy-950">
+              {number(capacity.data.remaining)}
+              <span className="ml-2 text-base font-medium text-cm-text-muted">
+                of {number(capacity.data.total)} left
+              </span>
+            </p>
+            <div className="mt-3 h-2 rounded-full bg-cm-blue-50" aria-hidden="true">
+              <div
+                className={`h-2 rounded-full ${usedPercent >= 80 ? "bg-cm-warning-600" : "bg-cm-blue-600"}`}
+                style={{ width: `${Math.max(usedPercent, 0.5)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-cm-text-muted">{number(capacity.data.used)} generated so far.</p>
+          </>
+        )}
+      </section>
+
+      <section className="mt-6 grid gap-4 sm:grid-cols-2">
+        <a
+          href="/admin/"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm hover:border-cm-blue-500"
+        >
+          <h2 className="font-semibold text-cm-blue-700">Admin console ↗</h2>
+          <p className="mt-1 text-sm text-cm-text-muted">
+            SKUs, box configurations, sections and operators. Replaced by in-app screens in M7.
+          </p>
+        </a>
+        <Link
+          to="/status"
+          className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm hover:border-cm-blue-500"
+        >
+          <h2 className="font-semibold text-cm-blue-700">System status</h2>
+          <p className="mt-1 text-sm text-cm-text-muted">Backend and database health.</p>
+        </Link>
+      </section>
+    </main>
+  );
+}
