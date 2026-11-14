@@ -6,7 +6,7 @@
  * - Adds the CSRF header on write requests.
  * - Turns every failure into an ApiError with a stable `code`.
  */
-const API_BASE = "/api/v1";
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/+$/, "");
 const CSRF_COOKIE = "ampl_csrftoken";
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -53,7 +53,7 @@ export async function apiRequest(path, { method = "GET", body, signal, full = fa
       method: upperMethod,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      credentials: "same-origin",
+      credentials: "include",
       signal,
     });
   } catch (error) {

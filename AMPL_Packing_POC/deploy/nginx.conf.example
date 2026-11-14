@@ -25,12 +25,13 @@ server {
     root /var/www/ampl-packing;
     index index.html;
 
-    # Django API and admin console -> gunicorn on port 8010
+    # Django API and admin console -> backend on ampl-pocapi.hawkntechnologies.com (or local container port 18001)
     location ~ ^/(api|admin)/ {
-        proxy_pass http://127.0.0.1:8010;
-        proxy_set_header Host $host;
+        proxy_pass https://ampl-pocapi.hawkntechnologies.com;
+        proxy_set_header Host ampl-pocapi.hawkntechnologies.com;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_ssl_server_name on;
         proxy_read_timeout 60s;
     }
 

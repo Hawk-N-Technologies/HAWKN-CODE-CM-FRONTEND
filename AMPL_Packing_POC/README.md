@@ -5,16 +5,16 @@ React + Vite web app for QR-based packing at Hawk N Technologies.
 - **Phones:** operators sign in, choose a packing section, scan product QR codes into a box, complete it, and verify boxes.
 - **Laptops:** the admin manages SKUs, UIDs, box configurations, sections and users, prints labels, and sees the dashboard, packing history and scan log.
 
-It runs on its own (port 5180) and shares no code or settings with HawkN OS. It talks only to the AMPL backend through `/api/v1` on the same address (session cookies).
+It runs on its own (port 18001) and shares no code or settings with HawkN OS. It proxies API requests to the AMPL backend (`https://ampl-pocapi.hawkntechnologies.com`).
 The backend is `AMPL_Packing_POC/` in the HAWKN-CODE-CM-BACKEND repo. Its `docs/` folder has the test record and the deployment guide.
 
 ## First-time setup
 
-Run from inside `AMPL_Packing_POC/`. The backend must be running on port 8010.
+Run from inside `AMPL_Packing_POC/`.
 
 ```bash
 npm install
-npm run dev          # http://localhost:5180  (https://… if VITE_DEV_HTTPS=true)
+npm run dev          # http://localhost:18001  (https://… if VITE_DEV_HTTPS=true)
 ```
 
 Open the app and sign in. Admins land on the dashboard (`/manage`), operators on their sections (`/op`).
@@ -32,8 +32,9 @@ npm run lint         # code checks
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PORT` | `5180` | Dev server port |
-| `VITE_API_PROXY_TARGET` | `http://localhost:8010` | Where the backend runs (development only) |
+| `PORT` | `18001` | Dev / container server port |
+| `VITE_BACKEND_URL` | `https://ampl-pocapi.hawkntechnologies.com` | AMPL backend API URL |
+| `VITE_API_PROXY_TARGET` | `https://ampl-pocapi.hawkntechnologies.com` | Where Vite dev server proxies `/api` and `/admin` |
 | `VITE_DEV_HTTPS` | `false` | `true` = serve https with the certificate in `.cert/` (needed for phone cameras) |
 | `VITE_DEV_HTTPS_KEY`, `VITE_DEV_HTTPS_CERT` | `.cert/key.pem`, `.cert/cert.pem` | Certificate files |
 
