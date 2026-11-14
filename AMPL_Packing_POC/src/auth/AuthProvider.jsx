@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchCsrf, fetchMe, postLogin, postLogout } from "../api/auth";
+import { SESSION_EXPIRED_EVENT } from "../api/client";
 import { AuthContext } from "./AuthContext";
 
 /**
@@ -38,6 +39,16 @@ export default function AuthProvider({ children }) {
       cancelled = true;
     };
   }, [refresh]);
+
+  // Session ended while using the app: go back to sign-in (RequireAuth redirects).
+  useEffect(() => {
+    const handleExpired = () =>
+      setState((prev) =>
+        prev.status === "authenticated" ? { status: "anonymous", user: null, error: null, expired: true } : prev,
+      );
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+  }, []);
 
   const login = useCallback(async (username, password) => {
     await fetchCsrf();
