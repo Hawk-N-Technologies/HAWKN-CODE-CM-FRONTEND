@@ -7,6 +7,8 @@ import AdminHomePage from "./pages/AdminHomePage";
 import AdminLayout from "./layouts/AdminLayout";
 import BatchesPage from "./pages/admin/BatchesPage";
 import ConfigurationsPage from "./pages/admin/ConfigurationsPage";
+import HistoryPage from "./pages/admin/HistoryPage";
+import ScanLogPage from "./pages/admin/ScanLogPage";
 import SectionsPage from "./pages/admin/SectionsPage";
 import SkusPage from "./pages/admin/SkusPage";
 import UsersPage from "./pages/admin/UsersPage";
@@ -43,6 +45,8 @@ export default function App() {
               <Route path="batches" element={<BatchesPage />} />
               <Route path="configurations" element={<ConfigurationsPage />} />
               <Route path="sections" element={<SectionsPage />} />
+              <Route path="history" element={<HistoryPage />} />
+              <Route path="scan-log" element={<ScanLogPage />} />
               <Route path="users" element={<UsersPage />} />
             </Route>
             <Route

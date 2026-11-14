@@ -6,6 +6,8 @@ const NAV = [
   { to: "/manage/batches", label: "UID batches" },
   { to: "/manage/configurations", label: "Box configurations" },
   { to: "/manage/sections", label: "Packing sections" },
+  { to: "/manage/history", label: "Packing history" },
+  { to: "/manage/scan-log", label: "Scan log" },
   { to: "/manage/users", label: "Users" },
   { to: "/op", label: "Packing screen" },
   { to: "/verify", label: "Verify a box" },
