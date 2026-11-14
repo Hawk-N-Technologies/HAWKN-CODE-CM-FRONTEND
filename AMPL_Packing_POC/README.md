@@ -90,6 +90,22 @@ Print from Chrome or Edge on a computer.
 
 ## Production
 
+### Option 1: Docker
+The Dockerfile supports running from either the root repository or inside `AMPL_Packing_POC/`:
+
+```bash
+# From root directory:
+docker build -t ampl-frontend -f AMPL_Packing_POC/Dockerfile .
+
+# Or from inside AMPL_Packing_POC/:
+cd AMPL_Packing_POC
+docker build -t ampl-frontend .
+
+# Run container on port 18001:
+docker run -d -p 18001:18001 --name ampl-frontend ampl-frontend
+```
+
+### Option 2: Nginx on host
 `npm run build`, then serve `dist/` with nginx on the same HTTPS address that forwards `/api/` and `/admin/` to the backend.
 See `deploy/nginx.conf.example` and the backend's `docs/DEPLOYMENT.md`.
 
