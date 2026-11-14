@@ -1,20 +1,45 @@
 # AMPL Packing POC — Frontend
 
-React + Vite web app for QR-based packing (operators on phones) and administration (desktop).
+React + Vite web app for QR-based packing at Hawk N Technologies.
 
-- Runs on its own (port 5180). Shares no code or settings with HawkN OS.
-- Talks only to the AMPL backend through `/api/v1` (same origin, session cookies).
+- **Phones:** operators sign in, choose a packing section, scan product QR codes into a box, complete it, and verify boxes.
+- **Laptops:** the admin manages SKUs, UIDs, box configurations, sections and users, prints labels, and sees the dashboard, packing history and scan log.
+
+It runs on its own (port 5180) and shares no code or settings with HawkN OS. It talks only to the AMPL backend through `/api/v1` on the same address (session cookies).
+The backend is `AMPL_Packing_POC/` in the HAWKN-CODE-CM-BACKEND repo. Its `docs/` folder has the test record and the deployment guide.
 
 ## First-time setup
 
-Run these from inside `AMPL_Packing_POC/`. The backend must be running on port 8010.
+Run from inside `AMPL_Packing_POC/`. The backend must be running on port 8010.
 
 ```bash
-npm install          # creates package-lock.json; commit it
-npm run dev          # http://localhost:5180
+npm install
+npm run dev          # http://localhost:5180  (https://… if VITE_DEV_HTTPS=true)
 ```
 
-Check: open <http://localhost:5180>. You are sent to the sign-in page.
+Open the app and sign in. Admins land on the dashboard (`/manage`), operators on their sections (`/op`).
+
+## Commands
+
+```bash
+npm run dev          # development server
+npm run build        # production build into dist/
+npm run preview      # serve the build locally
+npm run lint         # code checks
+```
+
+## Settings (`.env`, optional)
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT` | `5180` | Dev server port |
+| `VITE_API_PROXY_TARGET` | `http://localhost:8010` | Where the backend runs (development only) |
+| `VITE_DEV_HTTPS` | `false` | `true` = serve https with the certificate in `.cert/` (needed for phone cameras) |
+| `VITE_DEV_HTTPS_KEY`, `VITE_DEV_HTTPS_CERT` | `.cert/key.pem`, `.cert/cert.pem` | Certificate files |
+
+The production build needs no settings: it always calls `/api/v1` on its own address.
+
+## Screens
 
 | Route | Who | What |
 | --- | --- | --- |
@@ -27,48 +52,12 @@ Check: open <http://localhost:5180>. You are sent to the sign-in page.
 | `/manage/history` | Admin | Packing history with filters; click a box ID to open its record |
 | `/manage/scan-log` | Admin | Every scan and action, accepted or rejected |
 | `/manage/users` | Admin | Add users, reset passwords, activate/deactivate |
-| `/op` | Operator (and admin) | Choose packing section |
+| `/op` | Operator (and admin) | Choose a packing section |
 | `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
 | `/verify` | Operator (and admin) | Scan a box label, see its record, save the check |
 | `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
-| `/print/box/:publicId` | Operator (and admin) | 1 x 1 inch box label |
+| `/print/box/:publicId` | Operator (and admin) | 1 × 1 inch box label |
 | `/status` | Everyone | Frontend / backend / database health |
-
-The Django admin console is reachable through this app at `/admin/`.
-
-Other commands:
-
-```bash
-npm run lint         # code checks
-npm run build        # production build into dist/
-npm run preview      # serve the build locally
-```
-
-## Settings
-
-Defaults work for local development. To change them, copy `.env.example` to `.env`:
-
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `PORT` | `5180` | Dev server port |
-| `VITE_API_PROXY_TARGET` | `http://localhost:8010` | Where the backend runs |
-
-## Layout
-
-```
-src/
-  api/          client.js (all backend calls go through here), one file per area
-  auth/         AuthProvider (who is logged in), RequireAuth (route guard), roles
-  components/   shared UI pieces
-  pages/        one file per screen
-  styles/       tokens.css (Hawk N colours, copied), app.css
-```
-
-## Printing
-
-Print from Chrome or Edge on a computer.
-- Box label: paper 1 x 1 in (25 x 25 mm), scale 100%, margins None.
-- Product sheets: paper A4, scale 100%, margins Default, headers/footers off. Test on plain paper first.
 
 ## Testing on a phone (camera needs https)
 
@@ -79,8 +68,46 @@ Print from Chrome or Edge on a computer.
    openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout .cert/key.pem -out .cert/cert.pem -subj "/CN=ampl-dev"
    ```
 3. In `.env` (copy from `.env.example`): `VITE_DEV_HTTPS=true`
-4. In the backend `.env`, add to `DJANGO_CSRF_TRUSTED_ORIGINS`: `https://localhost:5180,https://192.168.1.20:5180`, then restart the backend.
+4. In the backend `.env`, set `DJANGO_CSRF_TRUSTED_ORIGINS` (one line only) to include `https://localhost:5180,https://192.168.1.20:5180`, then restart the backend.
 5. `npm run dev`, then open `https://192.168.1.20:5180` on the phone and accept the certificate warning
    (Android Chrome: Advanced → Proceed; iPhone Safari: Show Details → visit this website).
 
-`.cert/` is git-ignored. If the Mac asks whether to allow incoming connections for node, allow it.
+`.cert/` is git-ignored. If the Mac asks whether to allow incoming connections for node, allow it. If the Wi-Fi gives the Mac a new IP address, update step 4.
+
+## Scanning
+
+- **Camera:** the `qr-scanner` library (`src/components/scanner/QrScannerView.jsx` is the only file that uses it).
+- **Typing or USB/Bluetooth scanners:** the "Type or scan" box (scanners type the code and press Enter).
+- The same code seen again within 2.5 seconds is ignored (the camera sees one label many times a second). The server still rejects real duplicates.
+- Feedback: green or red banner, a beep, and vibration on Android.
+
+## Printing
+
+Print from Chrome or Edge on a computer.
+- **Box label:** paper 1 × 1 in (25 × 25 mm), scale 100%, margins None.
+- **Product sheets:** paper A4, scale 100%, margins Default, headers and footers off. Test on plain paper first, then adjust the sheet layout (it is remembered on that computer).
+
+## Production
+
+`npm run build`, then serve `dist/` with nginx on the same HTTPS address that forwards `/api/` and `/admin/` to the backend.
+See `deploy/nginx.conf.example` and the backend's `docs/DEPLOYMENT.md`.
+
+## Layout
+
+```
+src/
+  api/            client.js (all backend calls), one file per area
+  auth/           AuthProvider (who is logged in), RequireAuth (route guard), roles
+  layouts/        AdminLayout (side menu)
+  components/     scanner/, packing/, verification/, admin/, ui/ (shared pieces)
+  pages/          one file per screen; admin/ and print/ sub-folders
+  styles/         tokens.css (Hawk N colours, copied), app.css
+deploy/           nginx.conf.example
+```
+
+## Known limitations
+
+- Printing uses the browser's print dialog (no silent printing). Sticker sheet presets are starting values.
+- The phone camera needs HTTPS. In development the certificate is self-signed, so phones show a one-time warning.
+- Vibration does not work on iPhone (browser limitation).
+- Verification shows the system record of a box; only "Physical inspection" means someone opened and counted it.
