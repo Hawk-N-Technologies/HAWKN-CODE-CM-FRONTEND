@@ -1,0 +1,55 @@
+# AMPL Packing POC - example nginx site (HTTPS).
+# One address serves the React app and forwards API calls to Django, so the
+# browser sees a single origin (needed for the session and CSRF cookies).
+#
+# Replace: server_name, certificate paths, /var/www/ampl-packing (frontend build)
+# and /srv/ampl-packing/staticfiles (Django collectstatic output).
+
+server {
+    listen 80;
+    server_name ampl-poc.hawkntechnologies.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;   # nginx older than 1.25: remove this line and use "listen 443 ssl http2;"
+    server_name ampl-poc.hawkntechnologies.com;
+
+    ssl_certificate     /etc/letsencrypt/live/ampl-poc.hawkntechnologies.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ampl-poc.hawkntechnologies.com/privkey.pem;
+
+    client_max_body_size 2m;
+
+    # React app (output of `npm run build`, copied from dist/)
+    root /var/www/ampl-packing;
+    index index.html;
+
+    # Django API and admin console -> gunicorn on port 8010
+    location ~ ^/(api|admin)/ {
+        proxy_pass http://127.0.0.1:8010;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 60s;
+    }
+
+    # Django admin CSS/JS (output of `python manage.py collectstatic`)
+    location /static/ {
+        alias /srv/ampl-packing/staticfiles/;
+        expires 7d;
+    }
+
+    # Built JS/CSS files have content hashes in their names: cache for long
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Every other path is a React route (e.g. /op/pack/1, /verify)
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri /index.html;
+    }
+}
