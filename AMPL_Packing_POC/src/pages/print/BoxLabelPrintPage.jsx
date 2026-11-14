@@ -5,7 +5,7 @@ import PageMessage from "../../components/PageMessage";
 import QrSvg from "../../components/QrSvg";
 
 /**
- * 1 x 1 inch box label (25.4 mm square), printed from the browser.
+ * Box label, 50 mm wide x 35 mm high, printed from the browser.
  * Page size is set to exactly one label, so each print = one sticker.
  */
 export default function BoxLabelPrintPage() {
@@ -34,14 +34,14 @@ export default function BoxLabelPrintPage() {
   const label = state.data;
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6 print:m-0 print:max-w-none print:p-0">
-      <style>{"@page { size: 1in 1in; margin: 0; }"}</style>
+      <style>{"@page { size: 50mm 35mm; margin: 0; }"}</style>
 
       <section className="space-y-3 print:hidden">
         <Link to="/" className="text-sm font-medium text-cm-blue-700">‹ Back</Link>
         <h1 className="text-2xl font-bold text-cm-navy-950">Box label · {label.box_uid}</h1>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-cm-text-muted">
           <li>Click <strong>Print label</strong> and choose the sticker printer.</li>
-          <li>Paper size: <strong>1 × 1 in (25 × 25 mm)</strong>. Scale: <strong>100%</strong>. Margins: <strong>None</strong>.</li>
+          <li>Paper size: <strong>50 × 35 mm</strong> (landscape label). Scale: <strong>100%</strong>. Margins: <strong>None</strong>.</li>
           <li>Stick it on the box, then scan it with Verify to check it reads.</li>
         </ol>
         <button
@@ -51,17 +51,23 @@ export default function BoxLabelPrintPage() {
         >
           Print label
         </button>
-        <p className="text-sm text-cm-text-muted">Preview below is shown 3× larger than the real label.</p>
+        <p className="text-sm text-cm-text-muted">Preview below is shown 2× larger than the real label.</p>
       </section>
 
       <div className="mt-6 flex justify-center print:mt-0 print:block">
-        <div className="[zoom:3] print:[zoom:1]">
-          <div className="box-border flex h-[1in] w-[1in] flex-col items-center overflow-hidden bg-white p-[0.6mm] text-black outline outline-1 outline-dashed outline-cm-border print:outline-none">
-            <QrSvg svg={label.svg} className="h-[18mm] w-[18mm] shrink-0" />
-            <p className="mt-[0.4mm] font-mono text-[7.5pt] font-bold leading-none tracking-tight">{label.box_uid}</p>
-            <p className="mt-[0.4mm] text-[5pt] leading-none">
-              {label.config_label} · {label.total_items} pcs · Sec {label.section_code}
-            </p>
+        <div className="[zoom:2] print:[zoom:1]">
+          <div className="box-border flex h-[35mm] w-[50mm] items-center gap-[1.5mm] overflow-hidden bg-white p-[2mm] text-black outline outline-1 outline-dashed outline-cm-border print:outline-none">
+            <QrSvg svg={label.svg} className="h-[27mm] w-[27mm] shrink-0" />
+            <div className="flex min-w-0 flex-1 flex-col gap-[1mm] leading-none">
+              <p className="text-[5pt] uppercase tracking-wide">Box ID</p>
+              <p className="font-mono text-[7.5pt] font-bold tracking-tight">{label.box_uid}</p>
+              <p className="truncate text-[6pt]">{label.config_label}</p>
+              <p className="text-[6pt] font-bold">{label.total_items} pcs</p>
+              <p className="truncate text-[6pt]">Section {label.section_code}</p>
+              {label.completed_at && (
+                <p className="text-[5.5pt]">{new Date(label.completed_at).toLocaleDateString()}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

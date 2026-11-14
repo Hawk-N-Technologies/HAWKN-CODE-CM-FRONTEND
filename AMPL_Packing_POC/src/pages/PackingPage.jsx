@@ -270,7 +270,7 @@ export default function PackingPage() {
             rel="noreferrer"
             className="flex h-12 w-full items-center justify-center rounded-cm-lg border-2 border-cm-blue-600 bg-cm-card font-semibold text-cm-blue-700 hover:bg-cm-blue-50"
           >
-            Print box label (1 × 1 inch)
+            Print box label (50 × 35 mm)
           </a>
           <Link
             to={`/verify?code=${box.box_uid}`}

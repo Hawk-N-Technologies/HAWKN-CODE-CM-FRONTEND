@@ -18,7 +18,7 @@ function safeTarget(from) {
 }
 
 export default function LoginPage() {
-  const { status, user, login } = useAuth();
+  const { status, user, login, expired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ username: "", password: "" });
@@ -53,6 +53,12 @@ export default function LoginPage() {
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-10">
       <h1 className="text-2xl font-bold text-cm-navy-950">Sign in</h1>
       <p className="mt-1 text-cm-text-muted">AMPL Packing · Hawk N Technologies</p>
+
+      {expired && !error && (
+        <p role="status" className="mt-4 rounded-cm-md bg-cm-warning-100 px-4 py-3 text-sm font-medium text-cm-warning-600">
+          Your session ended. Please sign in again to continue.
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
         <div>

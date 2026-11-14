@@ -10,6 +10,10 @@ const API_BASE = "/api/v1";
 const CSRF_COOKIE = "ampl_csrftoken";
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// Fired when the server says "not logged in" (e.g. the session expired during a
+// shift). AuthProvider listens and sends the user to the sign-in page.
+export const SESSION_EXPIRED_EVENT = "ampl:session-expired";
+
 export class ApiError extends Error {
   constructor({ status, code, message, errors = [], data = null }) {
     super(message);
@@ -67,6 +71,10 @@ export async function apiRequest(path, { method = "GET", body, signal, full = fa
   if (response.ok && payload?.success !== false) {
     if (full) return payload;
     return payload?.data ?? payload;
+  }
+
+  if (response.status === 401 && !path.startsWith("/auth/")) {
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
   }
 
   if (!payload) {
