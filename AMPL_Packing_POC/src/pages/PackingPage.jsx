@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   cancelBox,
   completeBox,
@@ -48,6 +48,8 @@ const secondaryButton =
 
 export default function PackingPage() {
   const { sectionId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState({ state: "loading", error: null });
   const [section, setSection] = useState(null);
   const [box, setBox] = useState(null);
@@ -59,6 +61,7 @@ export default function PackingPage() {
   const busyRef = useRef(false);
   const lastScanRef = useRef({ value: "", at: 0 });
   const autoCompletedRef = useRef(""); // box we already tried to save automatically
+  const nextBoxHandledRef = useRef(false); // ?next=1 from the label preview
 
   const loadPage = useCallback(async () => {
     try {
@@ -145,15 +148,14 @@ export default function PackingPage() {
       }
     });
 
-  // Saves the full box and gives it its box ID. Safe to repeat.
+  // Saves the full box, then shows its label preview (Print / Next box). Safe to repeat.
   const handleComplete = () =>
     run(async () => {
       try {
         const data = await completeBox(box.public_id);
-        setBox(data);
         setCameraOn(false);
-        setResult(null);
         feedbackSuccess();
+        navigate(`/print/box/${data.public_id}?next=${sectionId}`);
       } catch (error) {
         feedbackError();
         setResult({ ok: false, title: "Box not saved", message: error.message });
@@ -171,14 +173,16 @@ export default function PackingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [box]);
 
-  // The print tab opens from the link itself; this page moves on to the next box.
-  const handlePrintAndNext = (event) => {
-    if (busyRef.current) {
-      event.preventDefault();
-      return;
-    }
-    handleStart({ ok: true, title: `${box.box_uid} saved`, message: "Next box ready. Scan items." });
-  };
+  // "Next box" on the label preview opens this page with ?next=1: start the new box straight away.
+  useEffect(() => {
+    if (page.state !== "ready" || nextBoxHandledRef.current || searchParams.get("next") !== "1") return;
+    nextBoxHandledRef.current = true;
+    setSearchParams({}, { replace: true });
+    if (box?.status === "OPEN") setCameraOn(true);
+    else if (!box && section?.active_config) handleStart({ ok: true, title: "Next box ready", message: "Scan the first item." });
+    // Runs once, when the page has loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page.state]);
 
   const handleRemove = (uid) => {
     if (!window.confirm(`Remove ${uid} from this box?`)) return;
@@ -234,7 +238,6 @@ export default function PackingPage() {
   }
 
   const isOpen = box?.status === "OPEN";
-  const isDone = box && (box.status === "COMPLETED" || box.status === "VERIFIED"); // VERIFIED: older boxes
   const ready = isOpen && box.progress.is_complete_ready;
 
   return (
@@ -273,30 +276,6 @@ export default function PackingPage() {
           <button type="button" onClick={() => handleStart()} disabled={busy || !section.active_config} className={primaryButton}>
             {busy ? "Starting…" : "Start new box"}
           </button>
-        </>
-      )}
-
-      {/* Box full and saved: print, then the next box starts by itself */}
-      {isDone && (
-        <>
-          <section className="rounded-cm-xl bg-cm-success-600 p-5 text-center text-white shadow-cm-md" role="status">
-            <p className="text-lg font-bold">Box full ✓ Saved</p>
-            <p className="mt-1 font-mono text-4xl font-bold">{box.box_uid}</p>
-            <p className="mt-1 opacity-90">
-              {box.progress.total_scanned} pcs · {box.config?.label}
-            </p>
-          </section>
-          <a
-            href={`/print/box/${box.public_id}?auto=1`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={handlePrintAndNext}
-            aria-disabled={busy}
-            className="flex h-16 w-full items-center justify-center rounded-cm-lg bg-cm-blue-600 text-xl font-bold text-white shadow-cm-sm hover:bg-cm-blue-700 aria-disabled:opacity-60"
-          >
-            {busy ? "Starting next box…" : "Print label → Next box"}
-          </a>
-          <p className="text-center text-sm text-cm-text-muted">Label did not print? Reprint it from Scan box / item.</p>
         </>
       )}
 

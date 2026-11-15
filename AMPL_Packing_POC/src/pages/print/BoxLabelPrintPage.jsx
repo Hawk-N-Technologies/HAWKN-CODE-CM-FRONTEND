@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getBoxLabel } from "../../api/labels";
 import PageMessage from "../../components/PageMessage";
 import QrSvg from "../../components/QrSvg";
@@ -7,14 +7,16 @@ import QrSvg from "../../components/QrSvg";
 /**
  * Box label, 50 mm wide x 35 mm high, printed from the browser.
  * Page size is set to exactly one label, so each print = one sticker.
- * ?auto=1 (from the packing screen): open the print window straight away,
- * and close this tab when printing is done.
+ * Printing starts only when Print is tapped.
+ * ?next=<section id> (from packing): shows "Next box" to go straight back to packing.
  */
 export default function BoxLabelPrintPage() {
   const { publicId } = useParams();
   const [searchParams] = useSearchParams();
-  const auto = searchParams.get("auto") === "1";
+  const nextSection = searchParams.get("next");
+  const navigate = useNavigate();
   const [state, setState] = useState({ status: "loading", data: null, error: null });
+  const [printed, setPrinted] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -26,16 +28,12 @@ export default function BoxLabelPrintPage() {
     };
   }, [publicId]);
 
-  useEffect(() => {
-    if (!auto || state.status !== "ok") return undefined;
-    const closeTab = () => window.close(); // only works for a tab opened by the app; harmless otherwise
-    window.addEventListener("afterprint", closeTab);
-    const timer = window.setTimeout(() => window.print(), 300); // let the QR draw first
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("afterprint", closeTab);
-    };
-  }, [auto, state.status]);
+  const handlePrint = () => {
+    window.print();
+    setPrinted(true);
+  };
+  const handleNextBox = () => navigate(`/op/pack/${nextSection}?next=1`);
+  const handleBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
 
   if (state.status === "loading") return <PageMessage title="Loading label…" />;
   if (state.status === "error") {
@@ -52,25 +50,18 @@ export default function BoxLabelPrintPage() {
       <style>{"@page { size: 50mm 35mm; margin: 0; }"}</style>
 
       <section className="space-y-3 print:hidden">
-        <Link to="/" className="text-sm font-medium text-cm-blue-700">‹ Back</Link>
+        {nextSection ? (
+          <p className="rounded-cm-xl bg-cm-success-600 px-4 py-3 text-center text-lg font-bold text-white" role="status">
+            {label.box_uid} saved ✓ · {label.total_items} / {label.total_items}
+          </p>
+        ) : (
+          <button type="button" onClick={handleBack} className="text-sm font-medium text-cm-blue-700">‹ Back</button>
+        )}
         <h1 className="text-2xl font-bold text-cm-navy-950">Box label · {label.box_uid}</h1>
-        <ol className="list-decimal space-y-1 pl-5 text-sm text-cm-text-muted">
-          <li>Click <strong>Print label</strong> and choose the sticker printer.</li>
-          <li>Paper size: <strong>50 × 35 mm</strong> (landscape label). Scale: <strong>100%</strong>. Margins: <strong>None</strong>.</li>
-          <li>Stick it on the box. To check it reads, scan it in <strong>Scan box / item</strong>.</li>
-        </ol>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="h-12 rounded-cm-lg bg-cm-blue-600 px-8 font-semibold text-white hover:bg-cm-blue-700"
-        >
-          Print label
-        </button>
-        <p className="text-sm text-cm-text-muted">Preview below is shown 2× larger than the real label.</p>
       </section>
 
-      <div className="mt-6 flex justify-center print:mt-0 print:block">
-        <div className="[zoom:2] print:[zoom:1]">
+      <div className="mt-4 flex justify-center print:mt-0 print:block">
+        <div className="[zoom:1.6] sm:[zoom:2] print:[zoom:1]">
           <div className="box-border flex h-[35mm] w-[50mm] items-center gap-[1.5mm] overflow-hidden bg-white p-[2mm] text-black outline outline-1 outline-dashed outline-cm-border print:outline-none">
             <QrSvg svg={label.svg} className="h-[27mm] w-[27mm] shrink-0" />
             <div className="flex min-w-0 flex-1 flex-col gap-[1mm] leading-none">
@@ -86,6 +77,29 @@ export default function BoxLabelPrintPage() {
           </div>
         </div>
       </div>
+
+      <section className="mt-6 space-y-3 print:hidden">
+        <button
+          type="button"
+          onClick={handlePrint}
+          className="h-14 w-full rounded-cm-lg bg-cm-blue-600 text-lg font-semibold text-white shadow-cm-sm hover:bg-cm-blue-700"
+        >
+          {printed ? "Print again" : "Print"}
+        </button>
+        {nextSection && (
+          <button
+            type="button"
+            onClick={handleNextBox}
+            className="h-14 w-full rounded-cm-lg bg-cm-success-600 text-lg font-semibold text-white shadow-cm-sm hover:opacity-90"
+          >
+            Next box
+          </button>
+        )}
+        <p className="text-sm text-cm-text-muted">
+          Printer settings: paper <strong>50 × 35 mm</strong>, scale <strong>100%</strong>, margins <strong>None</strong>.
+          Preview above is larger than the real label.
+        </p>
+      </section>
     </main>
   );
 }

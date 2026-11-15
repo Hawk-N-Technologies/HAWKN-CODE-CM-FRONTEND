@@ -91,14 +91,12 @@ function BoxDetails({ box }) {
       </div>
 
       {box.can_print && (
-        <a
-          href={`/print/box/${box.public_id}?auto=1`}
-          target="_blank"
-          rel="noreferrer"
+        <Link
+          to={`/print/box/${box.public_id}`}
           className="flex h-14 w-full items-center justify-center rounded-cm-lg border-2 border-cm-blue-600 bg-cm-card text-lg font-semibold text-cm-blue-700 hover:bg-cm-blue-50"
         >
           Reprint box label
-        </a>
+        </Link>
       )}
 
       <div className="rounded-cm-xl border border-cm-border bg-cm-card p-4">
