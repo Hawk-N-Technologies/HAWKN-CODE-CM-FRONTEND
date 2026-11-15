@@ -10,12 +10,8 @@ import { defineConfig, loadEnv } from "vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
-  const port = Number(env.PORT || 18001);
-  const apiTarget = (
-    env.VITE_API_PROXY_TARGET ||
-    env.VITE_BACKEND_URL ||
-    "https://ampl-pocapi.hawkntechnologies.com"
-  ).replace(/\/+$/, "");
+  const port = Number(env.PORT || 5180);
+  const apiTarget = (env.VITE_API_PROXY_TARGET || "http://localhost:8010").replace(/\/+$/, "");
 
   // Phones only allow the camera on https:// pages. With VITE_DEV_HTTPS=true
   // the dev server uses the local certificate created as described in README.
@@ -32,9 +28,9 @@ export default defineConfig(({ mode }) => {
   }
 
   const proxy = {
-    "/api": { target: apiTarget, changeOrigin: true, secure: false },
-    "/admin": { target: apiTarget, changeOrigin: true, secure: false },
-    "/static": { target: apiTarget, changeOrigin: true, secure: false },
+    "/api": { target: apiTarget, changeOrigin: true },
+    "/admin": { target: apiTarget, changeOrigin: true },
+    "/static": { target: apiTarget, changeOrigin: true },
   };
 
   return {

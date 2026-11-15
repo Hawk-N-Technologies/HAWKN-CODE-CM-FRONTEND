@@ -58,6 +58,7 @@ export default function PackingPage() {
   const [cancelReason, setCancelReason] = useState("");
   const busyRef = useRef(false);
   const lastScanRef = useRef({ value: "", at: 0 });
+  const autoCompletedRef = useRef(""); // box we already tried to save automatically
 
   const loadPage = useCallback(async () => {
     try {
@@ -130,19 +131,21 @@ export default function PackingPage() {
     [box, loadPage],
   );
 
-  const handleStart = () =>
+  const handleStart = (doneResult = null) =>
     run(async () => {
       unlockAudio();
       try {
         const data = await startBox(section.id);
         setBox(data);
-        setResult(null);
+        setResult(doneResult);
         setCameraOn(true);
       } catch (error) {
+        setBox(null);
         setResult({ ok: false, title: "Cannot start box", message: error.message });
       }
     });
 
+  // Saves the full box and gives it its box ID. Safe to repeat.
   const handleComplete = () =>
     run(async () => {
       try {
@@ -153,10 +156,29 @@ export default function PackingPage() {
         feedbackSuccess();
       } catch (error) {
         feedbackError();
-        setResult({ ok: false, title: "Cannot complete box", message: error.message });
+        setResult({ ok: false, title: "Box not saved", message: error.message });
         if (error.code === "BOX_NOT_OPEN") loadPage();
       }
     });
+
+  // Last item scanned -> save the box automatically (no confirm step).
+  useEffect(() => {
+    if (box?.status === "OPEN" && box.progress.is_complete_ready && autoCompletedRef.current !== box.public_id) {
+      autoCompletedRef.current = box.public_id;
+      handleComplete();
+    }
+    // Runs only when the box changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [box]);
+
+  // The print tab opens from the link itself; this page moves on to the next box.
+  const handlePrintAndNext = (event) => {
+    if (busyRef.current) {
+      event.preventDefault();
+      return;
+    }
+    handleStart({ ok: true, title: `${box.box_uid} saved`, message: "Next box ready. Scan items." });
+  };
 
   const handleRemove = (uid) => {
     if (!window.confirm(`Remove ${uid} from this box?`)) return;
@@ -212,7 +234,7 @@ export default function PackingPage() {
   }
 
   const isOpen = box?.status === "OPEN";
-  const isDone = box && (box.status === "COMPLETED" || box.status === "VERIFIED");
+  const isDone = box && (box.status === "COMPLETED" || box.status === "VERIFIED"); // VERIFIED: older boxes
   const ready = isOpen && box.progress.is_complete_ready;
 
   return (
@@ -248,40 +270,33 @@ export default function PackingPage() {
               <p className="mt-2 text-sm text-cm-danger-600">Ask an admin to assign a box configuration.</p>
             )}
           </section>
-          <button type="button" onClick={handleStart} disabled={busy || !section.active_config} className={primaryButton}>
+          <button type="button" onClick={() => handleStart()} disabled={busy || !section.active_config} className={primaryButton}>
             {busy ? "Starting…" : "Start new box"}
           </button>
         </>
       )}
 
-      {/* Completed box */}
+      {/* Box full and saved: print, then the next box starts by itself */}
       {isDone && (
         <>
           <section className="rounded-cm-xl bg-cm-success-600 p-5 text-center text-white shadow-cm-md" role="status">
-            <p className="text-sm font-semibold uppercase tracking-wide opacity-90">Box completed</p>
+            <p className="text-lg font-bold">Box full ✓ Saved</p>
             <p className="mt-1 font-mono text-4xl font-bold">{box.box_uid}</p>
-            <p className="mt-1 text-sm opacity-90">
-              {box.progress.total_scanned} products · {box.config?.label}
+            <p className="mt-1 opacity-90">
+              {box.progress.total_scanned} pcs · {box.config?.label}
             </p>
           </section>
           <a
-            href={`/print/box/${box.public_id}`}
+            href={`/print/box/${box.public_id}?auto=1`}
             target="_blank"
             rel="noreferrer"
-            className="flex h-12 w-full items-center justify-center rounded-cm-lg border-2 border-cm-blue-600 bg-cm-card font-semibold text-cm-blue-700 hover:bg-cm-blue-50"
+            onClick={handlePrintAndNext}
+            aria-disabled={busy}
+            className="flex h-16 w-full items-center justify-center rounded-cm-lg bg-cm-blue-600 text-xl font-bold text-white shadow-cm-sm hover:bg-cm-blue-700 aria-disabled:opacity-60"
           >
-            Print box label (50 × 35 mm)
+            {busy ? "Starting next box…" : "Print label → Next box"}
           </a>
-          <Link
-            to={`/verify?code=${box.box_uid}`}
-            className="flex h-12 w-full items-center justify-center rounded-cm-lg border border-cm-border bg-cm-card font-semibold text-cm-navy-950 hover:bg-cm-blue-50"
-          >
-            Verify this box
-          </Link>
-          <ScannedItems items={box.items} />
-          <button type="button" onClick={handleStart} disabled={busy} className={primaryButton}>
-            {busy ? "Starting…" : "Start next box"}
-          </button>
+          <p className="text-center text-sm text-cm-text-muted">Label did not print? Reprint it from Scan box / item.</p>
         </>
       )}
 
@@ -293,13 +308,14 @@ export default function PackingPage() {
 
           {ready ? (
             <section className="rounded-cm-xl border-2 border-cm-success-600 bg-cm-success-100 p-4 text-center">
-              <p className="text-lg font-bold text-cm-success-600">All quantities reached</p>
-              <p className="mt-1 text-sm text-cm-navy-950">
-                Check the box, then confirm to finish it and create its box ID.
-              </p>
-              <button type="button" onClick={handleComplete} disabled={busy} className={`${primaryButton} mt-4 bg-cm-success-600 hover:bg-cm-success-600`}>
-                {busy ? "Completing…" : "Confirm and complete box"}
-              </button>
+              <p className="text-lg font-bold text-cm-success-600">Box full</p>
+              {busy ? (
+                <p className="mt-1 text-cm-navy-950">Saving box…</p>
+              ) : (
+                <button type="button" onClick={handleComplete} className={`${primaryButton} mt-3 bg-cm-success-600 hover:bg-cm-success-600`}>
+                  Save box (try again)
+                </button>
+              )}
             </section>
           ) : (
             <section className="space-y-3">

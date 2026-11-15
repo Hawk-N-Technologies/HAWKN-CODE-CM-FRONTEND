@@ -2,19 +2,19 @@
 
 React + Vite web app for QR-based packing at Hawk N Technologies.
 
-- **Phones:** operators sign in, choose a packing section, scan product QR codes into a box, complete it, and verify boxes.
+- **Phones:** operators sign in, choose a packing section, scan product QR codes into a box (a full box saves itself), print its label and move to the next box, and scan any box or item to see its details.
 - **Laptops:** the admin manages SKUs, UIDs, box configurations, sections and users, prints labels, and sees the dashboard, packing history and scan log.
 
-It runs on its own (port 18001) and shares no code or settings with HawkN OS. It proxies API requests to the AMPL backend (`https://ampl-pocapi.hawkntechnologies.com`).
+It runs on its own (port 5180) and shares no code or settings with HawkN OS. It talks only to the AMPL backend through `/api/v1` on the same address (session cookies).
 The backend is `AMPL_Packing_POC/` in the HAWKN-CODE-CM-BACKEND repo. Its `docs/` folder has the test record and the deployment guide.
 
 ## First-time setup
 
-Run from inside `AMPL_Packing_POC/`.
+Run from inside `AMPL_Packing_POC/`. The backend must be running on port 8010.
 
 ```bash
 npm install
-npm run dev          # http://localhost:18001  (https://… if VITE_DEV_HTTPS=true)
+npm run dev          # http://localhost:5180  (https://… if VITE_DEV_HTTPS=true)
 ```
 
 Open the app and sign in. Admins land on the dashboard (`/manage`), operators on their sections (`/op`).
@@ -32,9 +32,8 @@ npm run lint         # code checks
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PORT` | `18001` | Dev / container server port |
-| `VITE_BACKEND_URL` | `https://ampl-pocapi.hawkntechnologies.com` | AMPL backend API URL |
-| `VITE_API_PROXY_TARGET` | `https://ampl-pocapi.hawkntechnologies.com` | Where Vite dev server proxies `/api` and `/admin` |
+| `PORT` | `5180` | Dev server port |
+| `VITE_API_PROXY_TARGET` | `http://localhost:8010` | Where the backend runs (development only) |
 | `VITE_DEV_HTTPS` | `false` | `true` = serve https with the certificate in `.cert/` (needed for phone cameras) |
 | `VITE_DEV_HTTPS_KEY`, `VITE_DEV_HTTPS_CERT` | `.cert/key.pem`, `.cert/cert.pem` | Certificate files |
 
@@ -45,17 +44,17 @@ The production build needs no settings: it always calls `/api/v1` on its own add
 | Route | Who | What |
 | --- | --- | --- |
 | `/login` | Everyone | Sign in |
-| `/manage` | Admin | Dashboard: UID and box counts, capacity, recent batches |
+| `/manage` | Admin | Dashboard: UID and box counts, recent batches |
 | `/manage/skus` | Admin | Add/edit SKUs, generate UIDs |
-| `/manage/batches` | Admin | All UID batches: print labels, CSV |
+| `/manage/batches` | Admin | All UID batches: print labels, CSV (UIDs only) |
 | `/manage/configurations` | Admin | Box configurations and their versions |
 | `/manage/sections` | Admin | Sections, their configuration and operators |
-| `/manage/history` | Admin | Packing history with filters; click a box ID to open its record |
+| `/manage/history` | Admin | Packing history with filters; click a box ID to see its details |
 | `/manage/scan-log` | Admin | Every scan and action, accepted or rejected |
 | `/manage/users` | Admin | Add users, reset passwords, activate/deactivate |
 | `/op` | Operator (and admin) | Choose a packing section |
-| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
-| `/verify` | Operator (and admin) | Scan a box label, see its record, save the check |
+| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan → box saves itself when full → Print label → next box |
+| `/scan` | Operator (and admin) | Scan box / item: details of any box or item, reprint a box label |
 | `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
 | `/print/box/:publicId` | Operator (and admin) | 50 × 35 mm box label |
 | `/status` | Everyone | Frontend / backend / database health |
@@ -90,22 +89,6 @@ Print from Chrome or Edge on a computer.
 
 ## Production
 
-### Option 1: Docker
-The Dockerfile supports running from either the root repository or inside `AMPL_Packing_POC/`:
-
-```bash
-# From root directory:
-docker build -t ampl-frontend -f AMPL_Packing_POC/Dockerfile .
-
-# Or from inside AMPL_Packing_POC/:
-cd AMPL_Packing_POC
-docker build -t ampl-frontend .
-
-# Run container on port 18001:
-docker run -d -p 18001:18001 --name ampl-frontend ampl-frontend
-```
-
-### Option 2: Nginx on host
 `npm run build`, then serve `dist/` with nginx on the same HTTPS address that forwards `/api/` and `/admin/` to the backend.
 See `deploy/nginx.conf.example` and the backend's `docs/DEPLOYMENT.md`.
 
@@ -116,7 +99,7 @@ src/
   api/            client.js (all backend calls), one file per area
   auth/           AuthProvider (who is logged in), RequireAuth (route guard), roles
   layouts/        AdminLayout (side menu)
-  components/     scanner/, packing/, verification/, admin/, ui/ (shared pieces)
+  components/     scanner/, packing/, admin/, ui/ (shared pieces)
   pages/          one file per screen; admin/ and print/ sub-folders
   styles/         tokens.css (Hawk N colours, copied), app.css
 deploy/           nginx.conf.example
@@ -127,4 +110,5 @@ deploy/           nginx.conf.example
 - Printing uses the browser's print dialog (no silent printing). Sticker sheet presets are starting values.
 - The phone camera needs HTTPS. In development the certificate is self-signed, so phones show a one-time warning.
 - Vibration does not work on iPhone (browser limitation).
-- Verification shows the system record of a box; only "Physical inspection" means someone opened and counted it.
+- Box details show what was scanned into the box at packing, not a physical count.
+- After printing, the label tab closes itself where the browser allows it; otherwise just switch back to the packing tab.
