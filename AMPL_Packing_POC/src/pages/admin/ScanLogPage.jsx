@@ -10,8 +10,6 @@ const ACTIONS = [
   ["BOX_START", "Box started"],
   ["BOX_COMPLETE", "Box completed"],
   ["BOX_CANCEL", "Box cancelled"],
-  ["BOX_LOOKUP", "Box looked up"],
-  ["BOX_VERIFY", "Box verified"],
 ];
 
 /** Audit trail: every scan and box action, accepted or rejected. */
@@ -99,7 +97,7 @@ export default function ScanLogPage() {
                     <td className="py-2 pr-3 font-mono">{row.parsed_value || row.raw_value || "—"}</td>
                     <td className="py-2 pr-3">
                       {row.box_uid ? (
-                        <Link to={`/verify?code=${row.box_uid}`} className="font-mono text-cm-blue-700 hover:underline">{row.box_uid}</Link>
+                        <Link to={`/scan?code=${row.box_uid}`} className="font-mono text-cm-blue-700 hover:underline">{row.box_uid}</Link>
                       ) : row.box_public_id ? (
                         <span className="text-cm-text-muted">(open box)</span>
                       ) : "—"}
