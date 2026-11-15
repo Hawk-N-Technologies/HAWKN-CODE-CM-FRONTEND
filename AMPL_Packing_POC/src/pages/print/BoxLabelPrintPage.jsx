@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getBoxLabel } from "../../api/labels";
 import PageMessage from "../../components/PageMessage";
 import QrSvg from "../../components/QrSvg";
@@ -7,9 +7,13 @@ import QrSvg from "../../components/QrSvg";
 /**
  * Box label, 50 mm wide x 35 mm high, printed from the browser.
  * Page size is set to exactly one label, so each print = one sticker.
+ * ?auto=1 (from the packing screen): open the print window straight away,
+ * and close this tab when printing is done.
  */
 export default function BoxLabelPrintPage() {
   const { publicId } = useParams();
+  const [searchParams] = useSearchParams();
+  const auto = searchParams.get("auto") === "1";
   const [state, setState] = useState({ status: "loading", data: null, error: null });
 
   useEffect(() => {
@@ -21,6 +25,17 @@ export default function BoxLabelPrintPage() {
       active = false;
     };
   }, [publicId]);
+
+  useEffect(() => {
+    if (!auto || state.status !== "ok") return undefined;
+    const closeTab = () => window.close(); // only works for a tab opened by the app; harmless otherwise
+    window.addEventListener("afterprint", closeTab);
+    const timer = window.setTimeout(() => window.print(), 300); // let the QR draw first
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("afterprint", closeTab);
+    };
+  }, [auto, state.status]);
 
   if (state.status === "loading") return <PageMessage title="Loading label…" />;
   if (state.status === "error") {
@@ -42,7 +57,7 @@ export default function BoxLabelPrintPage() {
         <ol className="list-decimal space-y-1 pl-5 text-sm text-cm-text-muted">
           <li>Click <strong>Print label</strong> and choose the sticker printer.</li>
           <li>Paper size: <strong>50 × 35 mm</strong> (landscape label). Scale: <strong>100%</strong>. Margins: <strong>None</strong>.</li>
-          <li>Stick it on the box, then scan it with Verify to check it reads.</li>
+          <li>Stick it on the box. To check it reads, scan it in <strong>Scan box / item</strong>.</li>
         </ol>
         <button
           type="button"

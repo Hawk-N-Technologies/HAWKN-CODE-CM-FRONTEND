@@ -7,16 +7,13 @@ import { btnSecondary, card, input, label } from "../../components/ui/ui";
 const STATUS_OPTIONS = [
   ["", "All boxes"],
   ["OPEN", "Open (pending)"],
-  ["COMPLETED", "Completed, not verified as match"],
-  ["VERIFIED", "Verified"],
-  ["MISMATCH", "Mismatch reported"],
+  ["COMPLETED", "Completed"],
   ["CANCELLED", "Cancelled"],
 ];
 
 const STATUS_BADGE = {
   OPEN: ["Open", "bg-cm-warning-100 text-cm-warning-600"],
-  COMPLETED: ["Completed", "bg-cm-blue-50 text-cm-blue-700"],
-  VERIFIED: ["Verified", "bg-cm-success-100 text-cm-success-600"],
+  COMPLETED: ["Completed", "bg-cm-success-100 text-cm-success-600"],
   CANCELLED: ["Cancelled", "bg-cm-bg text-cm-text-muted"],
 };
 
@@ -124,14 +121,12 @@ export default function HistoryPage() {
               </thead>
               <tbody className="divide-y divide-cm-border">
                 {result.rows.map((row) => {
-                  const [statusText, statusClass] = row.verification_status === "MISMATCH"
-                    ? ["Mismatch", "bg-cm-danger-100 text-cm-danger-600"]
-                    : STATUS_BADGE[row.status] || [row.status, ""];
+                  const [statusText, statusClass] = STATUS_BADGE[row.status] || [row.status, ""];
                   return (
                     <tr key={row.public_id}>
                       <td className="py-2 pr-3">
                         {row.box_uid ? (
-                          <Link to={`/verify?code=${row.box_uid}`} className="font-mono font-semibold text-cm-blue-700 hover:underline">
+                          <Link to={`/scan?code=${row.box_uid}`} className="font-mono font-semibold text-cm-blue-700 hover:underline">
                             {row.box_uid}
                           </Link>
                         ) : (
@@ -148,9 +143,6 @@ export default function HistoryPage() {
                       <td className="py-2 pr-3 text-right tabular-nums">{row.quantity} / {row.expected}</td>
                       <td className="py-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass}`}>{statusText}</span>
-                        {row.verification_status === "NOT_VERIFIED" && (
-                          <span className="ml-1 text-xs text-cm-text-muted">not verified</span>
-                        )}
                       </td>
                     </tr>
                   );
