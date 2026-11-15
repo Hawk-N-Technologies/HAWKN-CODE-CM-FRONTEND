@@ -53,10 +53,10 @@ The production build needs no settings: it always calls `/api/v1` on its own add
 | `/manage/scan-log` | Admin | Every scan and action, accepted or rejected |
 | `/manage/users` | Admin | Add users, reset passwords, activate/deactivate |
 | `/op` | Operator (and admin) | Choose a packing section |
-| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan → box saves itself when full → Print label → next box |
+| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan → box saves itself when full → label preview (Print / Next box) |
 | `/scan` | Operator (and admin) | Scan box / item: details of any box or item, reprint a box label |
 | `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
-| `/print/box/:publicId` | Operator (and admin) | 50 × 35 mm box label |
+| `/print/box/:publicId` | Operator (and admin) | 50 × 35 mm box label preview: Print / Print again, and Next box when coming from packing |
 | `/status` | Everyone | Frontend / backend / database health |
 
 ## Testing on a phone (camera needs https)
@@ -111,4 +111,4 @@ deploy/           nginx.conf.example
 - The phone camera needs HTTPS. In development the certificate is self-signed, so phones show a one-time warning.
 - Vibration does not work on iPhone (browser limitation).
 - Box details show what was scanned into the box at packing, not a physical count.
-- After printing, the label tab closes itself where the browser allows it; otherwise just switch back to the packing tab.
+- Printing starts only when **Print** is tapped. The label preview keeps **Print again** and **Next box** after printing.
