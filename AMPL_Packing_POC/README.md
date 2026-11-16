@@ -56,7 +56,7 @@ The production build needs no settings: it always calls `/api/v1` on its own add
 | `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan → box saves itself when full → label preview (Print / Next box) |
 | `/scan` | Operator (and admin) | Scan box / item: details of any box or item, reprint a box label |
 | `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
-| `/print/box/:publicId` | Operator (and admin) | 50 × 35 mm box label preview: Print / Print again, and Next box when coming from packing |
+| `/print/box/:publicId` | Operator (and admin) | 100 × 50 mm box label preview: Print / Print again, Download label PDF (exactly 100 × 50 mm), and Next box when coming from packing |
 | `/status` | Everyone | Frontend / backend / database health |
 
 ## Testing on a phone (camera needs https)
@@ -84,7 +84,7 @@ The production build needs no settings: it always calls `/api/v1` on its own add
 ## Printing
 
 Print from Chrome or Edge on a computer.
-- **Box label:** paper 50 × 35 mm (landscape), scale 100%, margins None.
+- **Box label:** paper 100 × 50 mm (landscape), scale 100%, margins None.
 - **Product sheets:** paper A4, scale 100%, margins Default, headers and footers off. Test on plain paper first, then adjust the sheet layout (it is remembered on that computer).
 
 ## Production
