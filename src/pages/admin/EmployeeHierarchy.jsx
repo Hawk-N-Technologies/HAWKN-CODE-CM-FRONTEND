@@ -1,5 +1,6 @@
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
 import {
   ImagePlus,
   Upload,
@@ -9,16 +10,76 @@ import {
   FileImage,
   CheckCircle2,
   CloudUpload,
+  Trash2,
 } from "lucide-react";
 
 import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
+import { getErrorMessage } from "../../services/developerProjectService";
+
+const HIERARCHY_API = "/api/company/hierarchy";
+const axiosConfig = { withCredentials: true };
+
+// Same rules as the backend (hierarchyUpload.js)
+const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILES_PER_UPLOAD = 5;
+
+const imageUrl = (uuid) => `${HIERARCHY_API}/${uuid}/file`;
 
 function EmployeeHierarchy() {
   const fileInputRef = useRef(null);
 
   const [selectedImages, setSelectedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [savedImages, setSavedImages] = useState([]);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(true);
+  const [confirmDeleteUuid, setConfirmDeleteUuid] = useState(null);
+  const [deletingUuid, setDeletingUuid] = useState(null);
+  const [savedReloadKey, setSavedReloadKey] = useState(0);
+
+  // Images already saved for the company
+  useEffect(() => {
+    let ignore = false;
+
+    axios
+      .get(HIERARCHY_API, axiosConfig)
+      .then((response) => {
+        if (!ignore) setSavedImages(response.data.data || []);
+      })
+      .catch((error) => {
+        if (!ignore) {
+          showToast.error(getErrorMessage(error, "Couldn't load saved hierarchy images."));
+        }
+      })
+      .finally(() => {
+        if (!ignore) setIsLoadingSaved(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [savedReloadKey]);
+
+  // Delete needs a second click to confirm
+  const handleDelete = async (uuid) => {
+    if (confirmDeleteUuid !== uuid) {
+      setConfirmDeleteUuid(uuid);
+      return;
+    }
+
+    setDeletingUuid(uuid);
+    try {
+      await axios.delete(`${HIERARCHY_API}/${uuid}`, axiosConfig);
+      showToast.success("Image deleted.");
+      setSavedImages((previous) => previous.filter((image) => image.uuid !== uuid));
+    } catch (error) {
+      showToast.error(getErrorMessage(error, "Couldn't delete the image."));
+    } finally {
+      setDeletingUuid(null);
+      setConfirmDeleteUuid(null);
+    }
+  };
 
   // Open file picker
   const handleSelectClick = () => {
@@ -32,12 +93,12 @@ function EmployeeHierarchy() {
     if (!files.length) return;
 
     const validFiles = files.filter((file) => {
-      if (!file.type.startsWith("image/")) {
-        showToast.error(`${file.name} is not an image.`);
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        showToast.error(`${file.name} must be a PNG, JPG or WEBP image.`);
         return false;
       }
 
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > MAX_FILE_SIZE) {
         showToast.error(`${file.name} is larger than 10MB.`);
         return false;
       }
@@ -80,26 +141,30 @@ function EmployeeHierarchy() {
     setIsUploading(true);
 
     try {
-      // TODO: Replace this with your actual API/FormData upload.
-      const formData = new FormData();
+      // The backend accepts up to 5 images per request
+      for (let index = 0; index < selectedImages.length; index += MAX_FILES_PER_UPLOAD) {
+        const formData = new FormData();
 
-      selectedImages.forEach((item) => {
-        formData.append("hierarchyImages", item.file);
-      });
+        selectedImages
+          .slice(index, index + MAX_FILES_PER_UPLOAD)
+          .forEach((item) => formData.append("images", item.file));
 
-      console.log("Images ready for upload:", selectedImages);
-
-      await new Promise((resolve) => setTimeout(resolve, 800));
+        await axios.post(HIERARCHY_API, formData, {
+          ...axiosConfig,
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
 
       showToast.success(
         `${selectedImages.length} image(s) uploaded successfully.`,
       );
 
-      // Keep images visible after upload.
-      // If you want to clear them after successful upload:
-      // setSelectedImages([]);
-    } catch {
-      showToast.error("Failed to upload images. Please try again.");
+      // Uploaded → clear the selection, show them under "Saved hierarchy"
+      selectedImages.forEach((image) => URL.revokeObjectURL(image.preview));
+      setSelectedImages([]);
+      setSavedReloadKey((key) => key + 1);
+    } catch (error) {
+      showToast.error(getErrorMessage(error, "Failed to upload images. Please try again."));
     } finally {
       setIsUploading(false);
     }
@@ -352,6 +417,67 @@ function EmployeeHierarchy() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* Saved Hierarchy */}
+      <section className="rounded-2xl border border-[#d8e2ef] bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-[#172b52]">Saved hierarchy</h3>
+            <p className="mt-1 text-xs text-[#71819b]">
+              Images currently saved for the company. HR can view these.
+            </p>
+          </div>
+
+          {savedImages.length > 0 && (
+            <span className="rounded-lg border border-[#d8e2ef] bg-[#eef3fa] px-3 py-1.5 text-xs font-semibold text-[#172b52]">
+              {savedImages.length} {savedImages.length === 1 ? "image" : "images"}
+            </span>
+          )}
+        </div>
+
+        {isLoadingSaved ? (
+          <p className="py-6 text-center text-sm text-[#71819b]">Loading…</p>
+        ) : savedImages.length ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {savedImages.map((image) => (
+              <figure
+                key={image.uuid}
+                className="overflow-hidden rounded-xl border border-[#d8e2ef] bg-[#f8faff]"
+              >
+                <a href={imageUrl(image.uuid)} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={imageUrl(image.uuid)}
+                    alt={image.originalFileName}
+                    className="h-48 w-full bg-white object-contain"
+                    loading="lazy"
+                  />
+                </a>
+                <figcaption className="flex items-center justify-between gap-2 border-t border-[#d8e2ef] px-3 py-2">
+                  <span
+                    className="truncate text-xs font-medium text-[#172b52]"
+                    title={image.originalFileName}
+                  >
+                    {image.originalFileName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(image.uuid)}
+                    disabled={deletingUuid === image.uuid}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 size={13} />
+                    {confirmDeleteUuid === image.uuid ? "Confirm" : "Delete"}
+                  </button>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-[#71819b]">
+            No hierarchy images saved yet.
+          </p>
+        )}
       </section>
 
       {/* Upload Information */}

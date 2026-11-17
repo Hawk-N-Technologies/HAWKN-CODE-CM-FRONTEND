@@ -1,5 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import Badge from "../../components/common/Badge";
+import { showToast } from "../../components/common/Toast";
+import {
+  getErrorMessage,
+  getMyProjects,
+} from "../../services/developerProjectService";
 import {
   Activity,
   CheckCircle2,
@@ -10,17 +16,53 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const phases = [
-  { name: "Discovery", progress: 100, status: "Completed", tasks: "8 / 8" },
-  {
-    name: "Core Development",
-    progress: 68,
-    status: "In Progress",
-    tasks: "17 / 25",
-  },
-  { name: "Testing", progress: 22, status: "In Progress", tasks: "3 / 14" },
-  { name: "Delivery", progress: 0, status: "Not Started", tasks: "0 / 6" },
-];
+const axiosConfig = { withCredentials: true };
+
+// Task statuses that mean work on a phase has started
+const STARTED = ["In Progress", "Code Review", "Testing", "Done"];
+
+/**
+ * One row per phase of the project (modules → phases), built from its tasks:
+ *   progress = done tasks / all tasks
+ *   Completed = every task Done, In Progress = any task past To Do
+ */
+async function loadPhases(projectUuid) {
+  const get = async (url) =>
+    (await axios.get(url, axiosConfig)).data.data || [];
+
+  const [modules, tasks] = await Promise.all([
+    get(`/api/projects/${projectUuid}/modules`),
+    get(`/api/projects/${projectUuid}/tasks`),
+  ]);
+
+  const phaseLists = await Promise.all(
+    modules.map((module) =>
+      get(`/api/projects/${projectUuid}/modules/${module.uuid}/phases`),
+    ),
+  );
+
+  return modules.flatMap((module, index) =>
+    phaseLists[index].map((phase) => {
+      const phaseTasks = tasks.filter((task) => task.phaseId === phase.id);
+      const done = phaseTasks.filter((task) => task.status === "Done").length;
+      const total = phaseTasks.length;
+
+      let status = "Not Started";
+      if (total && done === total) status = "Completed";
+      else if (phaseTasks.some((task) => STARTED.includes(task.status))) {
+        status = "In Progress";
+      }
+
+      return {
+        key: phase.uuid,
+        name: modules.length > 1 ? `${module.name} · ${phase.name}` : phase.name,
+        progress: total ? Math.round((done / total) * 100) : 0,
+        status,
+        tasks: `${done} / ${total}`,
+      };
+    }),
+  );
+}
 
 const STATUS_CONFIG = {
   Completed: {
@@ -320,6 +362,60 @@ function PhaseCard({ phase, index, total }) {
 }
 
 function ProjectProgress() {
+  const [projects, setProjects] = useState([]);
+  const [projectUuid, setProjectUuid] = useState("");
+  const [phases, setPhases] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Projects this developer leads → first one selected
+  useEffect(() => {
+    let ignore = false;
+
+    getMyProjects()
+      .then((list) => {
+        if (ignore) return;
+        setProjects(list);
+        if (list.length) setProjectUuid(list[0].uuid);
+        else setIsLoading(false);
+      })
+      .catch((error) => {
+        if (ignore) return;
+        showToast.error(getErrorMessage(error, "Couldn't load your projects."));
+        setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Phases of the selected project
+  useEffect(() => {
+    if (!projectUuid) return undefined;
+    let ignore = false;
+
+    loadPhases(projectUuid)
+      .then((rows) => {
+        if (!ignore) setPhases(rows);
+      })
+      .catch((error) => {
+        if (!ignore) showToast.error(getErrorMessage(error, "Couldn't load project progress."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [projectUuid]);
+
+  const selectProject = (uuid) => {
+    setIsLoading(true);
+    setPhases([]);
+    setProjectUuid(uuid);
+  };
+
   const metrics = useMemo(() => {
     const total = phases.length;
 
@@ -345,9 +441,10 @@ function ProjectProgress() {
       0,
     );
 
-    const average = Math.round(
-      phases.reduce((sum, phase) => sum + phase.progress, 0) / total,
-    );
+    // No phases yet → 0% (not NaN)
+    const average = total
+      ? Math.round(phases.reduce((sum, phase) => sum + phase.progress, 0) / total)
+      : 0;
 
     return {
       total,
@@ -359,7 +456,7 @@ function ProjectProgress() {
       remainingTasks: totalTasks - completedTasks,
       average,
     };
-  }, []);
+  }, [phases]);
 
   return (
     <div className="min-w-0 space-y-6">
@@ -401,6 +498,33 @@ function ProjectProgress() {
           </div>
         </div>
       </header>
+
+      {/* Project picker */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <p className="text-sm text-slate-600">
+          {isLoading
+            ? "Loading progress…"
+            : !projectUuid
+              ? "You're not leading any projects yet."
+              : phases.length
+                ? `${phases.length} phases across this project's modules`
+                : "No phases yet — add modules and phases in Phases."}
+        </p>
+        <select
+          aria-label="Select project"
+          value={projectUuid}
+          onChange={(event) => selectProject(event.target.value)}
+          disabled={!projects.length}
+          className="h-10 min-w-[16rem] rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {!projects.length && <option value="">No projects to show</option>}
+          {projects.map((project) => (
+            <option key={project.uuid} value={project.uuid}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Overview Metrics */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -615,7 +739,7 @@ function ProjectProgress() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {phases.map((phase, index) => (
             <PhaseCard
-              key={phase.name}
+              key={phase.key}
               phase={phase}
               index={index}
               total={phases.length}
@@ -639,7 +763,7 @@ function ProjectProgress() {
 
             return (
               <div
-                key={phase.name}
+                key={phase.key}
                 className={`relative flex gap-3 border-slate-200 pb-6 last:pb-0 md:flex-col md:border-l-0 md:pb-0 md:pl-0 ${
                   index < phases.length - 1
                     ? "border-b md:border-b-0"
