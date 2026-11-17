@@ -1,10 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Select from "../../components/common/Select";
 import Textarea from "../../components/common/TextArea";
 import { showToast } from "../../components/common/Toast";
+import { getErrorMessage } from "../../services/developerProjectService";
+
+const RETEST_API = "/api/bugs/tester/retests";
+const axiosConfig = { withCredentials: true };
+
+/**
+ * Row = [id, title, "project · attempt N", result, notes, meta]
+ * meta = { uuid, canRecord } — canRecord: the bug is waiting for retest.
+ */
+const toRow = (item) => [
+  `BUG-${String(item.uuid).slice(0, 6).toUpperCase()}`,
+  item.title,
+  `${item.project?.name || "—"} · Attempt ${item.attemptNumber}`,
+  item.result,
+  item.testNotes || "",
+  { uuid: item.uuid, canRecord: item.canRecord },
+];
 
 const RETEST_STATUSES = ["Pending", "Passed", "Failed"];
 
@@ -214,7 +232,7 @@ function RetestCard({ item, onStatusChange, onNotesChange, onSave }) {
                 {item[0]}
               </span>
               <span className="text-xs text-cm-text-muted">
-                Version {item[2]}
+                {item[2]}
               </span>
             </div>
 
@@ -236,6 +254,7 @@ function RetestCard({ item, onStatusChange, onNotesChange, onSave }) {
           <Select
             label="Retest Result"
             value={item[3]}
+            disabled={!item[5]?.canRecord}
             options={RETEST_STATUSES.map((status) => ({
               value: status,
               label: status,
@@ -248,6 +267,7 @@ function RetestCard({ item, onStatusChange, onNotesChange, onSave }) {
           <Textarea
             label="Retest Notes"
             value={item[4]}
+            disabled={!item[5]?.canRecord}
             onChange={(value) =>
               onNotesChange(item[0], getSelectValue(value))
             }
@@ -257,11 +277,17 @@ function RetestCard({ item, onStatusChange, onNotesChange, onSave }) {
 
       <div className="flex flex-col-reverse gap-3 border-t border-cm-border bg-cm-bg/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p className="text-[11px] text-cm-text-muted">
-          Review the result and notes before saving.
+          {item[5]?.canRecord
+            ? "Passed closes the bug. Failed sends it back to the project lead."
+            : "Result recorded."}
         </p>
 
         <div className="flex justify-end">
-          <Button size="sm" onClick={() => onSave(item)}>
+          <Button
+            size="sm"
+            disabled={!item[5]?.canRecord || item[3] === "Pending"}
+            onClick={() => onSave(item)}
+          >
             Save Retest
           </Button>
         </div>
@@ -390,12 +416,28 @@ function SaveRetestModal({ item, onClose, onConfirm }) {
 }
 
 export default function Retesting() {
-  const [data, setData] = useState([
-    ["BUG-003", "Validation message", "v1.4.2", "Pending", ""],
-    ["BUG-005", "Login timeout", "v1.4.2", "Passed", "Verified after fix."],
-  ]);
-
+  const [data, setData] = useState([]);
   const [pendingSave, setPendingSave] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Bugs sent for retest in the tester's projects (waiting ones first)
+  useEffect(() => {
+    let ignore = false;
+
+    axios
+      .get(RETEST_API, axiosConfig)
+      .then((response) => {
+        if (!ignore) setData((response.data.data || []).map(toRow));
+      })
+      .catch((error) => {
+        if (!ignore) showToast.error(getErrorMessage(error, "Couldn't load retests."));
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
 
   const counts = {
     pending: data.filter((item) => item[3] === "Pending").length,
@@ -409,7 +451,7 @@ export default function Retesting() {
     setData((current) =>
       current.map((item) =>
         item[0] === bugId
-          ? [item[0], item[1], item[2], nextStatus, item[4]]
+          ? [item[0], item[1], item[2], nextStatus, item[4], item[5]]
           : item,
       ),
     );
@@ -419,7 +461,7 @@ export default function Retesting() {
     setData((current) =>
       current.map((item) =>
         item[0] === bugId
-          ? [item[0], item[1], item[2], item[3], nextNotes]
+          ? [item[0], item[1], item[2], item[3], nextNotes, item[5]]
           : item,
       ),
     );
@@ -429,24 +471,36 @@ export default function Retesting() {
     setPendingSave([...item]);
   };
 
-  const handleConfirmSave = () => {
-    if (!pendingSave) return;
+  const handleConfirmSave = async () => {
+    if (!pendingSave || isSaving) return;
 
-    const currentRecord = data.find((item) => item[0] === pendingSave[0]);
+    const [, , , result, notes, meta] = pendingSave;
 
-    if (!currentRecord) {
-      setPendingSave(null);
+    if (!["Passed", "Failed"].includes(result)) {
+      showToast.error("Choose Passed or Failed.");
       return;
     }
 
-    setData((current) =>
-      current.map((item) =>
-        item[0] === pendingSave[0] ? [...pendingSave] : item,
-      ),
-    );
+    if (result === "Failed" && !String(notes).trim()) {
+      showToast.error("Add a note explaining why the retest failed.");
+      return;
+    }
 
-    showToast.success("Retest result saved.");
-    setPendingSave(null);
+    setIsSaving(true);
+    try {
+      const response = await axios.patch(
+        `${RETEST_API}/${meta.uuid}`,
+        { result, testNotes: notes },
+        axiosConfig,
+      );
+      showToast.success(response.data.message || "Retest result saved.");
+      setPendingSave(null);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      showToast.error(getErrorMessage(error, "Couldn't save the retest result."));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
