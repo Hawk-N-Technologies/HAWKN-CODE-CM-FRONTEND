@@ -84,6 +84,8 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
     hr: "/hr/notifications",
     bde: "/bd/notifications",
     developer: "/developer/notifications",
+    tester: "/tester/notifications",
+    client: "/client/notifications",
   }[roleName];
 
   const unreadCount = Math.max(0, Number(notificationCount) || 0);

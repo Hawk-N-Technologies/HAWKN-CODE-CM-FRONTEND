@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import TableSearch from "../../components/tables/TableSearch";
+import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
 
 const FILTERS = [
@@ -165,6 +166,8 @@ function Notifications() {
               {filtered.length} {filtered.length === 1 ? "Result" : "Results"}
             </Badge>
           </div>
+
+          <PushAlertsCard />
 
           <div className="flex flex-wrap gap-2">
             {FILTERS.map((value) => (
