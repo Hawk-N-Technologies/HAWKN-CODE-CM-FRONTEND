@@ -14,6 +14,7 @@ import {
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import TableSearch from "../../components/tables/TableSearch";
+import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
 import { createTestNotification } from "../../services/notificationService";
 
@@ -396,6 +397,10 @@ function Notifications() {
             description="Search, filter and review company notifications."
             icon={Bell}
           />
+
+          <div className="mb-4">
+            <PushAlertsCard />
+          </div>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 border-y border-slate-100 py-4">

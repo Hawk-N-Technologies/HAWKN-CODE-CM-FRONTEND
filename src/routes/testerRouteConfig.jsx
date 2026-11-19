@@ -11,6 +11,7 @@ import {
   CalendarCheck,
   CalendarArrowDownIcon,
   BadgePlus,
+  Bell,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -25,6 +26,7 @@ const I = {
   training: <GraduationCap aria-hidden="true" />,
   leave: <CalendarArrowDownIcon aria-hidden="true" />,
   issues: <BadgePlus aria-hidden="true" />,
+  notifications: <Bell aria-hidden="true" />,
 };
 export const TESTER_NAV_SECTIONS = [
   {
@@ -63,6 +65,11 @@ export const TESTER_NAV_SECTIONS = [
         label: "My Leave",
         path: "/tester/leave",
         icon: I.leave,
+      },
+      {
+        label: "Notifications",
+        path: "/tester/notifications",
+        icon: I.notifications,
       },
     ],
   },

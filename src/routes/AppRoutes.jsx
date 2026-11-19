@@ -82,6 +82,8 @@ import ClientDelivery from "../pages/client/Delivery";
 import ClientPhases from "../pages/client/Phases";
 import ClientPhaseTesting from "../pages/client/PhaseTesting";
 import ClientProjectDetails from "../pages/client/ProjectDetails";
+import ClientNotifications from "../pages/client/Notifications";
+import TesterNotifications from "../pages/tester/Notifications";
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
@@ -230,6 +232,7 @@ function AppRoutes() {
               path="/client/brd-approval"
               element={<ClientBRDApproval />}
             />
+            <Route path="/client/notifications" element={<ClientNotifications />} />
           </Route>
         </Route>
 
@@ -276,6 +279,7 @@ function AppRoutes() {
             <Route path="/tester/bugs" element={<TesterBugs />} />
             <Route path="/tester/issues" element={<TesterIssues />} />
             <Route path="/tester/attendance" element={<AttendanceMonthly />} />
+            <Route path="/tester/notifications" element={<TesterNotifications />} />
             <Route path="/tester/retesting" element={<Retesting />} />
             <Route path="/tester/client-testing" element={<ClientTesting />} />
             <Route path="/tester/build-testing" element={<BuildTesting />} />

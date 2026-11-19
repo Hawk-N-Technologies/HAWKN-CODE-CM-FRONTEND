@@ -284,6 +284,15 @@ const CLIENT_NAV_SECTIONS = [
       },
     ],
   },
+  {
+    items: [
+      {
+        label: "Notifications",
+        path: "/client/notifications",
+        icon: ICONS.notifications,
+      },
+    ],
+  },
 ];
 
 export const NAV_SECTIONS_BY_ROLE = {
