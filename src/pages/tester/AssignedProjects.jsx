@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Badge from "../../components/common/Badge";
+import TableSearch from "../../components/tables/TableSearch";
 import { getTesterAssignedProjects } from "../../services/testerDashboardService";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const formatDate = (value) => {
   if (!value) return "No deadline";
@@ -467,6 +470,24 @@ export default function AssignedProjects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Search by project name, status or project lead
+  const visibleProjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return projects;
+
+    return projects.filter((project) =>
+      [project.name, project.status, project.projectLead]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [projects, search]);
+
+  // 10 per page
+  const pager = usePagination(visibleProjects);
 
   useEffect(() => {
     let cancelled = false;
@@ -518,16 +539,38 @@ export default function AssignedProjects() {
               </div>
 
               <span className="text-xs font-medium text-cm-text-muted">
-                {projects.length}{" "}
-                {projects.length === 1 ? "project" : "projects"} found
+                {visibleProjects.length}{" "}
+                {visibleProjects.length === 1 ? "project" : "projects"} found
               </span>
             </div>
 
-            <div className="grid items-stretch gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-              {projects.map((project) => (
-                <ProjectCard key={project.uuid} project={project} />
-              ))}
-            </div>
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search projects…"
+            />
+
+            {visibleProjects.length === 0 ? (
+              <p className="rounded-xl border border-cm-border bg-cm-card p-6 text-center text-sm text-cm-text-muted">
+                No projects match your search.
+              </p>
+            ) : (
+              <div className="grid items-stretch gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                {pager.pageItems.map((project) => (
+                  <ProjectCard key={project.uuid} project={project} />
+                ))}
+                {pager.hasPages && (
+                  <div className="col-span-full">
+                    <TablePagination
+                      page={pager.page}
+                      pageSize={pager.pageSize}
+                      total={pager.total}
+                      onPageChange={pager.setPage}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </>
       )}

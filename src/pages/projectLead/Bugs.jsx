@@ -18,10 +18,13 @@ import {
 } from "lucide-react";
 
 import Select from "../../components/common/Select";
+import TableSearch from "../../components/tables/TableSearch";
 import Input from "../../components/common/Input";
 import Textarea from "../../components/common/TextArea";
 import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const SEVERITIES = ["Low", "Medium", "High", "Critical"];
 
@@ -296,6 +299,7 @@ export default function Bugs() {
 
   const [projectId, setProjectId] = useState("");
   const [moduleId, setModuleId] = useState("");
+  const [search, setSearch] = useState("");
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingBug, setEditingBug] = useState(null);
@@ -368,6 +372,23 @@ export default function Bugs() {
       ),
     [bugs, moduleId],
   );
+
+  // Search by title, description, status or severity
+  const searchedBugs = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return visibleBugs;
+
+    return visibleBugs.filter((bug) =>
+      [bug.title, bug.description, bug.status, bug.severity]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [visibleBugs, search]);
+
+  // 10 per page
+  const pager = usePagination(searchedBugs);
 
   const bugStats = useMemo(() => {
     const total = visibleBugs.length;
@@ -924,6 +945,14 @@ export default function Bugs() {
           </div>
         </div>
 
+        <div className="mt-4">
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search bugs…"
+          />
+        </div>
+
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
           <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
             Viewing
@@ -1069,9 +1098,13 @@ export default function Bugs() {
                 Report First Bug
               </button>
             </div>
+          ) : searchedBugs.length === 0 ? (
+            <div className="p-12 text-center text-sm text-slate-500">
+              No bugs match your search.
+            </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {visibleBugs.map((bug) => (
+              {pager.pageItems.map((bug) => (
                 <article
                   key={bug.uuid ?? bug.id}
                   className="space-y-4 p-5 transition-colors hover:bg-slate-50/70 sm:p-6"
@@ -1212,6 +1245,16 @@ export default function Bugs() {
                   </div>
                 </article>
               ))}
+              {pager.hasPages && (
+                <div className="px-5 pb-4 sm:px-6">
+                  <TablePagination
+                    page={pager.page}
+                    pageSize={pager.pageSize}
+                    total={pager.total}
+                    onPageChange={pager.setPage}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

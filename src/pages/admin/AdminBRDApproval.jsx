@@ -22,6 +22,8 @@ import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
 import showAlert from "../../components/common/Alert";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const API_URL = "/api/brds";
 
@@ -289,6 +291,9 @@ function AdminBRDApproval() {
       return matchesFilter && (!query || searchableText.includes(query));
     });
   }, [brds, activeFilter, search]);
+
+  // 10 rows per page
+  const brdPager = usePagination(filteredBRDs);
 
   const openDetails = async (brd) => {
     setSelectedBRD(brd);
@@ -584,7 +589,7 @@ function AdminBRDApproval() {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {filteredBRDs.map((brd) => {
+                {brdPager.pageItems.map((brd) => {
                   const canReview = brd.status === STATUS.PENDING;
 
                   return (
@@ -676,6 +681,17 @@ function AdminBRDApproval() {
                 })}
               </tbody>
             </table>
+
+            {brdPager.hasPages && (
+              <div className="px-5 pb-4">
+                <TablePagination
+                  page={brdPager.page}
+                  pageSize={brdPager.pageSize}
+                  total={brdPager.total}
+                  onPageChange={brdPager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>

@@ -17,6 +17,8 @@ import TableSearch from "../../components/tables/TableSearch";
 import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
 import { createTestNotification } from "../../services/notificationService";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 // -----------------------------------------------------------------------------
 // Constants + helpers
@@ -232,6 +234,9 @@ function Notifications() {
       return matchesFilter && matchesSearch;
     });
   }, [notifications, search, filter]);
+
+  // 10 per page
+  const pager = usePagination(filtered);
 
   const readCount = notifications.length - unreadCount;
 
@@ -489,7 +494,7 @@ function Notifications() {
         ) : (
           /* Notification cards */
           <div className="mt-5 flex flex-col gap-3">
-            {filtered.map((item) => (
+            {pager.pageItems.map((item) => (
               <NotificationCard
                 key={item.id}
                 item={item}
@@ -497,6 +502,14 @@ function Notifications() {
                 onMarkRead={handleMarkRead}
               />
             ))}
+            {pager.hasPages && (
+              <TablePagination
+                page={pager.page}
+                pageSize={pager.pageSize}
+                total={pager.total}
+                onPageChange={pager.setPage}
+              />
+            )}
           </div>
         )}
 

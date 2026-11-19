@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   RefreshCw,
@@ -13,8 +13,11 @@ import {
   CircleDot,
 } from "lucide-react";
 import Select from "../../components/common/Select";
+import TableSearch from "../../components/tables/TableSearch";
 import Button from "../../components/common/Button";
 import { showToast } from "../../components/common/Toast";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 // Keep these values aligned with the statuses accepted by your backend.
 const DEVELOPER_STATUSES = ["Assigned", "In Progress", "Fixed"];
@@ -68,6 +71,24 @@ export default function BugFixing() {
   const [loading, setLoading] = useState(false);
   const [savingBugId, setSavingBugId] = useState(null);
   const [statusChanges, setStatusChanges] = useState({});
+  const [search, setSearch] = useState("");
+
+  // Search by title, description, status or severity
+  const visibleBugs = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return bugs;
+
+    return bugs.filter((bug) =>
+      [bug.title, bug.description, bug.status, bug.severity]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [bugs, search]);
+
+  // 10 per page
+  const pager = usePagination(visibleBugs);
 
   useEffect(() => {
     let active = true;
@@ -327,6 +348,16 @@ export default function BugFixing() {
             }}
           />
         </div>
+
+        {bugs.length > 0 && (
+          <div className="mt-4">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search bugs…"
+            />
+          </div>
+        )}
       </section>
 
       {/* Summary Cards */}
@@ -472,9 +503,13 @@ export default function BugFixing() {
               Bugs assigned to you for this project will appear here.
             </p>
           </div>
+        ) : visibleBugs.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-500">
+            No bugs match your search.
+          </div>
         ) : (
           <div className="space-y-4">
-            {bugs.map((bug) => {
+            {pager.pageItems.map((bug) => {
               const selectedStatus = statusChanges[bug.id] ?? bug.status;
               const isSaving = savingBugId === bug.id;
 
@@ -578,6 +613,14 @@ export default function BugFixing() {
                 </article>
               );
             })}
+            {pager.hasPages && (
+              <TablePagination
+                page={pager.page}
+                pageSize={pager.pageSize}
+                total={pager.total}
+                onPageChange={pager.setPage}
+              />
+            )}
           </div>
         )}
       </section>

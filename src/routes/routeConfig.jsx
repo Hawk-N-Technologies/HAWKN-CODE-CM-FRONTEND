@@ -174,11 +174,11 @@ const HR_NAV_SECTIONS = [
         path: "/hr/internship-probation",
         icon: ICONS.internship,
       },
-      // {
-      //   label: "Employee Hierarchy",
-      //   path: "/hr/employee-heirarchy",
-      //   icon: ICONS.hierarchy,
-      // },
+      {
+        label: "Employee Hierarchy",
+        path: "/hr/employee-hierarchy",
+        icon: ICONS.hierarchy,
+      },
       {
         label: "Notifications",
         path: "/hr/notifications",

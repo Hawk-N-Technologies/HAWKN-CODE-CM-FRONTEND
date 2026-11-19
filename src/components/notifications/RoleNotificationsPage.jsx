@@ -6,6 +6,8 @@ import Button from "../common/Button";
 import TableSearch from "../tables/TableSearch";
 import PushAlertsCard from "./PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../tables/TablePagination";
 
 /**
  * Notifications page shared by roles that had none (Tester, Client).
@@ -59,6 +61,9 @@ export default function RoleNotificationsPage({ eyebrow, description, linkPrefix
       return matchesFilter && matchesSearch;
     });
   }, [notifications, search, filter]);
+
+  // 10 per page
+  const pager = usePagination(filtered);
 
   async function handleMarkRead(id) {
     try {
@@ -162,7 +167,7 @@ export default function RoleNotificationsPage({ eyebrow, description, linkPrefix
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filtered.map((item) => (
+          {pager.pageItems.map((item) => (
             <article
               key={item.id}
               className={`rounded-cm-lg border bg-cm-card p-5 shadow-sm ${item.readAt ? "border-cm-border" : "border-blue-300"}`}
@@ -186,6 +191,14 @@ export default function RoleNotificationsPage({ eyebrow, description, linkPrefix
               </div>
             </article>
           ))}
+          {pager.hasPages && (
+            <TablePagination
+              page={pager.page}
+              pageSize={pager.pageSize}
+              total={pager.total}
+              onPageChange={pager.setPage}
+            />
+          )}
         </div>
       )}
     </section>

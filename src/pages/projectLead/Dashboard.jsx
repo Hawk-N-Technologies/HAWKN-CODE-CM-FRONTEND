@@ -19,6 +19,7 @@ import Button from "../../components/common/Button";
 import {
   getErrorMessage,
   getMyProjects,
+  getMySummary,
 } from "../../services/developerProjectService";
 
 /**
@@ -26,13 +27,6 @@ import {
  * "Assigned projects" = projects where the logged-in developer is the
  * Project Lead (same data as Developer → My Projects, same API).
  */
-
-// Still static until the Phases / Tasks modules exist
-const STATIC_KPIS = [
-  { label: "Active Phases", value: "7" },
-  { label: "Open Tasks", value: "24" },
-  { label: "Completed Tasks", value: "38" },
-];
 
 // Badge only has: success / warning / danger / info / neutral
 const STATUS_TONE = {
@@ -159,6 +153,11 @@ function Dashboard() {
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
+  const [summary, setSummary] = useState({
+    activePhases: 0,
+    openTasks: 0,
+    completedTasks: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -170,11 +169,12 @@ function Dashboard() {
   useEffect(() => {
     let ignore = false;
 
-    getMyProjects()
-      .then((list) => {
+    Promise.all([getMyProjects(), getMySummary()])
+      .then(([list, counts]) => {
         if (ignore) return;
 
         setProjects(list);
+        setSummary(counts);
         setLoadError(null);
       })
       .catch((error) => {
@@ -220,7 +220,9 @@ function Dashboard() {
       label: "Assigned Projects",
       value: live(String(projects.length)),
     },
-    ...STATIC_KPIS,
+    { label: "Active Phases", value: live(String(summary.activePhases)) },
+    { label: "Open Tasks", value: live(String(summary.openTasks)) },
+    { label: "Completed Tasks", value: live(String(summary.completedTasks)) },
     {
       label: "Average Progress",
       value: live(`${averageProgress}%`),

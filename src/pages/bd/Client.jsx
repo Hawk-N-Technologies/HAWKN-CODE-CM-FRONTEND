@@ -10,7 +10,7 @@ import TablePagination from "../../components/tables/TablePagination";
 import { showToast } from "../../components/common/Toast";
 import * as clientService from "../../services/clientService";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 const STATUS_TONE = { Lead: "warning", Active: "success", Inactive: "neutral" };
 
@@ -162,6 +162,7 @@ function Client() {
               <DataTable
                 columns={columns}
                 rows={paginated}
+                paginate={false}
                 emptyMessage="No clients match your search."
               />
               <TablePagination
