@@ -6,6 +6,8 @@ import Button from "../../components/common/Button";
 import TableSearch from "../../components/tables/TableSearch";
 import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const FILTERS = [
   "All",
@@ -63,6 +65,9 @@ function Notifications() {
       return matchesFilter && matchesSearch;
     });
   }, [notifications, search, filter]);
+
+  // 10 per page
+  const pager = usePagination(filtered);
 
   async function handleMarkRead(id) {
     try {
@@ -253,7 +258,7 @@ function Notifications() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filtered.map((item) => (
+          {pager.pageItems.map((item) => (
             <article
               key={item.id}
               className={`group relative overflow-hidden rounded-2xl border bg-cm-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6 ${
@@ -338,6 +343,14 @@ function Notifications() {
               </div>
             </article>
           ))}
+          {pager.hasPages && (
+            <TablePagination
+              page={pager.page}
+              pageSize={pager.pageSize}
+              total={pager.total}
+              onPageChange={pager.setPage}
+            />
+          )}
         </div>
       )}
     </section>

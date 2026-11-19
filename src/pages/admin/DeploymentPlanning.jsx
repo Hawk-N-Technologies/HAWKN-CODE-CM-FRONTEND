@@ -8,6 +8,7 @@ import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
 import ErrorState from "../../components/common/ErrorState";
 import DataTable from "../../components/tables/DataTable";
+import TableSearch from "../../components/tables/TableSearch";
 import { showToast } from "../../components/common/Toast";
 
 import {
@@ -436,6 +437,7 @@ function DeploymentPlanning() {
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedUuid, setSelectedUuid] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -482,6 +484,18 @@ function DeploymentPlanning() {
     () => rows.filter((row) => row.readiness.isReady).length,
     [rows]
   );
+
+  // Search by project or client name
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+
+    return rows.filter((row) =>
+      `${row.project.name} ${row.project.clientName}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [rows, search]);
 
   const plannedCount = useMemo(
     () => rows.filter((row) => row.hasPlan).length,
@@ -759,14 +773,26 @@ function DeploymentPlanning() {
             )}
           </div>
 
+          <div className="mb-4">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search project or client…"
+            />
+          </div>
+
           <DataTable
             columns={columns}
-            rows={rows.map((row) => ({
+            rows={visibleRows.map((row) => ({
               ...row,
               id: row.project.uuid,
             }))}
             isLoading={isLoading}
-            emptyMessage="No projects yet — create one in Project Management first."
+            emptyMessage={
+              search.trim()
+                ? "No projects match your search."
+                : "No projects yet — create one in Project Management first."
+            }
           />
         </section>
       )}

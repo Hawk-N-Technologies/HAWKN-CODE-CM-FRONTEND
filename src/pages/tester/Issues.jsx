@@ -21,6 +21,8 @@ import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const STATUSES = [
   "Submitted",
@@ -533,6 +535,9 @@ export default function Bugs() {
     });
   }, [issues, search, statusFilter, severityFilter]);
 
+  // 10 per page
+  const pager = usePagination(filteredIssues);
+
   const metrics = useMemo(
     () => ({
       total: issues.length,
@@ -788,13 +793,23 @@ export default function Bugs() {
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-            {filteredIssues.map((issue) => (
+            {pager.pageItems.map((issue) => (
               <IssueCard
                 key={issue.uuid || issue.id}
                 issue={issue}
                 onEdit={openEditModal}
               />
             ))}
+            {pager.hasPages && (
+              <div className="col-span-full">
+                <TablePagination
+                  page={pager.page}
+                  pageSize={pager.pageSize}
+                  total={pager.total}
+                  onPageChange={pager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>

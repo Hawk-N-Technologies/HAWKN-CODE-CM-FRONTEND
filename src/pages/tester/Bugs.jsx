@@ -16,6 +16,8 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import { showToast } from "../../components/common/Toast";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 // API response helper.
 const getList = (response, key) => {
@@ -388,6 +390,9 @@ export default function Bugs() {
       return matchesProject && matchesStatus && matchesSearch;
     });
   }, [bugs, filterProjectId, filterStatus, search]);
+
+  // 10 per page
+  const pager = usePagination(visibleBugs);
 
   // Dashboard metrics.
   const stats = useMemo(
@@ -935,7 +940,7 @@ export default function Bugs() {
           </div>
         ) : (
           <div className="divide-y divide-cm-border">
-            {visibleBugs.map((bug) => (
+            {pager.pageItems.map((bug) => (
               <article
                 key={bug.uuid || bug.id}
                 className="space-y-3 p-5 transition-colors hover:bg-cm-bg/50"
@@ -1013,6 +1018,16 @@ export default function Bugs() {
                 </div>
               </article>
             ))}
+            {pager.hasPages && (
+              <div className="px-5 pb-4">
+                <TablePagination
+                  page={pager.page}
+                  pageSize={pager.pageSize}
+                  total={pager.total}
+                  onPageChange={pager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>
