@@ -705,7 +705,8 @@ export default function Bugs() {
               </button>
             </div>
 
-            <div className="relative mt-5 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            {/* Decorative tags — hidden on phones to leave room for the form */}
+            <div className="relative mt-5 hidden flex-wrap items-center gap-2 text-xs text-slate-300 sm:flex">
               <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
                 Project support
               </span>

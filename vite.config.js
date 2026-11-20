@@ -14,6 +14,16 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
 
+    // Production build only: drop debugging console.log / console.debug calls
+    // (some log user data). console.error and console.warn stay.
+    build: {
+      rolldownOptions: {
+        treeshake: {
+          manualPureFunctions: mode === "production" ? ["console.log", "console.debug"] : [],
+        },
+      },
+    },
+
     server: {
       proxy: {
         "/api": {
