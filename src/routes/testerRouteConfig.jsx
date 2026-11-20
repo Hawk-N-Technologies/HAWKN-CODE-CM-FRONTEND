@@ -12,6 +12,7 @@ import {
   CalendarArrowDownIcon,
   BadgePlus,
   Bell,
+  PackageCheck,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -27,6 +28,7 @@ const I = {
   leave: <CalendarArrowDownIcon aria-hidden="true" />,
   issues: <BadgePlus aria-hidden="true" />,
   notifications: <Bell aria-hidden="true" />,
+  delivery: <PackageCheck aria-hidden="true" />,
 };
 export const TESTER_NAV_SECTIONS = [
   {
@@ -56,6 +58,7 @@ export const TESTER_NAV_SECTIONS = [
         path: "/tester/field-training",
         icon: I.training,
       },
+      { label: "Delivery", path: "/tester/delivery", icon: I.delivery },
       {
         label: "My Attendance",
         path: "/tester/attendance",
