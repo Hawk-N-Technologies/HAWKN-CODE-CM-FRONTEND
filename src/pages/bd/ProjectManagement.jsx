@@ -625,6 +625,24 @@ function ProjectDetails({ project, onClose }) {
 // Page
 // ---------------------------------------------------------------------------
 
+
+// The projects API is paged ({ projects, pagination }, max 100 per page).
+// This page searches and filters in the browser, so load every page.
+async function getAllProjects() {
+  const all = [];
+
+  for (let page = 1; page <= 10; page += 1) {
+    const result = await getProjects({ page, limit: 100 });
+    const rows = Array.isArray(result) ? result : result?.projects ?? [];
+    all.push(...rows);
+
+    const totalPages = Array.isArray(result) ? 1 : result?.pagination?.totalPages ?? 1;
+    if (page >= totalPages) break;
+  }
+
+  return all;
+}
+
 function ProjectManagement() {
   const [projects, setProjects] = useState([]);
   const [options, setOptions] = useState({
@@ -650,7 +668,7 @@ function ProjectManagement() {
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([getProjects(), getProjectOptions()])
+    Promise.all([getAllProjects(), getProjectOptions()])
       .then(([projectList, optionData]) => {
         if (ignore) return;
 

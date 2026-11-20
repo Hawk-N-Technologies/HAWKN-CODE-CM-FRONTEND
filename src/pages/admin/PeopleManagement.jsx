@@ -1570,6 +1570,9 @@ function PeopleManagement() {
           <DataTable
             columns={columns}
             rows={people}
+            // `id` is the employee id for employees but the user id for
+            // admin / HR accounts, so it can repeat — key by user instead
+            rowKey={(row) => row.uuid ?? `user-${row.userId ?? row.id}`}
             isLoading={isPeopleLoading}
             emptyMessage={
               debouncedSearch

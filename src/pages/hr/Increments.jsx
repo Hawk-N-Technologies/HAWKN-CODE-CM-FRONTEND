@@ -790,14 +790,15 @@ function BonusesTab() {
               </Button>
             )}
 
+            {/* Two clicks, inline: Delete → Confirm delete? (no pop-up) */}
             <Button
               size="sm"
               variant="danger"
               loading={deletingUuid === row.uuid}
-              disabled={deletingUuid !== null}
-              onClick={() => setConfirmUuid(row.uuid)}
+              disabled={deletingUuid !== null && deletingUuid !== row.uuid}
+              onClick={() => handleDelete(row)}
             >
-              Delete
+              {isConfirming ? "Confirm delete?" : "Delete"}
             </Button>
           </div>
         );
@@ -880,43 +881,6 @@ function BonusesTab() {
         </Modal>
       )}
 
-      {confirmUuid &&
-        (() => {
-          const record = list.records.find((item) => item.uuid === confirmUuid);
-          return record ? (
-            <Modal
-              title="Delete bonus?"
-              description="This action cannot be undone."
-              onClose={() => setConfirmUuid(null)}
-              size="max-w-md"
-            >
-              <p className="text-sm text-cm-text-muted">
-                Delete the {formatMoney(record.amount)}{" "}
-                {record.bonusType.toLowerCase()} bonus for{" "}
-                <strong className="text-cm-text">
-                  {record.employee.fullName}
-                </strong>
-                ?
-              </p>
-              <div className="mt-6 flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setConfirmUuid(null)}
-                  disabled={deletingUuid !== null}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  loading={deletingUuid === record.uuid}
-                  onClick={() => handleDelete(record)}
-                >
-                  Delete bonus
-                </Button>
-              </div>
-            </Modal>
-          ) : null;
-        })()}
 
       <section className="overflow-hidden rounded-cm-lg border border-cm-border bg-cm-card shadow-sm">
         <SectionHeader
@@ -1452,7 +1416,7 @@ function IncrementsTab() {
               disabled={revertingUuid !== null && revertingUuid !== row.uuid}
               onClick={() => handleRevert(row)}
             >
-              Revert
+              {isConfirming ? "Confirm revert?" : "Revert"}
             </Button>
           </div>
         );

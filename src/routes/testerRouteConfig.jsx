@@ -13,6 +13,7 @@ import {
   BadgePlus,
   Bell,
   PackageCheck,
+  BookOpenCheck,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -29,6 +30,7 @@ const I = {
   issues: <BadgePlus aria-hidden="true" />,
   notifications: <Bell aria-hidden="true" />,
   delivery: <PackageCheck aria-hidden="true" />,
+  sops: <BookOpenCheck aria-hidden="true" />,
 };
 export const TESTER_NAV_SECTIONS = [
   {
@@ -59,6 +61,7 @@ export const TESTER_NAV_SECTIONS = [
         icon: I.training,
       },
       { label: "Delivery", path: "/tester/delivery", icon: I.delivery },
+      { label: "SOPs", path: "/tester/sops", icon: I.sops },
       {
         label: "My Attendance",
         path: "/tester/attendance",

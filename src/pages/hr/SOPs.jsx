@@ -1,680 +1,447 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BookOpen,
-  Building2,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardList,
-  FileText,
-  Plus,
-  Search,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { BookOpenCheck, CalendarDays, FileText, Pencil, Plus, RefreshCw } from "lucide-react";
 
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
-import FileUpload from "../../components/common/FileUpload";
+import Modal from "../../components/common/Modal";
+import EmptyState from "../../components/common/EmptyState";
+import ErrorState from "../../components/common/ErrorState";
+import Loader from "../../components/common/Loader";
+import InlineDeleteButton from "../../components/common/InlineDeleteButton";
+import RichTextEditor from "../../components/common/RichTextEditor";
+import RichTextView from "../../components/common/RichTextView";
 import { showToast } from "../../components/common/Toast";
+import PageHeader from "../../components/layout/PageHeader";
+import TableSearch from "../../components/tables/TableSearch";
+import TablePagination from "../../components/tables/TablePagination";
+import { useAuth } from "../../hooks/useAuth";
+import usePagination from "../../hooks/usePagination";
+import {
+  SOP_DEPARTMENTS,
+  createSop,
+  deleteSop,
+  getSop,
+  getSopError,
+  getSops,
+  updateSop,
+} from "../../services/sopService";
 
-const INITIAL = [
-  {
-    id: "SOP-001",
-    title: "Employee Onboarding SOP",
-    department: "HR",
-    effectiveDate: "2026-09-01",
-    acknowledgement: "Required",
-    status: "Active",
-    fileName: "employee-onboarding.pdf",
-  },
-  {
-    id: "SOP-002",
-    title: "Leave Process",
-    department: "HR",
-    effectiveDate: "2026-08-15",
-    acknowledgement: "Required",
-    status: "Active",
-    fileName: "leave-process.pdf",
-  },
-];
+/**
+ * SOPs — Standard Operating Procedures.
+ * Admin & HR create, edit and delete them (rich text, like Company Policies).
+ * Every employee can open and read them. Used for every employee role.
+ */
 
-const EMPTY_FORM = {
-  title: "",
-  department: "HR",
-  effectiveDate: "",
-  acknowledgement: "Required",
+const EDITOR_ROLES = ["admin", "hr"];
+const EMPTY = { title: "", department: "General", effectiveDate: "", content: "" };
+
+// "2026-11-01" → "01 Nov 2026" (built from parts so the day can't shift)
+const formatDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-function formatDate(value) {
-  if (!value) return "—";
+const formatDateTime = (value) =>
+  value
+    ? new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "—";
 
-  const [year, month, day] = value.split("-").map(Number);
+const hasText = (html) =>
+  String(html || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim().length > 0 || /<img\s/i.test(html || "");
 
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+function SopFormModal({ editing, onClose, onSaved }) {
+  const [values, setValues] = useState(editing ? null : EMPTY);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
-function MetricCard({ label, value, detail, icon: Icon, tone }) {
-  const tones = {
-    blue: "bg-blue-50 text-blue-700 ring-blue-100",
-    green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-    amber: "bg-amber-50 text-amber-700 ring-amber-100",
-    slate: "bg-slate-100 text-slate-700 ring-slate-200",
-  };
-
-  return (
-    <article className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-            {value}
-          </p>
-        </div>
-
-        <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${tones[tone]}`}
-        >
-          <Icon size={20} />
-        </span>
-      </div>
-
-      <p className="mt-3 text-xs leading-5 text-slate-500">{detail}</p>
-    </article>
-  );
-}
-
-function SOPModal({ children, onClose }) {
+  // Editing → load the full text first
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
+    if (!editing) return undefined;
+    let ignore = false;
+
+    getSop(editing.uuid)
+      .then((sop) => {
+        if (!ignore) {
+          setValues({
+            title: sop.title,
+            department: sop.department,
+            effectiveDate: sop.effectiveDate ? String(sop.effectiveDate).slice(0, 10) : "",
+            content: sop.content,
+          });
+        }
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getSopError(error, "Couldn't open this SOP."));
+      });
+
+    return () => {
+      ignore = true;
     };
+  }, [editing]);
 
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sop-modal-title"
-        className="relative flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
-      >
-        <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#0b1833] via-[#122b4d] to-[#1c4168] px-5 py-6 sm:px-7 sm:py-7">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full border border-white/10"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-1 -top-10 h-40 w-40 rounded-full border border-white/10"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute bottom-[-90px] right-28 h-44 w-44 rounded-full border border-white/5"
-          />
-
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur-sm">
-                <FileText size={23} />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-200">
-                  People operations
-                </p>
-
-                <h2
-                  id="sop-modal-title"
-                  className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl"
-                >
-                  Add Standard Operating Procedure
-                </h2>
-
-                <p className="mt-2 max-w-md text-sm leading-6 text-blue-100/80">
-                  Add a company procedure, define its effective date, and set
-                  acknowledgement requirements.
-                </p>
-
-                <div className="mt-4">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-white">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    New SOP
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              aria-label="Close add SOP dialog"
-              onClick={onClose}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="relative mt-6 flex items-center gap-2 border-t border-white/10 pt-4 text-xs text-blue-100/80">
-            <ShieldCheck size={15} />
-            <span>Standardized processes · Company documentation</span>
-          </div>
-        </header>
-
-        {children}
-      </section>
-    </div>
-  );
-}
-
-function SOPs() {
-  const [sops, setSops] = useState(INITIAL);
-  const [file, setFile] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("All");
-  const [form, setForm] = useState(EMPTY_FORM);
-
-  const summary = useMemo(
-    () => ({
-      total: sops.length,
-      active: sops.filter((sop) => sop.status === "Active").length,
-      required: sops.filter(
-        (sop) => sop.acknowledgement === "Required",
-      ).length,
-      acknowledged: sops.filter(
-        (sop) => sop.acknowledgement === "Acknowledged",
-      ).length,
-    }),
-    [sops],
-  );
-
-  const filteredSops = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return sops.filter((sop) => {
-      const matchesSearch =
-        !query ||
-        sop.title.toLowerCase().includes(query) ||
-        sop.department.toLowerCase().includes(query) ||
-        sop.id.toLowerCase().includes(query) ||
-        (sop.fileName || "").toLowerCase().includes(query);
-
-      const matchesDepartment =
-        departmentFilter === "All" ||
-        sop.department === departmentFilter;
-
-      return matchesSearch && matchesDepartment;
-    });
-  }, [sops, search, departmentFilter]);
-
-  const closeForm = () => {
-    setShowForm(false);
-    setForm(EMPTY_FORM);
-    setFile(null);
+  const set = (field, value) => {
+    setValues((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
-  const add = (event) => {
+  const save = async (event) => {
     event.preventDefault();
 
-    if (!form.title.trim() || !form.effectiveDate) {
-      showToast.error("Title and effective date are required.");
+    const nextErrors = {};
+    if (values.title.trim().length < 3) nextErrors.title = "Title must be at least 3 characters.";
+    if (!hasText(values.content)) nextErrors.content = "Write the procedure.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    const payload = {
+      title: values.title.trim(),
+      department: values.department,
+      effectiveDate: values.effectiveDate || null,
+      content: values.content,
+    };
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateSop(editing.uuid, payload);
+        showToast.success("SOP saved.");
+      } else {
+        await createSop(payload);
+        showToast.success("SOP created.");
+      }
+      onSaved();
+    } catch (error) {
+      showToast.error(getSopError(error, "Couldn't save the SOP."));
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      onClose={onClose}
+      closeDisabled={saving}
+      eyebrow="SOPS"
+      title={editing ? "Edit SOP" : "New SOP"}
+      description="Write the procedure step by step. Every employee will be able to read it."
+      icon={editing ? Pencil : Plus}
+      size="xl"
+    >
+      {loadError ? (
+        <ErrorState title="Couldn't open this SOP" description={loadError} />
+      ) : !values ? (
+        <Loader label="Opening SOP…" />
+      ) : (
+        <form noValidate onSubmit={save} className="space-y-5 px-6 py-6 sm:px-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_200px_180px]">
+            <Input
+              label="Title"
+              required
+              maxLength={200}
+              placeholder="e.g. How to raise a leave request"
+              value={values.title}
+              onChange={(event) => set("title", event.target.value)}
+              error={errors.title}
+            />
+            <Select
+              label="Department"
+              value={values.department}
+              options={SOP_DEPARTMENTS.map((value) => ({ value, label: value }))}
+              onChange={(event) => set("department", event.target.value || "General")}
+            />
+            <Input
+              label="Effective from"
+              type="date"
+              value={values.effectiveDate}
+              onChange={(event) => set("effectiveDate", event.target.value)}
+            />
+          </div>
+
+          <RichTextEditor
+            label="Procedure"
+            value={values.content}
+            onChange={(html) => set("content", html)}
+            error={errors.content}
+            placeholder="Step 1…"
+          />
+
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              {editing ? "Save changes" : "Create SOP"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
+function SopViewModal({ sop, onClose }) {
+  const [full, setFull] = useState(null);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let ignore = false;
+    getSop(sop.uuid)
+      .then((data) => {
+        if (!ignore) setFull(data);
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getSopError(error, "Couldn't open this SOP."));
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [sop.uuid]);
+
+  return (
+    <Modal
+      onClose={onClose}
+      eyebrow={sop.department.toUpperCase()}
+      title={sop.title}
+      description={[
+        sop.effectiveDate && `Effective from ${formatDate(sop.effectiveDate)}`,
+        `Last updated ${formatDateTime(sop.updatedAt)}${sop.updatedBy ? ` by ${sop.updatedBy}` : ""}`,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      icon={BookOpenCheck}
+      size="xl"
+    >
+      <div className="px-6 py-6 sm:px-8">
+        {loadError ? (
+          <ErrorState title="Couldn't open this SOP" description={loadError} />
+        ) : !full ? (
+          <Loader label="Opening SOP…" />
+        ) : (
+          <RichTextView html={full.content} />
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+export default function SOPs() {
+  const { role } = useAuth();
+  const canEdit = EDITOR_ROLES.includes(role);
+
+  const [sops, setSops] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState("All");
+  const [viewing, setViewing] = useState(null);
+  const [form, setForm] = useState(null); // null | { editing: sop | null }
+  const [confirmDeleteUuid, setConfirmDeleteUuid] = useState(null);
+  const [deletingUuid, setDeletingUuid] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    getSops()
+      .then((list) => {
+        if (ignore) return;
+        setSops(list);
+        setLoadError("");
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getSopError(error, "Couldn't load SOPs."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
+
+  const reload = () => {
+    setIsLoading(true);
+    setReloadKey((key) => key + 1);
+  };
+
+  const visible = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return sops.filter(
+      (sop) =>
+        (department === "All" || sop.department === department) &&
+        (!query || `${sop.title} ${sop.department} ${sop.preview}`.toLowerCase().includes(query)),
+    );
+  }, [sops, search, department]);
+
+  // 10 per page
+  const pager = usePagination(visible);
+
+  const handleDelete = async (sop) => {
+    if (confirmDeleteUuid !== sop.uuid) {
+      setConfirmDeleteUuid(sop.uuid);
       return;
     }
 
-    setSops((prev) => [
-      ...prev,
-      {
-        id: `SOP-${String(prev.length + 1).padStart(3, "0")}`,
-        ...form,
-        title: form.title.trim(),
-        status: "Active",
-        fileName: file?.name ?? null,
-      },
-    ]);
-
-    setForm(EMPTY_FORM);
-    setFile(null);
-    setShowForm(false);
-
-    showToast.success("SOP added.");
-  };
-
-  const acknowledge = (id) => {
-    setSops((prev) =>
-      prev.map((sop) =>
-        sop.id === id
-          ? { ...sop, acknowledgement: "Acknowledged" }
-          : sop,
-      ),
-    );
-
-    showToast.success("SOP acknowledgement recorded.");
+    setDeletingUuid(sop.uuid);
+    try {
+      await deleteSop(sop.uuid);
+      setSops((current) => current.filter((item) => item.uuid !== sop.uuid));
+      showToast.success(`SOP "${sop.title}" deleted.`);
+    } catch (error) {
+      showToast.error(getSopError(error, "Couldn't delete the SOP."));
+    } finally {
+      setDeletingUuid(null);
+      setConfirmDeleteUuid(null);
+    }
   };
 
   return (
-    <div className="min-w-0 space-y-6 pb-6">
-      {/* Page hero */}
-      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border border-white/10"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-blue-500/10 blur-3xl"
-        />
-
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100">
-                <BookOpen size={23} />
-              </div>
-
-              <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
-                HUMAN RESOURCES
-              </span>
-            </div>
-
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[34px]">
-              Standard Operating Procedures
-            </h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              Manage company procedures, track effective dates, and maintain
-              acknowledgement records in one place.
-            </p>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                SOP management
-              </span>
-
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-slate-200">
-                {summary.total} total documents
-              </span>
-            </div>
-          </div>
-
-          <div className="relative shrink-0">
-            <Button onClick={() => setShowForm(true)}>
-              <span className="inline-flex items-center gap-2">
-                <Plus size={16} />
-                Add SOP
-              </span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Summary cards */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-base font-semibold text-slate-900">
-            SOP overview
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            A quick overview of documented procedures and acknowledgement
-            requirements.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Total SOPs"
-            value={summary.total}
-            detail="All recorded procedures"
-            icon={ClipboardList}
-            tone="blue"
-          />
-
-          <MetricCard
-            label="Active SOPs"
-            value={summary.active}
-            detail="Currently active documents"
-            icon={CheckCircle2}
-            tone="green"
-          />
-
-          <MetricCard
-            label="Acknowledgement required"
-            value={summary.required}
-            detail="Awaiting acknowledgement"
-            icon={ShieldCheck}
-            tone="amber"
-          />
-
-          <MetricCard
-            label="Acknowledged"
-            value={summary.acknowledged}
-            detail="Recorded acknowledgements"
-            icon={BookOpen}
-            tone="slate"
-          />
-        </div>
-      </section>
-
-      {/* SOP register */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">
-              SOP register
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Browse procedures and manage acknowledgement status.
-            </p>
-          </div>
-
-          <div className="flex w-full flex-col gap-3 sm:flex-row lg:max-w-xl">
-            <div className="relative min-w-0 flex-1">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search SOPs or documents..."
-                aria-label="Search SOPs"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
-              />
-            </div>
-
-            <div className="relative shrink-0 sm:w-40">
-              <Select
-                label="Department"
-                value={departmentFilter}
-                options={["All", "HR", "Company"].map((value) => ({
-                  value,
-                  label: value === "All" ? "All departments" : value,
-                }))}
-                onChange={(event) =>
-                  setDepartmentFilter(event.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
-          <p className="text-sm text-slate-500">
-            Showing{" "}
-            <span className="font-semibold text-slate-800">
-              {filteredSops.length}
-            </span>{" "}
-            of {sops.length} SOPs
-          </p>
-
-          <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-            Document register
-          </span>
-        </div>
-
-        <div className="space-y-3 p-4 pt-1 sm:p-5 sm:pt-2">
-          {filteredSops.map((sop) => (
-            <article
-              key={sop.id}
-              className="group rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md sm:p-5"
+    <div className="flex flex-col gap-6 pb-8">
+      <PageHeader
+        eyebrow={canEdit ? "COMPANY" : "KNOWLEDGE BASE"}
+        title="SOPs"
+        description={
+          canEdit
+            ? "Standard operating procedures for the whole team. Write them here — every employee can read them."
+            : "How we do things at Hawk'N. Open any procedure to read it step by step."
+        }
+        icon={BookOpenCheck}
+        actions={
+          canEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              leftIcon={<Plus size={16} />}
+              onClick={() => setForm({ editing: null })}
+              className="!min-h-[44px] !whitespace-nowrap"
             >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              New SOP
+            </Button>
+          )
+        }
+      />
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#101a3a]">Procedures</h2>
+            <p className="text-sm text-slate-500">
+              {isLoading ? "Loading…" : `${sops.length} ${sops.length === 1 ? "SOP" : "SOPs"}`}
+            </p>
+          </div>
+          <Button size="sm" variant="outline" leftIcon={<RefreshCw size={14} />} onClick={reload}>
+            Refresh
+          </Button>
+        </div>
+
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search SOPs…" />
+          <Select
+            aria-label="Department"
+            value={department}
+            options={["All", ...SOP_DEPARTMENTS].map((value) => ({
+              value,
+              label: value === "All" ? "All departments" : value,
+            }))}
+            onChange={(event) => setDepartment(event.target.value || "All")}
+          />
+        </div>
+
+        {isLoading ? (
+          <Loader label="Loading SOPs…" />
+        ) : loadError ? (
+          <ErrorState title="Couldn't load SOPs" description={loadError} onRetry={reload} />
+        ) : sops.length === 0 ? (
+          <EmptyState
+            title="No SOPs yet"
+            description={canEdit ? "Write the first procedure for your team." : "Your HR team hasn't published any SOPs yet."}
+          />
+        ) : visible.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-500">No SOPs match your search.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {pager.pageItems.map((sop) => (
+              <article
+                key={sop.uuid}
+                className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md lg:flex-row lg:items-center lg:justify-between"
+              >
                 <div className="flex min-w-0 items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 transition group-hover:bg-blue-100">
-                    <FileText size={20} />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-800">
+                    <FileText className="h-5 w-5" />
                   </div>
-
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">
-                        {sop.title}
-                      </h3>
-
-                      <Badge tone="success">{sop.status}</Badge>
-
-                      <Badge
-                        tone={
-                          sop.acknowledgement === "Acknowledged"
-                            ? "success"
-                            : "warning"
-                        }
-                      >
-                        {sop.acknowledgement}
-                      </Badge>
+                      <h3 className="break-words text-base font-bold text-[#101a3a]">{sop.title}</h3>
+                      <Badge tone="info">{sop.department}</Badge>
                     </div>
-
-                    <p className="mt-1 text-xs font-medium text-slate-400">
-                      {sop.id}
+                    {sop.preview && <p className="mt-1 line-clamp-2 max-w-2xl text-sm text-slate-500">{sop.preview}</p>}
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                      {sop.effectiveDate && (
+                        <>
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          Effective {formatDate(sop.effectiveDate)} ·
+                        </>
+                      )}
+                      Updated {formatDateTime(sop.updatedAt)}
                     </p>
-
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Building2 size={15} className="text-slate-400" />
-                        {sop.department}
-                      </span>
-
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays size={15} className="text-slate-400" />
-                        Effective {formatDate(sop.effectiveDate)}
-                      </span>
-                    </div>
-
-                    {sop.fileName && (
-                      <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                        <FileText
-                          size={14}
-                          className="shrink-0 text-blue-600"
-                        />
-                        <span className="truncate">{sop.fileName}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                  {sop.acknowledgement === "Required" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => acknowledge(sop.id)}
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <CheckCircle2 size={15} />
-                        Acknowledge
-                      </span>
-                    </Button>
-                  ) : (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100">
-                      <CheckCircle2 size={14} />
-                      Acknowledged
-                    </span>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Button size="sm" variant={canEdit ? "outline" : "primary"} onClick={() => setViewing(sop)}>
+                    Read
+                  </Button>
+                  {canEdit && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        leftIcon={<Pencil size={14} />}
+                        onClick={() => setForm({ editing: sop })}
+                        disabled={deletingUuid === sop.uuid}
+                      >
+                        Edit
+                      </Button>
+                      <InlineDeleteButton
+                        isConfirming={confirmDeleteUuid === sop.uuid}
+                        loading={deletingUuid === sop.uuid}
+                        disabled={deletingUuid !== null && deletingUuid !== sop.uuid}
+                        onDelete={() => handleDelete(sop)}
+                        onKeep={() => setConfirmDeleteUuid(null)}
+                      />
+                    </>
                   )}
                 </div>
-              </div>
-            </article>
-          ))}
-
-          {filteredSops.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-5 py-12 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-200">
-                <FileText size={25} />
-              </div>
-
-              <h3 className="mt-4 text-base font-semibold text-slate-900">
-                No matching SOPs
-              </h3>
-
-              <p className="mt-1 max-w-sm text-sm leading-6 text-slate-500">
-                {sops.length === 0
-                  ? "Start building your SOP register by adding the first procedure."
-                  : "Try another search term or change the department filter."}
-              </p>
-
-              {sops.length === 0 ? (
-                <div className="mt-5">
-                  <Button onClick={() => setShowForm(true)}>
-                    <span className="inline-flex items-center gap-2">
-                      <Plus size={16} />
-                      Add First SOP
-                    </span>
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setDepartmentFilter("All");
-                  }}
-                  className="mt-4 text-sm font-semibold text-blue-700 transition hover:text-blue-900"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+              </article>
+            ))}
+            {pager.hasPages && (
+              <TablePagination
+                page={pager.page}
+                pageSize={pager.pageSize}
+                total={pager.total}
+                onPageChange={pager.setPage}
+              />
+            )}
+          </div>
+        )}
       </section>
 
-      {/* Add SOP modal */}
-      {showForm && (
-        <SOPModal onClose={closeForm}>
-          <form onSubmit={add} className="min-h-0 overflow-y-auto">
-            <div className="space-y-5 p-5 sm:p-7">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Procedure details
-                </h3>
-                <p className="mt-1 text-sm leading-5 text-slate-500">
-                  Enter the SOP information and choose its acknowledgement
-                  requirements.
-                </p>
-              </div>
+      {viewing && <SopViewModal sop={viewing} onClose={() => setViewing(null)} />}
 
-              <Input
-                label="SOP Title"
-                required
-                value={form.title}
-                onChange={(event) =>
-                  setForm({ ...form, title: event.target.value })
-                }
-              />
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Select
-                  label="Department"
-                  value={form.department}
-                  options={["HR", "Company"].map((value) => ({
-                    value,
-                    label: value,
-                  }))}
-                  onChange={(event) =>
-                    setForm({ ...form, department: event.target.value })
-                  }
-                />
-
-                <Input
-                  label="Effective Date"
-                  type="date"
-                  required
-                  value={form.effectiveDate}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      effectiveDate: event.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <Select
-                label="Acknowledgement"
-                value={form.acknowledgement}
-                options={["Required", "Not Required"].map((value) => ({
-                  value,
-                  label: value,
-                }))}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    acknowledgement: event.target.value,
-                  })
-                }
-              />
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="mb-3 flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm ring-1 ring-slate-200">
-                    <FileText size={17} />
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Supporting document
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Attach the SOP document if available. This field is
-                      optional.
-                    </p>
-                  </div>
-                </div>
-
-                <FileUpload
-                  label="SOP Document (optional)"
-                  onFileSelect={setFile}
-                  helperText="PDF or Word document."
-                />
-              </div>
-            </div>
-
-            <footer className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-              <p className="text-xs leading-5 text-slate-500">
-                Fields marked as required must be completed.
-              </p>
-
-              <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeForm}
-                >
-                  Cancel
-                </Button>
-
-                <Button type="submit">
-                  <span className="inline-flex items-center gap-2">
-                    <Plus size={16} />
-                    Add SOP
-                  </span>
-                </Button>
-              </div>
-            </footer>
-          </form>
-        </SOPModal>
+      {form && (
+        <SopFormModal
+          editing={form.editing}
+          onClose={() => setForm(null)}
+          onSaved={() => {
+            setForm(null);
+            reload();
+          }}
+        />
       )}
     </div>
   );
 }
-
-export default SOPs;

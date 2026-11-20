@@ -10,6 +10,7 @@ import {
   KanbanSquare,
   Gauge,
   Bug,
+  BookOpenCheck,
 } from "lucide-react";
 import { ROLES } from "../constants/roles";
 
@@ -27,6 +28,7 @@ const ICONS = {
   kanban: <KanbanSquare aria-hidden="true" />,
   progress: <Gauge aria-hidden="true" />,
   bugs: <Bug aria-hidden="true" />,
+  sops: <BookOpenCheck aria-hidden="true" />,
 };
 
 const PROJECT_LEAD_NAV_SECTIONS = [
@@ -86,6 +88,7 @@ const PROJECT_LEAD_NAV_SECTIONS = [
         path: "/project-lead/progress",
         icon: ICONS.progress,
       },
+      { label: "SOPs", path: "/project-lead/sops", icon: ICONS.sops },
     ],
   },
 ];

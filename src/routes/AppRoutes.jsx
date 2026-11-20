@@ -10,7 +10,7 @@ import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import AdminCompanyPolicies from "../pages/admin/CompanyPolicies";
 import AdminRolesResponsibilities from "../pages/admin/RolesResponsibilities";
 import AdminPeopleManagement from "../pages/admin/PeopleManagement";
-import AdminSOPs from "../pages/hr/SOPs";
+import SOPs from "../pages/hr/SOPs";
 
 import AdminHRMS from "../pages/admin/HRMS";
 import AdminClientManagement from "../pages/admin/ClilentManagement";
@@ -136,7 +136,7 @@ function AppRoutes() {
               path="/admin/company-policies"
               element={<AdminCompanyPolicies />}
             />
-            <Route path="/admin/sops" element={<AdminSOPs />} />
+            <Route path="/admin/sops" element={<SOPs />} />
             <Route
               path="/admin/roles-responsibilities"
               element={<AdminRolesResponsibilities />}
@@ -199,6 +199,7 @@ function AppRoutes() {
               element={<HREmployeeHierarchy />}
             />
             <Route path="/hr/notifications" element={<HRNotifications />} />
+            <Route path="/hr/sops" element={<SOPs />} />
           </Route>
         </Route>
 
@@ -208,6 +209,7 @@ function AppRoutes() {
             <Route path="/bd/clients" element={<BDClient />} />
             <Route path="/bd/projects" element={<BDProjectManagement />} />
             <Route path="/bd/notifications" element={<BDNotifications />} />
+            <Route path="/bd/sops" element={<SOPs />} />
             <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />
             <Route path="/bd/leave" element={<LeaveRequest />} />
             <Route path="/bd/brd" element={<BRDUpload />} />
@@ -271,6 +273,7 @@ function AppRoutes() {
               path="/developer/notifications"
               element={<Notifications />}
             />
+            <Route path="/developer/sops" element={<SOPs />} />
           </Route>
         </Route>
 
@@ -288,6 +291,7 @@ function AppRoutes() {
             <Route path="/tester/issues" element={<TesterIssues />} />
             <Route path="/tester/attendance" element={<AttendanceMonthly />} />
             <Route path="/tester/notifications" element={<TesterNotifications />} />
+            <Route path="/tester/sops" element={<SOPs />} />
             <Route path="/tester/retesting" element={<Retesting />} />
             <Route path="/tester/client-testing" element={<ClientTesting />} />
             <Route path="/tester/build-testing" element={<BuildTesting />} />
@@ -315,6 +319,7 @@ function AppRoutes() {
           <Route path="/project-lead/er-diagram" element={<ERDiagram />} />
           <Route path="/project-lead/flowchart" element={<Flowchart />} />
           <Route path="/project-lead/phases" element={<Phases />} />
+          <Route path="/project-lead/sops" element={<SOPs />} />
           <Route path="/project-lead/bugs" element={<Bugs />} />
 
           <Route
