@@ -9,6 +9,7 @@ import {
   Bell,
   CalendarCheck,
   CalendarArrowDownIcon,
+  BookOpenCheck,
 } from "lucide-react";
 const I = {
   overview: <LayoutDashboard aria-hidden="true" />,
@@ -21,6 +22,7 @@ const I = {
   bugs: <Bug aria-hidden="true" />,
   notifications: <Bell aria-hidden="true" />,
   leave: <CalendarArrowDownIcon aria-hidden="true" />,
+  sops: <BookOpenCheck aria-hidden="true" />,
 };
 export const DEVELOPER_NAV_SECTIONS = [
   {
@@ -50,6 +52,7 @@ export const DEVELOPER_NAV_SECTIONS = [
         path: "/developer/notifications",
         icon: I.notifications,
       },
+      { label: "SOPs", path: "/developer/sops", icon: I.sops },
 
       {
         label: "My Attendance",

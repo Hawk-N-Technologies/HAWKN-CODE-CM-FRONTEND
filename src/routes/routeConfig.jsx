@@ -174,11 +174,12 @@ const HR_NAV_SECTIONS = [
         path: "/hr/internship-probation",
         icon: ICONS.internship,
       },
-      // {
-      //   label: "Employee Hierarchy",
-      //   path: "/hr/employee-heirarchy",
-      //   icon: ICONS.hierarchy,
-      // },
+      {
+        label: "Employee Hierarchy",
+        path: "/hr/employee-hierarchy",
+        icon: ICONS.hierarchy,
+      },
+      { label: "SOPs", path: "/hr/sops", icon: ICONS.sop },
       {
         label: "Notifications",
         path: "/hr/notifications",
@@ -210,6 +211,7 @@ const BD_NAV_SECTIONS = [
       { label: "Clients", path: "/bd/clients", icon: ICONS.clients },
       { label: "Projects", path: "/bd/projects", icon: ICONS.projects },
       { label: "BRD", path: "/bd/brd", icon: ICONS.brd },
+      { label: "SOPs", path: "/bd/sops", icon: ICONS.sop },
       {
         label: "Notifications",
         path: "/bd/notifications",
@@ -252,21 +254,26 @@ const CLIENT_NAV_SECTIONS = [
       //   path: "/client/phases",
       //   icon: ICONS.checklist,
       // },
-      // {
-      //   label: "Phase Testing",
-      //   path: "/client/phase-testing",
-      //   icon: ICONS.testing,
-      // },
+      {
+        label: "Phase Approval",
+        path: "/client/phase-approval",
+        icon: ICONS.testing,
+      },
       {
         label: "Bugs",
         path: "/client/bugs",
         icon: ICONS.bugs,
       },
-      // {
-      //   label: "Delivery",
-      //   path: "/client/delivery",
-      //   icon: ICONS.delivery,
-      // },
+      {
+        label: "Delivery",
+        path: "/client/delivery",
+        icon: ICONS.delivery,
+      },
+      {
+        label: "Training",
+        path: "/client/training",
+        icon: ICONS.internship,
+      },
     ],
   },
   {
@@ -281,6 +288,15 @@ const CLIENT_NAV_SECTIONS = [
         label: "BRD Approval",
         path: "/client/brd-approval",
         icon: ICONS.approval,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        label: "Notifications",
+        path: "/client/notifications",
+        icon: ICONS.notifications,
       },
     ],
   },

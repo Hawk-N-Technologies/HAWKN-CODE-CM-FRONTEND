@@ -3,9 +3,18 @@ import { useNavigate } from "react-router-dom";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import TableSearch from "../../components/tables/TableSearch";
+import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
-const FILTERS = ["All", "Unread", "TASK_ASSIGNED"];
+// "TASK_ASSIGNED" → "Task Assigned"
+const typeLabel = (type) =>
+  String(type || "")
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 function formatTime(value) {
   if (!value) return "Time unavailable";
@@ -36,6 +45,12 @@ export default function Notifications() {
   const [filter, setFilter] = useState("All");
   const [actionError, setActionError] = useState("");
 
+  // All, Unread, then one button per kind of notification received
+  const filters = useMemo(
+    () => ["All", "Unread", ...new Set(notifications.map((item) => item.type))],
+    [notifications],
+  );
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -53,6 +68,9 @@ export default function Notifications() {
       return matchesFilter && matchesSearch;
     });
   }, [notifications, search, filter]);
+
+  // 10 per page
+  const pager = usePagination(filtered);
 
   async function handleMarkRead(id) {
     try {
@@ -84,9 +102,11 @@ export default function Notifications() {
         await handleMarkRead(item.id);
       }
 
+      // Developers who lead a project also get Project Lead links
       if (
         typeof item.link === "string" &&
-        item.link.startsWith("/developer/")
+        (item.link.startsWith("/developer/") ||
+          item.link.startsWith("/project-lead/"))
       ) {
         navigate(item.link);
       }
@@ -119,7 +139,7 @@ export default function Notifications() {
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-300 sm:text-[15px]">
-              Stay informed about task assignments and development updates.
+              Tasks, bugs, team changes and project updates.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -147,15 +167,17 @@ export default function Notifications() {
         </div>
       </div>
 
+      <PushAlertsCard />
+
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((value) => (
+        {filters.map((value) => (
           <Button
             key={value}
             size="sm"
             variant={filter === value ? "primary" : "outline"}
             onClick={() => setFilter(value)}
           >
-            {value === "TASK_ASSIGNED" ? "Task Assigned" : value}
+            {value === "All" || value === "Unread" ? value : typeLabel(value)}
           </Button>
         ))}
       </div>
@@ -187,7 +209,7 @@ export default function Notifications() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filtered.map((item) => (
+          {pager.pageItems.map((item) => (
             <article
               key={item.id}
               className={`rounded-cm-lg border bg-cm-card p-5 shadow-sm ${
@@ -209,7 +231,7 @@ export default function Notifications() {
                       {item.readAt ? "Read" : "Unread"}
                     </Badge>
 
-                    <Badge tone="neutral">{item.type}</Badge>
+                    <Badge tone="neutral">{typeLabel(item.type)}</Badge>
                   </div>
 
                   <p className="mt-2 text-sm text-cm-text-muted">
@@ -233,6 +255,14 @@ export default function Notifications() {
               </div>
             </article>
           ))}
+          {pager.hasPages && (
+            <TablePagination
+              page={pager.page}
+              pageSize={pager.pageSize}
+              total={pager.total}
+              onPageChange={pager.setPage}
+            />
+          )}
         </div>
       )}
     </section>

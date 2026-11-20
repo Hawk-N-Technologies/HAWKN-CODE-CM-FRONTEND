@@ -20,6 +20,8 @@ import Select from "../../components/common/Select";
 import Loader from "../../components/common/Loader";
 import MultiSelect from "../../components/common/MultiSelect";
 import { showToast } from "../../components/common/Toast";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const API_URL = "/api/operations";
 
@@ -286,6 +288,9 @@ function Operations() {
         .includes(query),
     );
   }, [projects, search]);
+
+  // 10 per page
+  const pager = usePagination(filteredProjects);
 
   const stats = useMemo(() => {
     const planned = projects.filter((project) =>
@@ -590,52 +595,62 @@ function Operations() {
                 </p>
               </div>
             ) : (
-              filteredProjects.map((project) => {
-                const active = String(project.id) === selectedId;
-                const status = getPlanningStatus(project);
+              <>
+                {pager.pageItems.map((project) => {
+                  const active = String(project.id) === selectedId;
+                  const status = getPlanningStatus(project);
 
-                return (
-                  <button
-                    key={project.id}
-                    type="button"
-                    onClick={() => selectProject(project)}
-                    className={[
-                      "w-full rounded-xl border p-4 text-left transition-all duration-200",
-                      active
-                        ? "border-blue-300 bg-blue-50 shadow-sm ring-1 ring-blue-100"
-                        : "border-transparent hover:border-slate-200 hover:bg-slate-50",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {getProjectCode(project)}
-                        </p>
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => selectProject(project)}
+                      className={[
+                        "w-full rounded-xl border p-4 text-left transition-all duration-200",
+                        active
+                          ? "border-blue-300 bg-blue-50 shadow-sm ring-1 ring-blue-100"
+                          : "border-transparent hover:border-slate-200 hover:bg-slate-50",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {getProjectCode(project)}
+                          </p>
 
-                        <p className="mt-1 truncate text-sm font-semibold text-slate-900">
-                          {getProjectName(project)}
-                        </p>
+                          <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                            {getProjectName(project)}
+                          </p>
+                        </div>
+
+                        {active && (
+                          <CheckCircle2
+                            size={17}
+                            className="shrink-0 text-blue-700"
+                          />
+                        )}
                       </div>
 
-                      {active && (
-                        <CheckCircle2
-                          size={17}
-                          className="shrink-0 text-blue-700"
-                        />
-                      )}
-                    </div>
+                      <p className="mt-2 truncate text-xs text-slate-500">
+                        Client: {getClientName(project)}
+                      </p>
 
-                    <p className="mt-2 truncate text-xs text-slate-500">
-                      Client: {getClientName(project)}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge tone="success">BRD approved</Badge>
-                      <Badge tone={status.tone}>{status.label}</Badge>
-                    </div>
-                  </button>
-                );
-              })
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Badge tone="success">BRD approved</Badge>
+                        <Badge tone={status.tone}>{status.label}</Badge>
+                      </div>
+                    </button>
+                  );
+                })}
+                {pager.hasPages && (
+                  <TablePagination
+                    page={pager.page}
+                    pageSize={pager.pageSize}
+                    total={pager.total}
+                    onPageChange={pager.setPage}
+                  />
+                )}
+              </>
             )}
           </div>
         </aside>

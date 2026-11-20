@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import axios from "axios";
+import { forgetThisDevice } from "../services/pushAlerts";
 
 export const AuthContext = createContext(undefined);
 
@@ -100,6 +101,9 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
+      // This device must stop getting this person's phone/laptop alerts
+      await forgetThisDevice();
+
       await axios.post(
         "/api/auth/logout",
         {},

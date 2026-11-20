@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process */
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -55,7 +56,7 @@ const rawBackendUrl =
 const backendUrl = rawBackendUrl.replace(/\/+$/, "");
 
 // Extract BACKEND_HOST (hostname:port if non-standard)
-let backendHost = backendUrl;
+let backendHost;
 try {
   const urlObj = new URL(backendUrl);
   backendHost = urlObj.host;

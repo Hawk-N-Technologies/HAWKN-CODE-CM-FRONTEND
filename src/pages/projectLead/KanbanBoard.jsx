@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import {
   Activity,
   ArrowLeft,
@@ -15,56 +16,32 @@ import {
 
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
+import { showToast } from "../../components/common/Toast";
+import {
+  getErrorMessage,
+  getMyProjects,
+} from "../../services/developerProjectService";
 
+// The real task workflow (same order as the backend)
 const COLUMNS = [
-  "Idle",
+  "Backlog",
+  "To Do",
   "In Progress",
-  "Developer Testing",
-  "Tester",
-  "Client Testing",
-  "Completed",
+  "Code Review",
+  "Testing",
+  "Done",
 ];
 
-const INITIAL = [
-  {
-    id: "TASK-001",
-    title: "Authentication API",
-    assignee: "Aarav Shah",
-    status: "In Progress",
-    priority: "High",
-  },
-  {
-    id: "TASK-002",
-    title: "Dashboard UI",
-    assignee: "Neha Joshi",
-    status: "Developer Testing",
-    priority: "Medium",
-  },
-  {
-    id: "TASK-003",
-    title: "Reports",
-    assignee: "Dev Patel",
-    status: "Idle",
-    priority: "Low",
-  },
-  {
-    id: "TASK-004",
-    title: "Payment Integration",
-    assignee: "Ishita Shah",
-    status: "Client Testing",
-    priority: "High",
-  },
-  {
-    id: "TASK-005",
-    title: "Profile Screen",
-    assignee: "Aarav Shah",
-    status: "Completed",
-    priority: "Medium",
-  },
-];
+// Done is permanently locked by the backend
+const LOCKED_COLUMN = "Done";
+
+const KANBAN_API = "/api/kanban";
+const axiosConfig = { withCredentials: true };
+
+const shortTaskId = (uuid) => `TASK-${String(uuid).slice(0, 6).toUpperCase()}`;
 
 const COLUMN_STYLES = {
-  Idle: {
+  Backlog: {
     accent: "bg-slate-400",
     icon: Circle,
     iconColor: "text-slate-500",
@@ -78,28 +55,28 @@ const COLUMN_STYLES = {
     count: "bg-blue-50 text-blue-700",
     border: "border-blue-100",
   },
-  "Developer Testing": {
+  "Code Review": {
     accent: "bg-indigo-500",
     icon: Code2,
     iconColor: "text-indigo-600",
     count: "bg-indigo-50 text-indigo-700",
     border: "border-indigo-100",
   },
-  Tester: {
+  Testing: {
     accent: "bg-violet-500",
     icon: Layers3,
     iconColor: "text-violet-600",
     count: "bg-violet-50 text-violet-700",
     border: "border-violet-100",
   },
-  "Client Testing": {
+  "To Do": {
     accent: "bg-amber-500",
     icon: Users,
     iconColor: "text-amber-600",
     count: "bg-amber-50 text-amber-700",
     border: "border-amber-100",
   },
-  Completed: {
+  Done: {
     accent: "bg-emerald-500",
     icon: CheckCircle2,
     iconColor: "text-emerald-600",
@@ -159,27 +136,102 @@ const MetricCard = ({
 );
 
 function KanbanBoard() {
-  const [tasks, setTasks] = useState(INITIAL);
+  const [projects, setProjects] = useState([]);
+  const [projectUuid, setProjectUuid] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [movingUuid, setMovingUuid] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const move = (id, direction) => {
-    setTasks((previous) =>
-      previous.map((task) => {
-        if (task.id !== id) return task;
+  // Projects this developer leads → first one selected
+  useEffect(() => {
+    let ignore = false;
 
-        const index = COLUMNS.indexOf(task.status);
+    getMyProjects()
+      .then((list) => {
+        if (ignore) return;
+        setProjects(list);
+        if (list.length) setProjectUuid(list[0].uuid);
+        else setIsLoading(false);
+      })
+      .catch((error) => {
+        if (ignore) return;
+        showToast.error(getErrorMessage(error, "Couldn't load your projects."));
+        setIsLoading(false);
+      });
 
-        const next = Math.max(
-          0,
-          Math.min(COLUMNS.length - 1, index + direction),
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Board of the selected project
+  useEffect(() => {
+    if (!projectUuid) return undefined;
+    let ignore = false;
+
+    axios
+      .get(`${KANBAN_API}/projects/${projectUuid}`, axiosConfig)
+      .then((response) => {
+        if (ignore) return;
+        const board = response.data.data;
+        setTasks(
+          (board.columns || []).flatMap((column) =>
+            column.tasks.map((task) => ({
+              id: shortTaskId(task.uuid),
+              uuid: task.uuid,
+              title: task.title,
+              assignee: task.assignee?.fullName || "",
+              status: task.status,
+              priority: task.priority,
+            })),
+          ),
         );
+      })
+      .catch((error) => {
+        if (!ignore) showToast.error(getErrorMessage(error, "Couldn't load the board."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
 
-        return {
-          ...task,
-          status: COLUMNS[next],
-        };
-      }),
-    );
+    return () => {
+      ignore = true;
+    };
+  }, [projectUuid, reloadKey]);
+
+  const selectProject = (uuid) => {
+    setIsLoading(true);
+    setTasks([]);
+    setProjectUuid(uuid);
   };
+
+  // ← / → : move one stage; the backend decides if it's allowed
+  const move = useCallback(
+    async (uuid, direction) => {
+      const task = tasks.find((item) => item.uuid === uuid);
+      if (!task) return;
+
+      const nextStatus = COLUMNS[COLUMNS.indexOf(task.status) + direction];
+      if (!nextStatus) return;
+
+      setMovingUuid(uuid);
+      try {
+        await axios.patch(
+          `${KANBAN_API}/tasks/${uuid}/status`,
+          { status: nextStatus },
+          axiosConfig,
+        );
+        showToast.success(`Moved to ${nextStatus}.`);
+        setReloadKey((key) => key + 1);
+      } catch (error) {
+        showToast.error(getErrorMessage(error, "This move isn't allowed."));
+      } finally {
+        setMovingUuid(null);
+      }
+    },
+    [tasks],
+  );
 
   const columnTasks = useMemo(
     () =>
@@ -196,19 +248,15 @@ function KanbanBoard() {
     const total = tasks.length;
 
     const completed = tasks.filter(
-      (task) => task.status === "Completed",
+      (task) => task.status === "Done",
     ).length;
 
-    const active = tasks.filter(
-      (task) =>
-        task.status === "In Progress" ||
-        task.status === "Developer Testing" ||
-        task.status === "Tester" ||
-        task.status === "Client Testing",
+    const active = tasks.filter((task) =>
+      ["In Progress", "Code Review", "Testing"].includes(task.status),
     ).length;
 
-    const highPriority = tasks.filter(
-      (task) => task.priority === "High",
+    const highPriority = tasks.filter((task) =>
+      ["High", "Critical"].includes(task.priority),
     ).length;
 
     return {
@@ -402,8 +450,25 @@ function KanbanBoard() {
           <span className="hidden h-4 w-px bg-slate-200 sm:block" />
 
           <span className="text-xs text-slate-400">
-            {stats.total} tasks distributed across {COLUMNS.length} stages
+            {isLoading
+              ? "Loading board…"
+              : `${stats.total} tasks distributed across ${COLUMNS.length} stages`}
           </span>
+
+          <select
+            aria-label="Select project"
+            value={projectUuid}
+            onChange={(event) => selectProject(event.target.value)}
+            disabled={!projects.length}
+            className="ml-auto h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {!projects.length && <option value="">No projects to show</option>}
+            {projects.map((project) => (
+              <option key={project.uuid} value={project.uuid}>
+                {project.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* BOARD COLUMNS */}
@@ -479,7 +544,7 @@ function KanbanBoard() {
 
                         return (
                           <article
-                            key={task.id}
+                            key={task.uuid}
                             className="group rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
                           >
                             {/* TASK CARD HEADER */}
@@ -538,8 +603,12 @@ function KanbanBoard() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={columnIndex === 0}
-                                onClick={() => move(task.id, -1)}
+                                disabled={
+                                  columnIndex === 0 ||
+                                  column === LOCKED_COLUMN ||
+                                  movingUuid !== null
+                                }
+                                onClick={() => move(task.uuid, -1)}
                               >
                                 <span className="flex items-center gap-1">
                                   <ArrowLeft size={13} />
@@ -553,9 +622,10 @@ function KanbanBoard() {
                                 size="sm"
                                 variant="outline"
                                 disabled={
-                                  columnIndex === COLUMNS.length - 1
+                                  columnIndex === COLUMNS.length - 1 ||
+                                  movingUuid !== null
                                 }
-                                onClick={() => move(task.id, 1)}
+                                onClick={() => move(task.uuid, 1)}
                               >
                                 <span className="flex items-center gap-1">
                                   <span className="hidden xl:inline">

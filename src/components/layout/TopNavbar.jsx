@@ -84,6 +84,8 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
     hr: "/hr/notifications",
     bde: "/bd/notifications",
     developer: "/developer/notifications",
+    tester: "/tester/notifications",
+    client: "/client/notifications",
   }[roleName];
 
   const unreadCount = Math.max(0, Number(notificationCount) || 0);
@@ -92,7 +94,7 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
     <header className="sticky top-0 z-40 h-[74px] shrink-0 border-b border-slate-200/70 bg-white">
       <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         {/* LEFT SECTION */}
-        <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           {/* Mobile Menu */}
           <button
             type="button"
@@ -115,10 +117,11 @@ function TopNavbar({ onMenuClick = () => {}, notificationCount = 0 }) {
               type="search"
               placeholder="Search anything..."
               aria-label="Search dashboard"
-              className="h-[42px] w-full rounded-xl border border-transparent bg-[#f4f6f9] pl-10 pr-20 text-[13px] font-medium text-slate-700 outline-none transition-all placeholder:font-normal placeholder:text-slate-400 hover:bg-[#f0f3f7] focus:border-slate-200 focus:bg-white focus:ring-[3px] focus:ring-cm-navy-950/5"
+              className="h-[42px] w-full rounded-xl border border-transparent bg-[#f4f6f9] pl-10 pr-3 text-[13px] sm:pr-20 font-medium text-slate-700 outline-none transition-all placeholder:font-normal placeholder:text-slate-400 hover:bg-[#f0f3f7] focus:border-slate-200 focus:bg-white focus:ring-[3px] focus:ring-cm-navy-950/5"
             />
 
-            <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-medium text-slate-400 shadow-sm">
+            {/* Keyboard hint — only on screens with a keyboard */}
+            <span className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-medium text-slate-400 shadow-sm sm:flex">
               <Command size={11} />K
             </span>
           </div>

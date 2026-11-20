@@ -8,7 +8,9 @@ import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
 import ErrorState from "../../components/common/ErrorState";
 import DataTable from "../../components/tables/DataTable";
+import TableSearch from "../../components/tables/TableSearch";
 import { showToast } from "../../components/common/Toast";
+import Modal from "../../components/common/Modal";
 
 import {
   getDeploymentPlan,
@@ -436,6 +438,7 @@ function DeploymentPlanning() {
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedUuid, setSelectedUuid] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -470,18 +473,27 @@ function DeploymentPlanning() {
     reload();
   };
 
+  // Opens the project's plan in a pop-up (Create Plan / Edit Plan / project picker)
   const selectProject = (uuid) => {
     setSelectedUuid(uuid);
-
-    if (uuid) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
   };
 
   const readyCount = useMemo(
     () => rows.filter((row) => row.readiness.isReady).length,
     [rows]
   );
+
+  // Search by project or client name
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+
+    return rows.filter((row) =>
+      `${row.project.name} ${row.project.clientName}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [rows, search]);
 
   const plannedCount = useMemo(
     () => rows.filter((row) => row.hasPlan).length,
@@ -705,34 +717,6 @@ function DeploymentPlanning() {
         </div>
       </section>
 
-      {/* Selected project's plan */}
-      {selectedUuid ? (
-        <PlanForm
-          key={selectedUuid}
-          projectUuid={selectedUuid}
-          onSaved={reload}
-        />
-      ) : (
-        !isLoading &&
-        !loadError &&
-        rows.length > 0 && (
-          <div className="flex items-start gap-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 p-5 sm:p-6">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-700">
-              <Rocket className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">
-                No project selected
-              </p>
-              <p className="mt-1 text-sm leading-5 text-slate-600">
-                Select a project above or use the Create Plan action in the
-                projects table to configure its deployment.
-              </p>
-            </div>
-          </div>
-        )
-      )}
-
       {/* All projects table */}
       {loadError ? (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -759,16 +743,54 @@ function DeploymentPlanning() {
             )}
           </div>
 
+          <div className="mb-4">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search project or client…"
+            />
+          </div>
+
           <DataTable
             columns={columns}
-            rows={rows.map((row) => ({
+            rows={visibleRows.map((row) => ({
               ...row,
               id: row.project.uuid,
             }))}
             isLoading={isLoading}
-            emptyMessage="No projects yet — create one in Project Management first."
+            emptyMessage={
+              search.trim()
+                ? "No projects match your search."
+                : "No projects yet — create one in Project Management first."
+            }
           />
         </section>
+      )}
+
+      {/* Plan pop-up */}
+      {selectedUuid && (
+        <Modal
+          onClose={() => setSelectedUuid("")}
+          eyebrow="DEPLOYMENT PLANNING"
+          title={(() => {
+            const row = rows.find((item) => item.project.uuid === selectedUuid);
+            return row ? `${row.hasPlan ? "Edit" : "Create"} Plan — ${row.project.name}` : "Deployment Plan";
+          })()}
+          description="Repository, server, CI/CD and live domain for this project."
+          icon={Rocket}
+          size="xl"
+        >
+          <div className="bg-slate-50 p-4 sm:p-6">
+            <PlanForm
+              key={selectedUuid}
+              projectUuid={selectedUuid}
+              onSaved={() => {
+                setSelectedUuid("");
+                reload();
+              }}
+            />
+          </div>
+        </Modal>
       )}
     </div>
   );

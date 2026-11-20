@@ -25,7 +25,8 @@ import Badge from "../../components/common/Badge";
 import Textarea from "../../components/common/TextArea";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
-import showAlert from "../../components/common/Alert";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const API_URL = "/api/brds";
 
@@ -430,6 +431,9 @@ export default function BRDApproval() {
     });
   }, [brds, activeFilter, search]);
 
+  // 10 rows per page
+  const brdPager = usePagination(filteredBRDs);
+
   const openDetails = async (brd) => {
     setSelectedBRD(brd);
     setComment("");
@@ -531,20 +535,7 @@ export default function BRDApproval() {
     const isApproval = action === "APPROVED";
 
     try {
-      const result = await showAlert.confirm({
-        title: isApproval ? "Approve this BRD?" : "Request changes?",
-        text: isApproval
-          ? "Your approval will complete the BRD approval workflow."
-          : "The BRD will be returned for corrections. Your reason will be saved.",
-        confirmButtonText: isApproval ? "Approve BRD" : "Request changes",
-        cancelButtonText: "Cancel",
-      });
-
-      const confirmed =
-        typeof result === "boolean" ? result : Boolean(result?.isConfirmed);
-
-      if (!confirmed) return;
-
+      // No extra "are you sure?" pop-up: the decision is made inside the review dialog
       setSubmitting(true);
 
       const response = await axios.patch(
@@ -806,7 +797,7 @@ export default function BRDApproval() {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {filteredBRDs.map((brd) => (
+                {brdPager.pageItems.map((brd) => (
                   <tr
                     key={brd.uuid || brd.id}
                     className="transition hover:bg-blue-50/40"
@@ -868,6 +859,17 @@ export default function BRDApproval() {
                 ))}
               </tbody>
             </table>
+
+            {brdPager.hasPages && (
+              <div className="px-5 pb-4">
+                <TablePagination
+                  page={brdPager.page}
+                  pageSize={brdPager.pageSize}
+                  total={brdPager.total}
+                  onPageChange={brdPager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>

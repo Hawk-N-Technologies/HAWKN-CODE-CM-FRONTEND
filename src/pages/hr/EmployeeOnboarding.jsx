@@ -8,6 +8,7 @@ import Select from "../../components/common/Select";
 import Loader from "../../components/common/Loader";
 import EmptyState from "../../components/common/EmptyState";
 import ErrorState from "../../components/common/ErrorState";
+import TableSearch from "../../components/tables/TableSearch";
 import { showToast } from "../../components/common/Toast";
 
 import {
@@ -19,6 +20,8 @@ import {
   startOnboarding,
   updateChecklistItem,
 } from "../../services/onboardingService";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -34,6 +37,8 @@ const EMPTY_FORM = {
   employmentType: "Full Time",
   joiningDate: "",
   phone1: "",
+  password: "",
+  confirmPassword: "",
 };
 
 const FILTERS = ["All", "Not Started", "In Progress", "Completed"];
@@ -351,13 +356,41 @@ function StartOnboardingForm({ roles, onCreated, onCancel }) {
                   })}
                 />
               </div>
+
+              {/* HR sets the final password. Only HR/Admin can change it later. */}
+              <Input
+                label="Password"
+                type="password"
+                required
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                error={errors.password?.message}
+                {...register("password", {
+                  required: "Password is required",
+                  minLength: { value: 8, message: "Password must be at least 8 characters" },
+                  maxLength: { value: 72, message: "Password must be at most 72 characters" },
+                })}
+              />
+
+              <Input
+                label="Confirm Password"
+                type="password"
+                required
+                autoComplete="new-password"
+                error={errors.confirmPassword?.message}
+                {...register("confirmPassword", {
+                  required: "Confirm the password",
+                  validate: (value, formValues) =>
+                    value === formValues.password || "Passwords do not match",
+                })}
+              />
             </div>
           </div>
 
           {/* Persistent footer */}
           <footer className="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-slate-50/90 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
             <p className="text-xs leading-5 text-slate-500">
-              The onboarding checklist will be generated when you submit.
+              The employee can log in with this password right away. The onboarding checklist will be generated when you submit.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -636,6 +669,7 @@ function EmployeeOnboarding() {
   const [loadError, setLoadError] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -686,18 +720,29 @@ function EmployeeOnboarding() {
     return result;
   }, [records]);
 
-  const visibleRecords = useMemo(
-    () =>
-      filter === "All"
-        ? records
-        : records.filter((record) => record.status === filter),
-    [records, filter],
-  );
+  const visibleRecords = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return records.filter((record) => {
+      const matchesFilter = filter === "All" || record.status === filter;
+      const matchesSearch =
+        !query ||
+        `${fullName(record.employee)} ${record.employee?.email ?? ""}`
+          .toLowerCase()
+          .includes(query);
+
+      return matchesFilter && matchesSearch;
+    });
+  }, [records, filter, search]);
+
+  // 10 per page
+  const pager = usePagination(visibleRecords);
 
   const handleCreated = (record) => {
     setRecords((previous) => [record, ...previous]);
     setIsFormOpen(false);
     setFilter("All");
+    setSearch(""); // so the new joiner is visible straight away
   };
 
   const handleChanged = (updated) => {
@@ -882,6 +927,16 @@ function EmployeeOnboarding() {
           )}
         </div>
 
+        {!isLoading && !loadError && records.length > 0 && (
+          <div className="mb-4">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search name or email…"
+            />
+          </div>
+        )}
+
         {isLoading ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <Loader label="Loading onboarding records…" />
@@ -909,12 +964,16 @@ function EmployeeOnboarding() {
         ) : visibleRecords.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <EmptyState
-              title={`No ${filter.toLowerCase()} onboarding`}
+              title={
+                search.trim()
+                  ? "No one matches your search"
+                  : `No ${filter.toLowerCase()} onboarding`
+              }
             />
           </div>
         ) : (
           <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            {visibleRecords.map((record) => (
+            {pager.pageItems.map((record) => (
               <OnboardingCard
                 key={record.uuid}
                 record={record}
@@ -922,6 +981,16 @@ function EmployeeOnboarding() {
                 onRemoved={handleRemoved}
               />
             ))}
+            {pager.hasPages && (
+              <div className="col-span-full">
+                <TablePagination
+                  page={pager.page}
+                  pageSize={pager.pageSize}
+                  total={pager.total}
+                  onPageChange={pager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>

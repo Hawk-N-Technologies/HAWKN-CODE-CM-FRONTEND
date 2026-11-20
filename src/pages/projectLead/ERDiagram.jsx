@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   FileImage,
@@ -11,6 +11,27 @@ import {
 import Button from "../../components/common/Button";
 import FileUpload from "../../components/common/FileUpload";
 import { showToast } from "../../components/common/Toast";
+import { getErrorMessage } from "../../services/developerProjectService";
+import {
+  getPlanningFileUrl,
+  getPlanningProjects,
+  getProjectPlanning,
+  saveProjectPlanning,
+} from "../../services/projectLeadPlanningService";
+
+// Same rules as the backend upload (planningUpload.js)
+const ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,.svg";
+const ALLOWED_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "webp", "svg"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+function validateFile(file) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    return "Upload a PDF, PNG, JPG, WEBP or SVG file.";
+  }
+  if (file.size > MAX_FILE_SIZE) return "The file must be 10 MB or smaller.";
+  return "";
+}
 
 function SectionHeading({ icon: Icon, title, description }) {
   return (
@@ -31,11 +52,96 @@ function SectionHeading({ icon: Icon, title, description }) {
 
 function ERDiagram() {
   const [file, setFile] = useState(null);
+  const [fileKey, setFileKey] = useState(0);
+  const [projects, setProjects] = useState([]);
+  const [projectUuid, setProjectUuid] = useState("");
+  const [planning, setPlanning] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const handleSave = () => {
-    if (!file) return;
+  // Projects this developer leads → first one selected
+  useEffect(() => {
+    let ignore = false;
 
-    showToast.success("ER diagram saved.");
+    getPlanningProjects()
+      .then((list) => {
+        if (ignore) return;
+        setProjects(list);
+        if (list.length) setProjectUuid(list[0].uuid);
+        else setIsLoading(false);
+      })
+      .catch((error) => {
+        if (ignore) return;
+        showToast.error(getErrorMessage(error, "Couldn't load your projects."));
+        setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Current planning of the selected project
+  useEffect(() => {
+    if (!projectUuid) return undefined;
+    let ignore = false;
+
+    getProjectPlanning(projectUuid)
+      .then((data) => {
+        if (!ignore) setPlanning(data);
+      })
+      .catch((error) => {
+        if (!ignore) showToast.error(getErrorMessage(error, "Couldn't load planning."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [projectUuid, reloadKey]);
+
+  const selectProject = (uuid) => {
+    setIsLoading(true);
+    setPlanning(null);
+    setFile(null);
+    setFileKey((key) => key + 1);
+    setProjectUuid(uuid);
+  };
+
+  const isUploaded = Boolean(planning?.erDiagramUploaded);
+
+  const handleSave = async () => {
+    if (!file || !projectUuid || !planning) return;
+
+    const problem = validateFile(file);
+    if (problem) {
+      showToast.error(problem);
+      return;
+    }
+
+    // Saving planning replaces these fields — send the current values back
+    // with the file so the deadline, description and stack are kept
+    const form = new FormData();
+    form.append("technologyStack", planning.technologyStack || "");
+    form.append("description", planning.description || "");
+    form.append("deadline", planning.deadline || "");
+    form.append("erDiagram", file);
+
+    setIsSaving(true);
+    try {
+      await saveProjectPlanning(projectUuid, form);
+      showToast.success("ER diagram saved.");
+      setFile(null);
+      setFileKey((key) => key + 1);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      showToast.error(getErrorMessage(error, "Couldn't save the ER diagram."));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -95,6 +201,52 @@ function ERDiagram() {
         </div>
 
         <div className="flex flex-col gap-5 p-5 sm:p-6">
+          {/* Project + current file */}
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex flex-col gap-1.5 text-xs font-semibold text-slate-600">
+              Project
+              <select
+                value={projectUuid}
+                onChange={(event) => selectProject(event.target.value)}
+                disabled={!projects.length || isSaving}
+                className="h-10 min-w-[16rem] rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {!projects.length && <option value="">No projects to show</option>}
+                {projects.map((project) => (
+                  <option key={project.uuid} value={project.uuid}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="text-sm">
+              {isLoading ? (
+                <span className="text-slate-500">Loading…</span>
+              ) : !projectUuid ? (
+                <span className="text-slate-500">You're not leading any projects yet.</span>
+              ) : isUploaded ? (
+                <span className="inline-flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    <CheckCircle2 size={12} />
+                    Uploaded
+                  </span>
+                  <a
+                    href={getPlanningFileUrl(projectUuid, "erDiagram")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-blue-600 hover:underline"
+                  >
+                    View current file
+                  </a>
+                </span>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  Not uploaded yet
+                </span>
+              )}
+            </div>
+          </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-2">
               <FileText size={16} className="text-blue-600" />
@@ -105,7 +257,9 @@ function ERDiagram() {
             </div>
 
             <FileUpload
+              key={fileKey}
               label="ER Diagram"
+              accept={ACCEPT}
               onFileSelect={setFile}
               helperText={file?.name ?? "Upload the project ER diagram."}
             />
@@ -190,7 +344,7 @@ function ERDiagram() {
         <div className="flex w-full justify-end sm:w-auto">
           <Button
             type="button"
-            disabled={!file}
+            disabled={!file || !planning || isSaving}
             onClick={handleSave}
           >
             <span className="inline-flex items-center justify-center gap-2">

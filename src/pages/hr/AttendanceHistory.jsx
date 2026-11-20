@@ -615,6 +615,7 @@ function AttendanceHistory() {
           <DataTable
             columns={columns}
             rows={records}
+            paginate={false}
             isLoading={isRefreshing}
             emptyMessage="No attendance records found."
           />

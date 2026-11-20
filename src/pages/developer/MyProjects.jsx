@@ -15,7 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 const getErrorMessage = (error, fallback = "Something went wrong.") =>
   error?.response?.data?.message || error?.message || fallback;

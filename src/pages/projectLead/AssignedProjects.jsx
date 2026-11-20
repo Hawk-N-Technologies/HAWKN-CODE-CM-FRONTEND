@@ -11,45 +11,46 @@ import {
 } from "lucide-react";
 
 import Badge from "../../components/common/Badge";
+import {
+  getErrorMessage,
+  getMyProjects,
+} from "../../services/developerProjectService";
+import { getProjectTeam } from "../../services/projectLeadTeamService";
 import DataTable from "../../components/tables/DataTable";
 import TableSearch from "../../components/tables/TableSearch";
 
-const PROJECTS = [
-  {
-    id: "PRJ-001",
-    name: "Acme Retail ERP",
-    client: "Acme Retail",
-    deadline: "2026-10-15",
-    team: 5,
-    progress: 72,
-    status: "In Progress",
-  },
-  {
-    id: "PRJ-002",
-    name: "Northstar Website",
-    client: "Northstar Foods",
-    deadline: "2026-11-02",
-    team: 4,
-    progress: 41,
-    status: "Planning",
-  },
-  {
-    id: "PRJ-003",
-    name: "Internal HRMS",
-    client: "Internal",
-    deadline: "2026-09-25",
-    team: 6,
-    progress: 79,
-    status: "In Progress",
-  },
-];
+// Same short ID as the other project pages
+const shortId = (uuid) => `PRJ-${String(uuid).slice(0, 6).toUpperCase()}`;
+
+// Projects that are still being worked on
+const ACTIVE_STATUSES = ["Planning", "In Development", "Testing", "On Hold"];
+
+// Team size = lead + developers + testers on the project's team
+async function loadTeamSize(projectUuid) {
+  try {
+    const { current } = await getProjectTeam(projectUuid);
+    return (
+      (current?.projectLead ? 1 : 0) +
+      (current?.developers?.length || 0) +
+      (current?.testers?.length || 0)
+    );
+  } catch {
+    return 1; // no team set up yet — just the lead
+  }
+}
 
 const getStatusTone = (status) => {
   switch (status) {
-    case "In Progress":
+    case "In Development":
+    case "Testing":
       return "info";
     case "Planning":
+    case "On Hold":
       return "warning";
+    case "Completed":
+      return "success";
+    case "Cancelled":
+      return "danger";
     default:
       return "neutral";
   }
@@ -277,24 +278,64 @@ function ProjectDetailsModal({ project, onClose }) {
 function AssignedProjects() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  // Projects this developer leads (+ team size of each)
+  useEffect(() => {
+    let ignore = false;
+
+    getMyProjects()
+      .then(async (list) => {
+        const teamSizes = await Promise.all(
+          list.map((project) => loadTeamSize(project.uuid)),
+        );
+        if (ignore) return;
+
+        setProjects(
+          list.map((project, index) => ({
+            id: shortId(project.uuid),
+            uuid: project.uuid,
+            name: project.name,
+            client: project.client?.name || "—",
+            deadline: project.deadline,
+            team: teamSizes[index],
+            progress: project.progress ?? 0,
+            status: project.status,
+          })),
+        );
+        setLoadError("");
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getErrorMessage(error, "Couldn't load your projects."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    if (!q) return PROJECTS;
+    if (!q) return projects;
 
-    return PROJECTS.filter((project) =>
+    return projects.filter((project) =>
       [project.id, project.name, project.client, project.status].some(
         (value) => String(value).toLowerCase().includes(q),
       ),
     );
-  }, [search]);
+  }, [search, projects]);
 
-  const activeProjects = PROJECTS.filter(
-    (project) => project.status === "In Progress",
+  const activeProjects = projects.filter((project) =>
+    ACTIVE_STATUSES.includes(project.status),
   ).length;
 
-  const totalTeamMembers = PROJECTS.reduce(
+  const totalTeamMembers = projects.reduce(
     (total, project) => total + project.team,
     0,
   );
@@ -412,7 +453,7 @@ function AssignedProjects() {
                 Total Projects
               </p>
               <p className="mt-0.5 text-2xl font-bold leading-7 tabular-nums text-white">
-                {PROJECTS.length}
+                {projects.length}
               </p>
             </div>
           </div>
@@ -445,7 +486,7 @@ function AssignedProjects() {
             </div>
 
             <p className="mt-4 text-2xl font-bold tabular-nums text-slate-800">
-              {PROJECTS.length}
+              {projects.length}
             </p>
             <p className="mt-1 text-sm font-medium text-slate-500">
               Assigned Projects
@@ -509,7 +550,7 @@ function AssignedProjects() {
           <div className="flex shrink-0 items-center gap-2 self-start rounded-lg bg-slate-100 px-3 py-2 sm:self-center">
             <span className="h-2 w-2 rounded-full bg-blue-500" />
             <span className="text-xs font-semibold tabular-nums text-slate-600">
-              {filtered.length} of {PROJECTS.length} Projects
+              {filtered.length} of {projects.length} Projects
             </span>
           </div>
         </div>
@@ -524,11 +565,22 @@ function AssignedProjects() {
           </div>
 
           <div className="min-w-0">
-            <DataTable
-              columns={columns}
-              rows={filtered}
-              emptyMessage="No assigned projects found."
-            />
+            {loadError ? (
+              <p className="px-6 py-10 text-center text-sm text-red-600">
+                {loadError}
+              </p>
+            ) : (
+              <DataTable
+                columns={columns}
+                rows={filtered}
+                isLoading={isLoading}
+                emptyMessage={
+                  search
+                    ? "No projects match your search."
+                    : "You're not leading any projects yet."
+                }
+              />
+            )}
           </div>
         </div>
       </section>

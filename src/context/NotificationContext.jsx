@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { io } from "socket.io-client";
@@ -15,9 +16,14 @@ import {
 
 const NotificationContext = createContext(null);
 
+// The login cookie belongs to the portal's own address (the API is reached
+// through the /api proxy), so live updates connect through the same address
+// — nginx / the Vite dev proxy forward /socket.io to the API.
+// Do NOT fall back to VITE_BACKEND_URL: vite.config always injects it, and a
+// direct connection to the API host is sent without the login cookie.
+// VITE_SOCKET_URL (or VITE_API_URL) can still override on purpose.
 const rawSocketUrl =
   import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_BACKEND_URL ||
   import.meta.env.VITE_API_URL ||
   (typeof window !== "undefined" ? window.location.origin : "");
 
@@ -30,12 +36,16 @@ export function NotificationProvider({ enabled, children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(Boolean(enabled));
   const [error, setError] = useState("");
+  // Ids already in the list — decides (synchronously) whether a live
+  // notification is new, so the unread badge goes up exactly once
+  const knownIdsRef = useRef(new Set());
 
   const refresh = useCallback(async () => {
     if (!enabled) return;
 
     try {
       const data = await fetchNotifications({ limit: 50 });
+      knownIdsRef.current = new Set(data.notifications.map((item) => item.id));
       setNotifications(data.notifications);
       setUnreadCount(data.unreadCount);
       setError("");
@@ -65,6 +75,7 @@ export function NotificationProvider({ enabled, children }) {
 
         if (!active) return;
 
+        knownIdsRef.current = new Set(data.notifications.map((item) => item.id));
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount);
         setError("");
@@ -88,18 +99,13 @@ export function NotificationProvider({ enabled, children }) {
     });
 
     socket.on("notification:new", (notification) => {
-      let wasAdded = false;
+      // Already showing it (e.g. it arrived again after a reconnect) → ignore
+      if (knownIdsRef.current.has(notification.id)) return;
+      knownIdsRef.current.add(notification.id);
 
-      setNotifications((current) => {
-        if (current.some((item) => item.id === notification.id)) {
-          return current;
-        }
+      setNotifications((current) => [notification, ...current].slice(0, 50));
 
-        wasAdded = true;
-        return [notification, ...current].slice(0, 50);
-      });
-
-      if (wasAdded && !notification.readAt) {
+      if (!notification.readAt) {
         setUnreadCount((count) => count + 1);
       }
     });

@@ -12,6 +12,12 @@ export async function getMyProjects() {
   return res.data.data;
 }
 
+// Project Lead dashboard numbers: { activePhases, openTasks, completedTasks }
+export async function getMySummary() {
+  const res = await axios.get("/api/developer/projects/summary", config);
+  return res.data.data;
+}
+
 // Any axios error → a message a human can read
 export function getErrorMessage(error, fallback = "Something went wrong. Please try again.") {
   if (error?.response?.status === 401) return "Your session has expired. Please log in again.";

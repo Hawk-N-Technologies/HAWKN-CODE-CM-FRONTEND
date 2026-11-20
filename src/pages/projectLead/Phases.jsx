@@ -10,7 +10,6 @@ import {
   Activity,
   Plus,
   Pencil,
-  Trash2,
   X,
   AlertCircle,
   Flag,
@@ -23,6 +22,7 @@ import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
 import { showToast } from "../../components/common/Toast";
+import InlineDeleteButton from "../../components/common/InlineDeleteButton";
 
 const STATUS_OPTIONS = [
   { value: "Not Started", label: "Not Started" },
@@ -31,6 +31,15 @@ const STATUS_OPTIONS = [
   { value: "On Hold", label: "On Hold" },
 ];
 
+// Testing module badges
+const TEST_TONE = { Pending: "warning", Passed: "success", Failed: "danger" };
+const CLIENT_TONE = {
+  Pending: "info",
+  Approved: "success",
+  Rejected: "danger",
+  "Changes Requested": "warning",
+};
+
 const EMPTY_FORM = {
   name: "",
   description: "",
@@ -38,23 +47,12 @@ const EMPTY_FORM = {
   endDate: "",
   status: "Not Started",
   sortOrder: 0,
+  needsClientApproval: false,
 };
 
 const getErrorMessage = (error, fallback) =>
   error.response?.data?.message || fallback;
 
-const getStatusTone = (status) => {
-  switch (status) {
-    case "Completed":
-      return "success";
-    case "In Progress":
-      return "info";
-    case "On Hold":
-      return "warning";
-    default:
-      return "neutral";
-  }
-};
 
 const getStatusClasses = (status) => {
   const styles = {
@@ -164,12 +162,6 @@ function ModalHeader({ mode, onClose, disabled }) {
       eyebrow: "PHASE MANAGEMENT",
       title: "Edit Phase",
       description: "Update the development phase details and configuration.",
-    },
-    delete: {
-      icon: Trash2,
-      eyebrow: "PHASE MANAGEMENT",
-      title: "Delete Phase",
-      description: "Review the phase information before deleting it.",
     },
   };
 
@@ -297,6 +289,26 @@ function PhaseFormFields({ values, onChange, disabled }) {
           </p>
         </div>
       </div>
+
+      {/* Testing module: the client approves this phase after the tester passes it */}
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-600"
+          checked={Boolean(values.needsClientApproval)}
+          onChange={(e) => onChange("needsClientApproval", e.target.checked)}
+          disabled={disabled}
+        />
+        <span>
+          <span className="block text-sm font-semibold text-slate-800">
+            Needs client approval
+          </span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            Usually the UI / design phase. Once the tester passes it, the client
+            approves it, rejects it or asks for changes.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }
@@ -319,6 +331,8 @@ function Phases() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Two-click inline delete: which card is showing "Confirm delete?"
+  const [confirmDeleteUuid, setConfirmDeleteUuid] = useState(null);
 
   const [modal, setModal] = useState({
     open: false,
@@ -629,6 +643,7 @@ function Phases() {
       endDate: form.endDate || null,
       status: form.status,
       sortOrder: Number(form.sortOrder),
+      needsClientApproval: Boolean(form.needsClientApproval),
     };
 
     setCreating(true);
@@ -681,6 +696,7 @@ function Phases() {
       endDate: phase.endDate || "",
       status: phase.status || "Not Started",
       sortOrder: phase.sortOrder ?? 0,
+      needsClientApproval: Boolean(phase.needsClientApproval),
     });
 
     setModal({
@@ -707,6 +723,7 @@ function Phases() {
       endDate: editForm.endDate || null,
       status: editForm.status,
       sortOrder: Number(editForm.sortOrder),
+      needsClientApproval: Boolean(editForm.needsClientApproval),
     };
 
     setSaving(true);
@@ -754,41 +771,32 @@ function Phases() {
   // DELETE PHASE
   // =====================================================
 
-  const openDeleteModal = (phase) => {
-    setModal({
-      open: true,
-      mode: "delete",
-      phase,
-    });
-  };
 
-  const deletePhase = async () => {
-    if (!modal.phase?.uuid) return;
+  const deletePhase = async (phase) => {
+    if (confirmDeleteUuid !== phase.uuid) {
+      setConfirmDeleteUuid(phase.uuid);
+      return;
+    }
 
     setDeleting(true);
 
     try {
-      await axios.delete(`/api/phases/${modal.phase.uuid}`, {
+      await axios.delete(`/api/phases/${phase.uuid}`, {
         withCredentials: true,
       });
 
       setPhases((previous) =>
-        previous.filter((phase) => phase.uuid !== modal.phase.uuid),
+        previous.filter((item) => item.uuid !== phase.uuid),
       );
 
-      setModal({
-        open: false,
-        mode: "",
-        phase: null,
-      });
-
-      showToast.success("Phase deleted successfully.");
+      showToast.success(`Phase "${phase.name}" deleted.`);
     } catch (error) {
       showToast.error(
         getErrorMessage(error, "Failed to delete phase."),
       );
     } finally {
       setDeleting(false);
+      setConfirmDeleteUuid(null);
     }
   };
 
@@ -1153,6 +1161,26 @@ function Phases() {
                     </div>
                   </div>
 
+                  {/* TESTING: tester sign-off + client approval */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <Badge tone={TEST_TONE[phase.testStatus] ?? "warning"}>
+                      Test: {phase.testStatus ?? "Pending"}
+                    </Badge>
+                    {phase.needsClientApproval && (
+                      <Badge tone={CLIENT_TONE[phase.clientApprovalStatus] ?? "neutral"}>
+                        Client:{" "}
+                        {phase.clientApprovalStatus
+                          ? phase.clientApprovalStatus === "Pending"
+                            ? "Waiting"
+                            : phase.clientApprovalStatus
+                          : "After testing"}
+                      </Badge>
+                    )}
+                    {phase.clientNote && phase.clientApprovalStatus !== "Approved" && (
+                      <span className="text-slate-500">“{phase.clientNote}”</span>
+                    )}
+                  </div>
+
                   {/* PHASE PROGRESS */}
                   <div className="mt-5 rounded-xl bg-slate-50 p-4">
                     <div className="mb-2 flex items-center justify-between gap-3">
@@ -1234,15 +1262,13 @@ function Phases() {
                         </span>
                       </Button>
 
-                      <button
-                        type="button"
-                        onClick={() => openDeleteModal(phase)}
-                        disabled={modalBusy}
-                        className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
+                      <InlineDeleteButton
+                        isConfirming={confirmDeleteUuid === phase.uuid}
+                        loading={deleting && confirmDeleteUuid === phase.uuid}
+                        disabled={modalBusy && !(deleting && confirmDeleteUuid === phase.uuid)}
+                        onDelete={() => deletePhase(phase)}
+                        onKeep={() => setConfirmDeleteUuid(null)}
+                      />
                     </div>
                   </div>
                 </article>
@@ -1408,97 +1434,6 @@ function Phases() {
             {/* =================================================
                 DELETE PHASE MODAL
             ================================================== */}
-            {modal.mode === "delete" && (
-              <>
-                <div className="space-y-4 overflow-y-auto p-6">
-                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
-                      <AlertCircle size={20} />
-                    </div>
-
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-red-800">
-                        Confirm phase deletion
-                      </h3>
-
-                      <p className="mt-1 text-sm leading-6 text-red-700">
-                        Are you sure you want to delete{" "}
-                        <span className="font-bold">
-                          {modal.phase?.name}
-                        </span>
-                        ? This action cannot be undone.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Phase Details
-                    </p>
-
-                    <p className="mt-2 break-words text-sm font-semibold text-slate-800">
-                      {modal.phase?.name}
-                    </p>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      {modal.phase?.description ||
-                        "No description provided."}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Badge tone={getStatusTone(modal.phase?.status)}>
-                        {modal.phase?.status}
-                      </Badge>
-
-                      <Badge tone="neutral">
-                        Sort order: {modal.phase?.sortOrder ?? 0}
-                      </Badge>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3">
-                      <div>
-                        <p className="text-xs text-slate-400">
-                          Start Date
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-slate-700">
-                          {formatDate(modal.phase?.startDate)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-slate-400">
-                          End Date
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-slate-700">
-                          {formatDate(modal.phase?.endDate)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* DELETE MODAL FOOTER */}
-                <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-                  <Button
-                    type="button"
-                    onClick={closeModal}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </Button>
-
-                  <button
-                    type="button"
-                    onClick={deletePhase}
-                    disabled={deleting}
-                    className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Trash2 size={15} />
-                    {deleting ? "Deleting..." : "Delete Phase"}
-                  </button>
-                </div>
-              </>
-            )}
           </section>
         </div>
       )}

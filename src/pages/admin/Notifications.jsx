@@ -14,8 +14,11 @@ import {
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import TableSearch from "../../components/tables/TableSearch";
+import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
 import { createTestNotification } from "../../services/notificationService";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 // -----------------------------------------------------------------------------
 // Constants + helpers
@@ -232,6 +235,9 @@ function Notifications() {
     });
   }, [notifications, search, filter]);
 
+  // 10 per page
+  const pager = usePagination(filtered);
+
   const readCount = notifications.length - unreadCount;
 
   async function handleMarkRead(id) {
@@ -397,6 +403,10 @@ function Notifications() {
             icon={Bell}
           />
 
+          <div className="mb-4">
+            <PushAlertsCard />
+          </div>
+
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 border-y border-slate-100 py-4">
             {FILTERS.map((value) => {
@@ -484,7 +494,7 @@ function Notifications() {
         ) : (
           /* Notification cards */
           <div className="mt-5 flex flex-col gap-3">
-            {filtered.map((item) => (
+            {pager.pageItems.map((item) => (
               <NotificationCard
                 key={item.id}
                 item={item}
@@ -492,6 +502,14 @@ function Notifications() {
                 onMarkRead={handleMarkRead}
               />
             ))}
+            {pager.hasPages && (
+              <TablePagination
+                page={pager.page}
+                pageSize={pager.pageSize}
+                total={pager.total}
+                onPageChange={pager.setPage}
+              />
+            )}
           </div>
         )}
 

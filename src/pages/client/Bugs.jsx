@@ -18,11 +18,14 @@ import {
 } from "lucide-react";
 
 import Select from "../../components/common/Select";
+import TableSearch from "../../components/tables/TableSearch";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
 import Badge from "../../components/common/Badge";
 import { showToast } from "../../components/common/Toast";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -189,6 +192,7 @@ function SummaryCard({ label, value, icon: Icon, style }) {
 export default function Bugs() {
   const [projects, setProjects] = useState([]);
   const [issues, setIssues] = useState([]);
+  const [search, setSearch] = useState("");
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
@@ -293,6 +297,23 @@ export default function Bugs() {
     ],
     [issues],
   );
+
+  // Search by title, type, severity or status
+  const visibleIssues = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return issues;
+
+    return issues.filter((issue) =>
+      [issue.title, issue.classification, issue.severity, issue.status]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [issues, search]);
+
+  // 10 per page
+  const pager = usePagination(visibleIssues);
 
   // -------------------------------------------------------------------------
   // Modal Controls
@@ -477,6 +498,16 @@ export default function Bugs() {
           />
         </div>
 
+        {issues.length > 0 && (
+          <div className="border-b border-slate-200 px-4 py-3 sm:px-5">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search issues…"
+            />
+          </div>
+        )}
+
         {/* Loading State */}
         {loadingIssues ? (
           <div className="flex min-h-48 items-center justify-center p-10">
@@ -507,10 +538,14 @@ export default function Bugs() {
               Raise your first ticket
             </button>
           </div>
+        ) : visibleIssues.length === 0 ? (
+          <div className="p-10 text-center text-sm text-cm-text-muted">
+            No issues match your search.
+          </div>
         ) : (
           /* Issue List */
           <div className="divide-y divide-slate-200">
-            {issues.map((issue) => (
+            {pager.pageItems.map((issue) => (
               <article
                 key={issue.uuid || issue.id}
                 className="space-y-3 p-4 transition-colors hover:bg-slate-50/80 sm:p-5"
@@ -600,6 +635,16 @@ export default function Bugs() {
                 )}
               </article>
             ))}
+            {pager.hasPages && (
+              <div className="px-4 pb-4 sm:px-5">
+                <TablePagination
+                  page={pager.page}
+                  pageSize={pager.pageSize}
+                  total={pager.total}
+                  onPageChange={pager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -660,7 +705,8 @@ export default function Bugs() {
               </button>
             </div>
 
-            <div className="relative mt-5 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            {/* Decorative tags — hidden on phones to leave room for the form */}
+            <div className="relative mt-5 hidden flex-wrap items-center gap-2 text-xs text-slate-300 sm:flex">
               <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
                 Project support
               </span>

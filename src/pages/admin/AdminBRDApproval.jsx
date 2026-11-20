@@ -21,7 +21,8 @@ import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
-import showAlert from "../../components/common/Alert";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const API_URL = "/api/brds";
 
@@ -290,6 +291,9 @@ function AdminBRDApproval() {
     });
   }, [brds, activeFilter, search]);
 
+  // 10 rows per page
+  const brdPager = usePagination(filteredBRDs);
+
   const openDetails = async (brd) => {
     setSelectedBRD(brd);
     setReviewAction(null);
@@ -340,17 +344,7 @@ function AdminBRDApproval() {
       return;
     }
 
-    const confirmed = await showAlert.confirm({
-      title: isReject ? "Reject this BRD?" : "Approve this BRD?",
-      text: isReject
-        ? "The BRD will be returned for corrections."
-        : "The BRD will be forwarded for client approval.",
-      confirmButtonText: isReject ? "Yes, reject" : "Yes, approve",
-      cancelButtonText: "Cancel",
-    });
-
-    if (!confirmed) return;
-
+    // No extra "are you sure?" pop-up: the decision is already made inside the review dialog
     setSubmitting(true);
 
     try {
@@ -584,7 +578,7 @@ function AdminBRDApproval() {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {filteredBRDs.map((brd) => {
+                {brdPager.pageItems.map((brd) => {
                   const canReview = brd.status === STATUS.PENDING;
 
                   return (
@@ -676,6 +670,17 @@ function AdminBRDApproval() {
                 })}
               </tbody>
             </table>
+
+            {brdPager.hasPages && (
+              <div className="px-5 pb-4">
+                <TablePagination
+                  page={brdPager.page}
+                  pageSize={brdPager.pageSize}
+                  total={brdPager.total}
+                  onPageChange={brdPager.setPage}
+                />
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -687,22 +692,24 @@ function AdminBRDApproval() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="brd-detail-title"
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-cm-lg border border-cm-border bg-cm-card shadow-xl"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-cm-card shadow-xl"
           >
-            <div className="flex items-start justify-between border-b border-cm-border p-5">
-              <div>
-                <p className="text-xs font-medium text-cm-text-muted">
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6 text-white flex items-start justify-between gap-4">
+              <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-16 h-40 w-40 rounded-full border border-white/10" />
+              <div aria-hidden="true" className="pointer-events-none absolute -right-1 -top-10 h-28 w-28 rounded-full border border-white/10" />
+              <div className="relative z-10 min-w-0">
+                <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
                   BRD REVIEW
-                </p>
+                </span>
 
                 <h2
                   id="brd-detail-title"
-                  className="mt-1 text-lg font-semibold text-cm-text"
+                  className="mt-3 text-2xl font-bold tracking-tight text-white"
                 >
                   {selectedBRD.projectName}
                 </h2>
 
-                <p className="mt-1 text-sm text-cm-text-muted">
+                <p className="mt-1 text-sm text-slate-300">
                   {selectedBRD.clientName}
                 </p>
               </div>
@@ -710,7 +717,7 @@ function AdminBRDApproval() {
               <button
                 type="button"
                 onClick={closeModals}
-                className="rounded-lg p-2 text-cm-text-muted hover:bg-cm-bg"
+                className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white disabled:opacity-50"
                 aria-label="Close details"
               >
                 <X className="h-5 w-5" />
@@ -852,18 +859,24 @@ function AdminBRDApproval() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="brd-decision-title"
-            className="w-full max-w-lg rounded-cm-lg border border-cm-border bg-cm-card shadow-xl"
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-cm-card shadow-xl"
           >
-            <div className="flex items-start justify-between border-b border-cm-border p-5">
-              <div>
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-6 text-white flex items-start justify-between gap-4">
+              <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-16 h-40 w-40 rounded-full border border-white/10" />
+              <div aria-hidden="true" className="pointer-events-none absolute -right-1 -top-10 h-28 w-28 rounded-full border border-white/10" />
+              <div className="relative z-10 min-w-0">
+                <span className="inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-200">
+                  BRD DECISION
+                </span>
+
                 <h2
                   id="brd-decision-title"
-                  className="text-lg font-semibold text-cm-text"
+                  className="mt-3 text-2xl font-bold tracking-tight text-white"
                 >
-                  {reviewAction === "APPROVED" ? "Approve BRD?" : "Reject BRD?"}
+                  {reviewAction === "APPROVED" ? "Approve BRD" : "Reject BRD"}
                 </h2>
 
-                <p className="mt-1 text-sm text-cm-text-muted">
+                <p className="mt-1 text-sm text-slate-300">
                   {selectedBRD.projectName}
                 </p>
               </div>
@@ -872,7 +885,7 @@ function AdminBRDApproval() {
                 type="button"
                 onClick={closeModals}
                 disabled={submitting}
-                className="rounded-lg p-2 text-cm-text-muted hover:bg-cm-bg disabled:opacity-50"
+                className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white disabled:opacity-50"
                 aria-label="Close decision dialog"
               >
                 <X className="h-5 w-5" />

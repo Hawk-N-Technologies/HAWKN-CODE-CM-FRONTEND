@@ -10,7 +10,7 @@ import AdminCompanyProfile from "../pages/admin/CompanyProfile";
 import AdminCompanyPolicies from "../pages/admin/CompanyPolicies";
 import AdminRolesResponsibilities from "../pages/admin/RolesResponsibilities";
 import AdminPeopleManagement from "../pages/admin/PeopleManagement";
-import AdminSOPs from "../pages/hr/SOPs";
+import SOPs from "../pages/hr/SOPs";
 
 import AdminHRMS from "../pages/admin/HRMS";
 import AdminClientManagement from "../pages/admin/ClilentManagement";
@@ -81,7 +81,11 @@ import ClientBugs from "../pages/client/Bugs";
 import ClientDelivery from "../pages/client/Delivery";
 import ClientPhases from "../pages/client/Phases";
 import ClientPhaseTesting from "../pages/client/PhaseTesting";
+import ClientTraining from "../pages/client/Training";
 import ClientProjectDetails from "../pages/client/ProjectDetails";
+import ClientNotifications from "../pages/client/Notifications";
+import TesterNotifications from "../pages/tester/Notifications";
+import TesterDelivery from "../pages/tester/Delivery";
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
@@ -132,7 +136,7 @@ function AppRoutes() {
               path="/admin/company-policies"
               element={<AdminCompanyPolicies />}
             />
-            <Route path="/admin/sops" element={<AdminSOPs />} />
+            <Route path="/admin/sops" element={<SOPs />} />
             <Route
               path="/admin/roles-responsibilities"
               element={<AdminRolesResponsibilities />}
@@ -190,11 +194,12 @@ function AppRoutes() {
               path="/hr/internship-probation"
               element={<HRInternshipProbation />}
             />
-            {/* <Route
-              path="/hr/employee-heirarchy"
+            <Route
+              path="/hr/employee-hierarchy"
               element={<HREmployeeHierarchy />}
-            /> */}
+            />
             <Route path="/hr/notifications" element={<HRNotifications />} />
+            <Route path="/hr/sops" element={<SOPs />} />
           </Route>
         </Route>
 
@@ -204,6 +209,7 @@ function AppRoutes() {
             <Route path="/bd/clients" element={<BDClient />} />
             <Route path="/bd/projects" element={<BDProjectManagement />} />
             <Route path="/bd/notifications" element={<BDNotifications />} />
+            <Route path="/bd/sops" element={<SOPs />} />
             <Route path="/bd/my-attendance" element={<AttendanceMonthly />} />
             <Route path="/bd/leave" element={<LeaveRequest />} />
             <Route path="/bd/brd" element={<BRDUpload />} />
@@ -220,9 +226,15 @@ function AppRoutes() {
             />
             <Route path="/client/phases" element={<ClientPhases />} />
             <Route
-              path="/client/phase-testing"
+              path="/client/phase-approval"
               element={<ClientPhaseTesting />}
             />
+            {/* old link → new name */}
+            <Route
+              path="/client/phase-testing"
+              element={<Navigate to="/client/phase-approval" replace />}
+            />
+            <Route path="/client/training" element={<ClientTraining />} />
             <Route path="/client/bugs" element={<ClientBugs />} />
             <Route path="/client/delivery" element={<ClientDelivery />} />
             <Route path="/client/brd" element={<ClientBRD />} />
@@ -230,6 +242,7 @@ function AppRoutes() {
               path="/client/brd-approval"
               element={<ClientBRDApproval />}
             />
+            <Route path="/client/notifications" element={<ClientNotifications />} />
           </Route>
         </Route>
 
@@ -260,6 +273,7 @@ function AppRoutes() {
               path="/developer/notifications"
               element={<Notifications />}
             />
+            <Route path="/developer/sops" element={<SOPs />} />
           </Route>
         </Route>
 
@@ -276,10 +290,13 @@ function AppRoutes() {
             <Route path="/tester/bugs" element={<TesterBugs />} />
             <Route path="/tester/issues" element={<TesterIssues />} />
             <Route path="/tester/attendance" element={<AttendanceMonthly />} />
+            <Route path="/tester/notifications" element={<TesterNotifications />} />
+            <Route path="/tester/sops" element={<SOPs />} />
             <Route path="/tester/retesting" element={<Retesting />} />
             <Route path="/tester/client-testing" element={<ClientTesting />} />
             <Route path="/tester/build-testing" element={<BuildTesting />} />
             <Route path="/tester/field-training" element={<FieldTraining />} />
+            <Route path="/tester/delivery" element={<TesterDelivery />} />
           </Route>
         </Route>
       </Route>
@@ -302,6 +319,7 @@ function AppRoutes() {
           <Route path="/project-lead/er-diagram" element={<ERDiagram />} />
           <Route path="/project-lead/flowchart" element={<Flowchart />} />
           <Route path="/project-lead/phases" element={<Phases />} />
+          <Route path="/project-lead/sops" element={<SOPs />} />
           <Route path="/project-lead/bugs" element={<Bugs />} />
 
           <Route

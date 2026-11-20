@@ -1300,6 +1300,7 @@ function ProjectManagement() {
             ) : projects.length > 0 ? (
               <DataTable
                 columns={columns}
+                paginate={false}
                 rows={projects.map((project) => ({
                   ...project,
                   id: project.uuid,

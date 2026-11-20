@@ -7,8 +7,12 @@ import {
 } from "lucide-react";
 import Loader from "../common/Loader";
 import EmptyState from "../common/EmptyState";
+import usePagination from "../../hooks/usePagination";
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+// Tables without server paging show this many rows per page
+const CLIENT_PAGE_SIZE = 10;
 
 function getPageNumbers(currentPage, totalPages) {
   if (totalPages <= 7) {
@@ -51,26 +55,46 @@ const DataTable = ({
   onPageSizeChange,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   isLoading = false,
+  // false → the page slices rows itself (server paging without `pagination`)
+  paginate = true,
+  // Optional (row, index) => unique key, when `id` alone isn't unique
+  rowKey,
 }) => {
-  const page = Math.max(1, Number(pagination?.page ?? 1));
-  const limit = Math.max(1, Number(pagination?.limit ?? 10));
-  const total = Math.max(0, Number(pagination?.total ?? rows.length));
+  // No `pagination` prop → page through `rows` here, 10 at a time
+  const clientPager = usePagination(rows, CLIENT_PAGE_SIZE);
+  const isClientPaged = !pagination && paginate && clientPager.hasPages;
+
+  const tablePagination = isClientPaged
+    ? {
+        page: clientPager.page,
+        limit: clientPager.pageSize,
+        total: clientPager.total,
+        totalPages: clientPager.totalPages,
+      }
+    : pagination;
+  const handlePageChange = isClientPaged ? clientPager.setPage : onPageChange;
+  const handlePageSizeChange = isClientPaged ? undefined : onPageSizeChange;
+  const visibleRows = isClientPaged ? clientPager.pageItems : rows;
+
+  const page = Math.max(1, Number(tablePagination?.page ?? 1));
+  const limit = Math.max(1, Number(tablePagination?.limit ?? 10));
+  const total = Math.max(0, Number(tablePagination?.total ?? visibleRows.length));
 
   const totalPages = Math.max(
     1,
-    Number(pagination?.totalPages ?? Math.ceil(total / limit)),
+    Number(tablePagination?.totalPages ?? Math.ceil(total / limit)),
   );
 
-  const hasPagination = Boolean(pagination);
+  const hasPagination = Boolean(tablePagination);
   const pageNumbers = getPageNumbers(page, totalPages);
 
-  const startItem = rows.length === 0 ? 0 : (page - 1) * limit + 1;
+  const startItem = visibleRows.length === 0 ? 0 : (page - 1) * limit + 1;
 
-  const endItem = Math.min((page - 1) * limit + rows.length, total);
+  const endItem = Math.min((page - 1) * limit + visibleRows.length, total);
 
   const goToPage = (nextPage) => {
     if (
-      typeof onPageChange !== "function" ||
+      typeof handlePageChange !== "function" ||
       nextPage < 1 ||
       nextPage > totalPages ||
       nextPage === page ||
@@ -79,7 +103,7 @@ const DataTable = ({
       return;
     }
 
-    onPageChange(nextPage);
+    handlePageChange(nextPage);
   };
 
   const changePageSize = (event) => {
@@ -88,9 +112,9 @@ const DataTable = ({
     if (
       Number.isFinite(nextLimit) &&
       nextLimit > 0 &&
-      typeof onPageSizeChange === "function"
+      typeof handlePageSizeChange === "function"
     ) {
-      onPageSizeChange(nextLimit);
+      handlePageSizeChange(nextLimit);
     }
   };
 
@@ -108,7 +132,12 @@ const DataTable = ({
   };
 
   const getRowKey = (row, index) =>
-    row?.id ?? row?.uuid ?? row?.userUuid ?? row?.employeeUuid ?? index;
+    rowKey?.(row, index) ??
+    row?.id ??
+    row?.uuid ??
+    row?.userUuid ??
+    row?.employeeUuid ??
+    index;
 
   const navButtonClass = [
     "inline-flex h-9 items-center justify-center gap-1.5",
@@ -163,7 +192,7 @@ const DataTable = ({
                   </div>
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : visibleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={Math.max(columns.length, 1)}
@@ -183,7 +212,7 @@ const DataTable = ({
                 </td>
               </tr>
             ) : (
-              rows.map((row, rowIndex) => (
+              visibleRows.map((row, rowIndex) => (
                 <tr
                   key={getRowKey(row, rowIndex)}
                   className={[
@@ -235,7 +264,7 @@ const DataTable = ({
 
           <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end">
             {/* Page size */}
-            {typeof onPageSizeChange === "function" && (
+            {typeof handlePageSizeChange === "function" && (
               <label className="flex items-center gap-2">
                 <span className="whitespace-nowrap text-xs font-medium text-slate-500">
                   Rows per page

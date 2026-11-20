@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
 import TableSearch from "../../components/tables/TableSearch";
+import PushAlertsCard from "../../components/notifications/PushAlertsCard";
 import { useNotifications } from "../../context/NotificationContext";
+import usePagination from "../../hooks/usePagination";
+import TablePagination from "../../components/tables/TablePagination";
 
 const FILTERS = [
   "All",
@@ -62,6 +65,9 @@ function Notifications() {
       return matchesFilter && matchesSearch;
     });
   }, [notifications, search, filter]);
+
+  // 10 per page
+  const pager = usePagination(filtered);
 
   async function handleMarkRead(id) {
     try {
@@ -138,6 +144,8 @@ function Notifications() {
         </div>
       </div>
 
+      <PushAlertsCard />
+
       {/* Notification Filters */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((value) => (
@@ -187,7 +195,7 @@ function Notifications() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filtered.map((item) => (
+          {pager.pageItems.map((item) => (
             <article
               key={item.id}
               className={`rounded-cm-lg border bg-cm-card p-5 shadow-sm ${
@@ -235,6 +243,14 @@ function Notifications() {
               </div>
             </article>
           ))}
+          {pager.hasPages && (
+            <TablePagination
+              page={pager.page}
+              pageSize={pager.pageSize}
+              total={pager.total}
+              onPageChange={pager.setPage}
+            />
+          )}
         </div>
       )}
     </section>
