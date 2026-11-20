@@ -51,6 +51,8 @@ export default function AdminHomePage() {
   }, [load]);
 
   const data = summary.data;
+  const capacity = data?.uid_capacity;
+  const usedPercent = capacity?.total ? (capacity.used / capacity.total) * 100 : 0;
 
   return (
     <main className="w-full space-y-6 p-4 sm:p-6">
@@ -82,14 +84,29 @@ export default function AdminHomePage() {
 
           <section>
             <h2 className="mb-2 font-semibold">Boxes</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <Stat label="Pending (open)" value={data.boxes.open} tone="warn" to="/manage/history?status=OPEN" />
-              <Stat label="Completed" value={data.boxes.completed} tone="good" to="/manage/history?status=COMPLETED" />
+              <Stat label="Completed (incl. verified)" value={data.boxes.completed} />
+              <Stat label="Verified" value={data.boxes.verified} tone="good" to="/manage/history?status=VERIFIED" />
+              <Stat label="Not yet verified" value={data.boxes.not_verified} tone="neutral" />
+              <Stat label="Mismatch" value={data.boxes.mismatch} tone="bad" to="/manage/history?status=MISMATCH" />
               <Stat label="Cancelled" value={data.boxes.cancelled} tone="muted" to="/manage/history?status=CANCELLED" />
             </div>
             <p className="mt-2 text-sm text-cm-text-muted">
               Today: {number(data.today.boxes_completed)} boxes completed, {number(data.today.products_packed)} products packed.
             </p>
+          </section>
+
+          <section className="rounded-cm-xl border border-cm-border bg-cm-card p-5 shadow-cm-sm">
+            <h2 className="font-semibold">Product UID capacity (6-digit range)</h2>
+            <p className="mt-2 text-2xl font-bold text-cm-navy-950">
+              {number(capacity.remaining)}
+              <span className="ml-2 text-base font-medium text-cm-text-muted">of {number(capacity.total)} left</span>
+            </p>
+            <div className="mt-3 h-2 rounded-full bg-cm-blue-50" aria-hidden="true">
+              <div className={`h-2 rounded-full ${usedPercent >= 80 ? "bg-cm-warning-600" : "bg-cm-blue-600"}`}
+                style={{ width: `${Math.max(usedPercent, 0.5)}%` }} />
+            </div>
           </section>
         </>
       )}

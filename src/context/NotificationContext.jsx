@@ -18,8 +18,18 @@ const NotificationContext = createContext(null);
 
 // The login cookie belongs to the portal's own address (the API is reached
 // through the /api proxy), so live updates connect through the same address
-// — nginx forwards /socket.io to the API. VITE_API_URL can still override.
-const SOCKET_URL = import.meta.env.VITE_API_URL || window.location.origin;
+// — nginx / the Vite dev proxy forward /socket.io to the API.
+// Do NOT fall back to VITE_BACKEND_URL: vite.config always injects it, and a
+// direct connection to the API host is sent without the login cookie.
+// VITE_SOCKET_URL (or VITE_API_URL) can still override on purpose.
+const rawSocketUrl =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "");
+
+const SOCKET_URL = rawSocketUrl
+  ? rawSocketUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "")
+  : "";
 
 export function NotificationProvider({ enabled, children }) {
   const [notifications, setNotifications] = useState([]);

@@ -10,7 +10,7 @@ const NAV = [
   { to: "/manage/scan-log", label: "Scan log" },
   { to: "/manage/users", label: "Users" },
   { to: "/op", label: "Packing screen" },
-  { to: "/scan", label: "Scan box / item" },
+  { to: "/verify", label: "Verify a box" },
 ];
 
 /** Admin area: side menu on desktop, scrollable tab row on phones. */

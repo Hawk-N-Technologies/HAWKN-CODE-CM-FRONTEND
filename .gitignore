@@ -35,6 +35,7 @@ dist/
 dist-ssr/
 build/
 out/
+nginx.conf
 .next/
 .nuxt/
 .output/

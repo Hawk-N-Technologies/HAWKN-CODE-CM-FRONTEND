@@ -2,7 +2,7 @@
 
 React + Vite web app for QR-based packing at Hawk N Technologies.
 
-- **Phones:** operators sign in, choose a packing section, scan product QR codes into a box (a full box saves itself), print its label and move to the next box, and scan any box or item to see its details.
+- **Phones:** operators sign in, choose a packing section, scan product QR codes into a box, complete it, and verify boxes.
 - **Laptops:** the admin manages SKUs, UIDs, box configurations, sections and users, prints labels, and sees the dashboard, packing history and scan log.
 
 It runs on its own (port 5180) and shares no code or settings with HawkN OS. It talks only to the AMPL backend through `/api/v1` on the same address (session cookies).
@@ -44,19 +44,19 @@ The production build needs no settings: it always calls `/api/v1` on its own add
 | Route | Who | What |
 | --- | --- | --- |
 | `/login` | Everyone | Sign in |
-| `/manage` | Admin | Dashboard: UID and box counts, recent batches |
+| `/manage` | Admin | Dashboard: UID and box counts, capacity, recent batches |
 | `/manage/skus` | Admin | Add/edit SKUs, generate UIDs |
-| `/manage/batches` | Admin | All UID batches: print labels, CSV (UIDs only) |
+| `/manage/batches` | Admin | All UID batches: print labels, CSV |
 | `/manage/configurations` | Admin | Box configurations and their versions |
 | `/manage/sections` | Admin | Sections, their configuration and operators |
-| `/manage/history` | Admin | Packing history with filters; click a box ID to see its details |
+| `/manage/history` | Admin | Packing history with filters; click a box ID to open its record |
 | `/manage/scan-log` | Admin | Every scan and action, accepted or rejected |
 | `/manage/users` | Admin | Add users, reset passwords, activate/deactivate |
 | `/op` | Operator (and admin) | Choose a packing section |
-| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan → box saves itself when full → label preview (Print / Next box) |
-| `/scan` | Operator (and admin) | Scan box / item: details of any box or item, reprint a box label |
+| `/op/pack/:sectionId` | Operator (and admin) | Packing screen: scan, progress, complete |
+| `/verify` | Operator (and admin) | Scan a box label, see its record, save the check |
 | `/print/batch/:batchId` | Admin | Product label sheet (A4 stickers, adjustable layout) |
-| `/print/box/:publicId` | Operator (and admin) | 100 × 50 mm box label preview: Print / Print again, Download label PDF (exactly 100 × 50 mm), and Next box when coming from packing |
+| `/print/box/:publicId` | Operator (and admin) | 50 × 35 mm box label |
 | `/status` | Everyone | Frontend / backend / database health |
 
 ## Testing on a phone (camera needs https)
@@ -84,7 +84,7 @@ The production build needs no settings: it always calls `/api/v1` on its own add
 ## Printing
 
 Print from Chrome or Edge on a computer.
-- **Box label:** paper 100 × 50 mm (landscape), scale 100%, margins None.
+- **Box label:** paper 50 × 35 mm (landscape), scale 100%, margins None.
 - **Product sheets:** paper A4, scale 100%, margins Default, headers and footers off. Test on plain paper first, then adjust the sheet layout (it is remembered on that computer).
 
 ## Production
@@ -99,7 +99,7 @@ src/
   api/            client.js (all backend calls), one file per area
   auth/           AuthProvider (who is logged in), RequireAuth (route guard), roles
   layouts/        AdminLayout (side menu)
-  components/     scanner/, packing/, admin/, ui/ (shared pieces)
+  components/     scanner/, packing/, verification/, admin/, ui/ (shared pieces)
   pages/          one file per screen; admin/ and print/ sub-folders
   styles/         tokens.css (Hawk N colours, copied), app.css
 deploy/           nginx.conf.example
@@ -110,5 +110,4 @@ deploy/           nginx.conf.example
 - Printing uses the browser's print dialog (no silent printing). Sticker sheet presets are starting values.
 - The phone camera needs HTTPS. In development the certificate is self-signed, so phones show a one-time warning.
 - Vibration does not work on iPhone (browser limitation).
-- Box details show what was scanned into the box at packing, not a physical count.
-- Printing starts only when **Print** is tapped. The label preview keeps **Print again** and **Next box** after printing.
+- Verification shows the system record of a box; only "Physical inspection" means someone opened and counted it.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   cancelBox,
   completeBox,
@@ -48,8 +48,6 @@ const secondaryButton =
 
 export default function PackingPage() {
   const { sectionId } = useParams();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState({ state: "loading", error: null });
   const [section, setSection] = useState(null);
   const [box, setBox] = useState(null);
@@ -60,8 +58,6 @@ export default function PackingPage() {
   const [cancelReason, setCancelReason] = useState("");
   const busyRef = useRef(false);
   const lastScanRef = useRef({ value: "", at: 0 });
-  const autoCompletedRef = useRef(""); // box we already tried to save automatically
-  const nextBoxHandledRef = useRef(false); // ?next=1 from the label preview
 
   const loadPage = useCallback(async () => {
     try {
@@ -134,55 +130,33 @@ export default function PackingPage() {
     [box, loadPage],
   );
 
-  const handleStart = (doneResult = null) =>
+  const handleStart = () =>
     run(async () => {
       unlockAudio();
       try {
         const data = await startBox(section.id);
         setBox(data);
-        setResult(doneResult);
+        setResult(null);
         setCameraOn(true);
       } catch (error) {
-        setBox(null);
         setResult({ ok: false, title: "Cannot start box", message: error.message });
       }
     });
 
-  // Saves the full box, then shows its label preview (Print / Next box). Safe to repeat.
   const handleComplete = () =>
     run(async () => {
       try {
         const data = await completeBox(box.public_id);
+        setBox(data);
         setCameraOn(false);
+        setResult(null);
         feedbackSuccess();
-        navigate(`/print/box/${data.public_id}?next=${sectionId}`);
       } catch (error) {
         feedbackError();
-        setResult({ ok: false, title: "Box not saved", message: error.message });
+        setResult({ ok: false, title: "Cannot complete box", message: error.message });
         if (error.code === "BOX_NOT_OPEN") loadPage();
       }
     });
-
-  // Last item scanned -> save the box automatically (no confirm step).
-  useEffect(() => {
-    if (box?.status === "OPEN" && box.progress.is_complete_ready && autoCompletedRef.current !== box.public_id) {
-      autoCompletedRef.current = box.public_id;
-      handleComplete();
-    }
-    // Runs only when the box changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [box]);
-
-  // "Next box" on the label preview opens this page with ?next=1: start the new box straight away.
-  useEffect(() => {
-    if (page.state !== "ready" || nextBoxHandledRef.current || searchParams.get("next") !== "1") return;
-    nextBoxHandledRef.current = true;
-    setSearchParams({}, { replace: true });
-    if (box?.status === "OPEN") setCameraOn(true);
-    else if (!box && section?.active_config) handleStart({ ok: true, title: "Next box ready", message: "Scan the first item." });
-    // Runs once, when the page has loaded.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page.state]);
 
   const handleRemove = (uid) => {
     if (!window.confirm(`Remove ${uid} from this box?`)) return;
@@ -238,6 +212,7 @@ export default function PackingPage() {
   }
 
   const isOpen = box?.status === "OPEN";
+  const isDone = box && (box.status === "COMPLETED" || box.status === "VERIFIED");
   const ready = isOpen && box.progress.is_complete_ready;
 
   return (
@@ -273,8 +248,39 @@ export default function PackingPage() {
               <p className="mt-2 text-sm text-cm-danger-600">Ask an admin to assign a box configuration.</p>
             )}
           </section>
-          <button type="button" onClick={() => handleStart()} disabled={busy || !section.active_config} className={primaryButton}>
+          <button type="button" onClick={handleStart} disabled={busy || !section.active_config} className={primaryButton}>
             {busy ? "Starting…" : "Start new box"}
+          </button>
+        </>
+      )}
+
+      {/* Completed box */}
+      {isDone && (
+        <>
+          <section className="rounded-cm-xl bg-cm-success-600 p-5 text-center text-white shadow-cm-md" role="status">
+            <p className="text-sm font-semibold uppercase tracking-wide opacity-90">Box completed</p>
+            <p className="mt-1 font-mono text-4xl font-bold">{box.box_uid}</p>
+            <p className="mt-1 text-sm opacity-90">
+              {box.progress.total_scanned} products · {box.config?.label}
+            </p>
+          </section>
+          <a
+            href={`/print/box/${box.public_id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-12 w-full items-center justify-center rounded-cm-lg border-2 border-cm-blue-600 bg-cm-card font-semibold text-cm-blue-700 hover:bg-cm-blue-50"
+          >
+            Print box label (50 × 35 mm)
+          </a>
+          <Link
+            to={`/verify?code=${box.box_uid}`}
+            className="flex h-12 w-full items-center justify-center rounded-cm-lg border border-cm-border bg-cm-card font-semibold text-cm-navy-950 hover:bg-cm-blue-50"
+          >
+            Verify this box
+          </Link>
+          <ScannedItems items={box.items} />
+          <button type="button" onClick={handleStart} disabled={busy} className={primaryButton}>
+            {busy ? "Starting…" : "Start next box"}
           </button>
         </>
       )}
@@ -287,14 +293,13 @@ export default function PackingPage() {
 
           {ready ? (
             <section className="rounded-cm-xl border-2 border-cm-success-600 bg-cm-success-100 p-4 text-center">
-              <p className="text-lg font-bold text-cm-success-600">Box full</p>
-              {busy ? (
-                <p className="mt-1 text-cm-navy-950">Saving box…</p>
-              ) : (
-                <button type="button" onClick={handleComplete} className={`${primaryButton} mt-3 bg-cm-success-600 hover:bg-cm-success-600`}>
-                  Save box (try again)
-                </button>
-              )}
+              <p className="text-lg font-bold text-cm-success-600">All quantities reached</p>
+              <p className="mt-1 text-sm text-cm-navy-950">
+                Check the box, then confirm to finish it and create its box ID.
+              </p>
+              <button type="button" onClick={handleComplete} disabled={busy} className={`${primaryButton} mt-4 bg-cm-success-600 hover:bg-cm-success-600`}>
+                {busy ? "Completing…" : "Confirm and complete box"}
+              </button>
             </section>
           ) : (
             <section className="space-y-3">

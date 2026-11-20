@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AuthProvider from "./auth/AuthProvider";
 import RequireAuth from "./auth/RequireAuth";
 import { ROLES } from "./auth/roles";
@@ -17,10 +17,10 @@ import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OperatorHomePage from "./pages/OperatorHomePage";
 import PackingPage from "./pages/PackingPage";
-import ScanLookupPage from "./pages/ScanLookupPage";
 import BatchLabelsPrintPage from "./pages/print/BatchLabelsPrintPage";
 import BoxLabelPrintPage from "./pages/print/BoxLabelPrintPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
+import VerifyPage from "./pages/VerifyPage";
 
 export default function App() {
   return (
@@ -66,15 +66,13 @@ export default function App() {
               }
             />
             <Route
-              path="/scan"
+              path="/verify"
               element={
                 <RequireAuth roles={[ROLES.OPERATOR, ROLES.ADMIN]}>
-                  <ScanLookupPage />
+                  <VerifyPage />
                 </RequireAuth>
               }
             />
-            {/* Old links to the removed Verify screen */}
-            <Route path="/verify" element={<Navigate to="/scan" replace />} />
             <Route
               path="/print/box/:publicId"
               element={

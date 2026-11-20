@@ -10,7 +10,6 @@ export default function ManualEntry({
   placeholder = "Type or scan UID",
   inputMode = "numeric",
   label = "Type product UID",
-  buttonLabel = "Add",
 }) {
   const [value, setValue] = useState("");
 
@@ -42,7 +41,7 @@ export default function ManualEntry({
         disabled={disabled || !value.trim()}
         className="h-12 rounded-cm-lg bg-cm-navy-900 px-5 font-semibold text-white disabled:opacity-50"
       >
-        {buttonLabel}
+        Add
       </button>
     </form>
   );
