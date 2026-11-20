@@ -84,6 +84,7 @@ import ClientPhaseTesting from "../pages/client/PhaseTesting";
 import ClientProjectDetails from "../pages/client/ProjectDetails";
 import ClientNotifications from "../pages/client/Notifications";
 import TesterNotifications from "../pages/tester/Notifications";
+import TesterDelivery from "../pages/tester/Delivery";
 import {
   ADMIN_NAV_SECTIONS,
   HR_NAV_SECTIONS,
@@ -284,6 +285,7 @@ function AppRoutes() {
             <Route path="/tester/client-testing" element={<ClientTesting />} />
             <Route path="/tester/build-testing" element={<BuildTesting />} />
             <Route path="/tester/field-training" element={<FieldTraining />} />
+            <Route path="/tester/delivery" element={<TesterDelivery />} />
           </Route>
         </Route>
       </Route>

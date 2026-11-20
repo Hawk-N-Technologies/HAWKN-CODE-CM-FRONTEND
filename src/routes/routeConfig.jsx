@@ -262,11 +262,11 @@ const CLIENT_NAV_SECTIONS = [
         path: "/client/bugs",
         icon: ICONS.bugs,
       },
-      // {
-      //   label: "Delivery",
-      //   path: "/client/delivery",
-      //   icon: ICONS.delivery,
-      // },
+      {
+        label: "Delivery",
+        path: "/client/delivery",
+        icon: ICONS.delivery,
+      },
     ],
   },
   {
