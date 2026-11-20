@@ -1,268 +1,330 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { CalendarClock, ExternalLink, GraduationCap, Pencil, Plus, RefreshCw, Video } from "lucide-react";
+
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
+import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
-import Textarea from "../../components/common/TextArea";
+import TextArea from "../../components/common/TextArea";
+import Modal from "../../components/common/Modal";
+import EmptyState from "../../components/common/EmptyState";
+import ErrorState from "../../components/common/ErrorState";
+import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
+import PageHeader from "../../components/layout/PageHeader";
+import TableSearch from "../../components/tables/TableSearch";
+import TablePagination from "../../components/tables/TablePagination";
+import { TRAINING_TONE, formatDateTime, matches, toLocalInput } from "../../components/testing/testingUtils";
+import usePagination from "../../hooks/usePagination";
+import {
+  getTesterProjects,
+  getTestingError,
+  getTrainings,
+  scheduleTraining,
+  updateTraining,
+} from "../../services/testingService";
 
-const trainingStatuses = [
-  "Scheduled",
-  "In Progress",
-  "Completed",
-  "Rescheduled",
-];
+/**
+ * Tester → Field Training.
+ * Schedule training sessions for the client (date & time, Google Meet /
+ * walkthrough link, notes) and mark them done. The client sees every session
+ * and is told when one is scheduled, moved or cancelled.
+ */
 
-const getStatusTone = (value) => {
-  switch (value) {
-    case "Completed":
-      return "success";
-    case "In Progress":
-      return "info";
-    case "Rescheduled":
-      return "warning";
-    default:
-      return "neutral";
-  }
-};
+const STATUSES = ["Scheduled", "Rescheduled", "Completed", "Cancelled"];
 
-export default function FieldTraining() {
-  const [status, setStatus] = useState("Scheduled");
-  const [notes, setNotes] = useState("");
+function TrainingModal({ projects, editing, onClose, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    defaultValues: editing
+      ? {
+          title: editing.title,
+          scheduledAt: toLocalInput(editing.scheduledAt),
+          durationMinutes: editing.durationMinutes ?? "",
+          meetingLink: editing.meetingLink ?? "",
+          notes: editing.notes ?? "",
+          status: editing.status,
+        }
+      : { projectId: projects[0]?.uuid ?? "", title: "", scheduledAt: "", durationMinutes: 60, meetingLink: "", notes: "" },
+  });
 
-  const handleSave = () => {
-    showToast.success("Training update saved.");
+  const onSubmit = async (values) => {
+    const payload = {
+      title: values.title,
+      scheduledAt: new Date(values.scheduledAt).toISOString(),
+      durationMinutes: values.durationMinutes === "" ? null : Number(values.durationMinutes),
+      meetingLink: values.meetingLink,
+      notes: values.notes,
+    };
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateTraining(editing.uuid, { ...payload, status: values.status });
+        showToast.success("Training updated.");
+      } else {
+        await scheduleTraining({ ...payload, projectId: values.projectId });
+        showToast.success("Training scheduled. The client has been told.");
+      }
+      onSaved();
+    } catch (error) {
+      showToast.error(getTestingError(error, "Couldn't save the training."));
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
-        <div className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full border border-blue-300/10" />
-        <div className="pointer-events-none absolute -right-8 -top-20 h-56 w-56 rounded-full border border-blue-300/10" />
-        <div className="pointer-events-none absolute -bottom-24 right-24 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
-
-        <div className="relative z-10 flex flex-col justify-between gap-6 xl:flex-row xl:items-center">
-          <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-200">
-                Tester Workspace
-              </span>
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-[34px]">
-              Field Training
-            </h1>
-
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-[15px]">
-              Track field training sessions, monitor progress, and record
-              training observations.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
-                Training ID: TRAIN-001
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
-                Client Application Training
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Current Status
-              </p>
-              <div className="mt-3">
-                <Badge tone={getStatusTone(status)}>{status}</Badge>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Notes
-              </p>
-              <p className="mt-2 text-2xl font-bold text-white">
-                {notes.trim() ? "Added" : "Empty"}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Training observations
-              </p>
-            </div>
-          </div>
+    <Modal
+      onClose={onClose}
+      closeDisabled={saving}
+      eyebrow="FIELD TRAINING"
+      title={editing ? "Edit Training" : "Schedule Training"}
+      description="The client sees the date, the meeting link and your notes."
+      icon={GraduationCap}
+      size="md"
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-6 py-6 sm:px-8">
+        {editing ? (
+          <Input label="Project" value={editing.project.name} readOnly disabled />
+        ) : (
+          <Select
+            label="Project"
+            required
+            options={projects.map((project) => ({ value: project.uuid, label: project.name }))}
+            placeholder="Select project"
+            {...register("projectId", { required: "Pick a project" })}
+            error={errors.projectId?.message}
+          />
+        )}
+        <Input
+          label="Title"
+          required
+          maxLength={150}
+          placeholder="e.g. Admin panel walkthrough"
+          {...register("title", {
+            required: "Title is required",
+            minLength: { value: 3, message: "Title is too short" },
+          })}
+          error={errors.title?.message}
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Date & time"
+            type="datetime-local"
+            required
+            {...register("scheduledAt", { required: "Pick a date and time" })}
+            error={errors.scheduledAt?.message}
+          />
+          <Input
+            label="Duration (minutes)"
+            type="number"
+            min={5}
+            max={600}
+            {...register("durationMinutes", {
+              min: { value: 5, message: "At least 5 minutes" },
+              max: { value: 600, message: "At most 600 minutes" },
+            })}
+            error={errors.durationMinutes?.message}
+          />
         </div>
-      </section>
-
-      {/* Training Overview */}
-      <section className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Training Reference
-              </p>
-              <p className="mt-2 text-lg font-bold text-cm-text">
-                TRAIN-001
-              </p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6v6l4 2"
-                />
-                <circle cx="12" cy="12" r="9" />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Session identification
-          </p>
+        <Input
+          label="Meeting / walkthrough link"
+          placeholder="https://meet.google.com/…"
+          {...register("meetingLink", {
+            pattern: { value: /^(https?:\/\/\S+)?$/i, message: "Use a full link starting with https://" },
+          })}
+          error={errors.meetingLink?.message}
+        />
+        <TextArea
+          label="Notes (optional)"
+          rows={3}
+          maxLength={2000}
+          placeholder="Agenda, who should attend, what was covered…"
+          {...register("notes")}
+        />
+        {editing && (
+          <Select label="Status" options={STATUSES.map((value) => ({ value, label: value }))} {...register("status")} />
+        )}
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving} leftIcon={editing ? <Pencil size={16} /> : <Plus size={16} />}>
+            {editing ? "Save changes" : "Schedule training"}
+          </Button>
         </div>
+      </form>
+    </Modal>
+  );
+}
 
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Session Status
-              </p>
-              <p className="mt-2 text-lg font-bold text-cm-text">
-                {status}
-              </p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12l2 2 4-4"
-                />
-                <circle cx="12" cy="12" r="9" />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Current training progress
-          </p>
-        </div>
+export default function FieldTraining() {
+  const [trainings, setTrainings] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null); // null | { editing: training | null }
 
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Observation Notes
-              </p>
-              <p className="mt-2 text-lg font-bold text-cm-text">
-                {notes.trim() ? "Available" : "Not Added"}
-              </p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 7h8M8 11h8M8 15h5"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
-                />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Recorded training observations
-          </p>
-        </div>
-      </section>
+  useEffect(() => {
+    let ignore = false;
 
-      {/* Training Details */}
-      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-cm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    Promise.all([getTrainings(), getTesterProjects()])
+      .then(([list, projectList]) => {
+        if (ignore) return;
+        setTrainings(list);
+        setProjects(projectList);
+        setLoadError("");
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getTestingError(error, "Couldn't load training sessions."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
+
+  const reload = () => {
+    setIsLoading(true);
+    setReloadKey((key) => key + 1);
+  };
+
+  const visible = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return trainings.filter((item) => matches(query, item.title, item.project.name, item.status));
+  }, [trainings, search]);
+
+  // 10 per page
+  const pager = usePagination(visible);
+
+  return (
+    <div className="flex flex-col gap-6 pb-8">
+      <PageHeader
+        eyebrow="TESTING"
+        title="Field Training"
+        description="Schedule training sessions for your clients and keep notes. Clients see every session and get told about changes."
+        icon={GraduationCap}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            leftIcon={<Plus size={16} />}
+            disabled={isLoading || projects.length === 0}
+            onClick={() => setModal({ editing: null })}
+            className="!min-h-[44px] !whitespace-nowrap"
+          >
+            Schedule Training
+          </Button>
+        }
+      />
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cm-text-muted">
-                Training Session
-              </p>
-            </div>
-            <h2 className="mt-2 text-lg font-bold text-cm-text">
-              Client Application Training
-            </h2>
-            <p className="mt-1 text-sm text-cm-text-muted">
-              Update the session status and document your observations.
-            </p>
+            <h2 className="text-lg font-bold text-[#101a3a]">Training sessions</h2>
+            <p className="text-sm text-slate-500">Latest first.</p>
           </div>
-
-          <Badge tone={getStatusTone(status)}>{status}</Badge>
+          <Button size="sm" variant="outline" leftIcon={<RefreshCw size={14} />} onClick={reload}>
+            Refresh
+          </Button>
         </div>
 
-        <div className="p-5 sm:p-6">
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="space-y-2">
-              <Select
-                label="Training Status"
-                value={status}
-                options={trainingStatuses.map((value) => ({
-                  value,
-                  label: value,
-                }))}
-                onChange={(e) => setStatus(e.target.value)}
-              />
-
-              <p className="text-xs text-cm-text-muted">
-                Select the current stage of this training session.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Textarea
-                label="Training Notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Record training observations..."
-              />
-
-              <p className="text-xs text-cm-text-muted">
-                Document observations, outcomes, or relevant training details.
-              </p>
-            </div>
+        {trainings.length > 0 && (
+          <div className="mb-4">
+            <TableSearch value={search} onChange={setSearch} placeholder="Search title, project or status…" />
           </div>
+        )}
 
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-cm-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs leading-5 text-cm-text-muted">
-              Review the training status and notes before saving your update.
-            </p>
-
-            <Button onClick={handleSave}>
-              Save Update
-            </Button>
+        {isLoading ? (
+          <Loader label="Loading training sessions…" />
+        ) : loadError ? (
+          <ErrorState title="Couldn't load training sessions" description={loadError} onRetry={reload} />
+        ) : trainings.length === 0 ? (
+          <EmptyState
+            title="No training sessions yet"
+            description={
+              projects.length ? "Schedule the first session for your client." : "You aren't testing any projects yet."
+            }
+          />
+        ) : visible.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-500">No sessions match your search.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {pager.pageItems.map((training) => (
+              <article
+                key={training.uuid}
+                className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-800">
+                    <GraduationCap className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="break-words text-base font-bold text-[#101a3a]">{training.title}</h3>
+                      <Badge tone={TRAINING_TONE[training.status]}>{training.status}</Badge>
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-500">{training.project.name}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      {formatDateTime(training.scheduledAt)}
+                      {training.durationMinutes ? ` · ${training.durationMinutes} min` : ""}
+                    </p>
+                    {training.notes && (
+                      <p className="mt-1 line-clamp-2 max-w-xl text-xs text-slate-500">{training.notes}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {training.meetingLink && (
+                    <a
+                      href={training.meetingLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                    >
+                      <Video className="h-4 w-4" /> Join <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  <Button size="sm" variant="outline" leftIcon={<Pencil size={14} />} onClick={() => setModal({ editing: training })}>
+                    Edit
+                  </Button>
+                </div>
+              </article>
+            ))}
+            {pager.hasPages && (
+              <TablePagination
+                page={pager.page}
+                pageSize={pager.pageSize}
+                total={pager.total}
+                onPageChange={pager.setPage}
+              />
+            )}
           </div>
-        </div>
+        )}
       </section>
+
+      {modal && (
+        <TrainingModal
+          projects={projects}
+          editing={modal.editing}
+          onClose={() => setModal(null)}
+          onSaved={() => {
+            setModal(null);
+            reload();
+          }}
+        />
+      )}
     </div>
   );
 }

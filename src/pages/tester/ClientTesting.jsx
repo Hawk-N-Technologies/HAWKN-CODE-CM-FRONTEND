@@ -1,279 +1,166 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Clock3, MessageSquareWarning, RefreshCw, UserCheck } from "lucide-react";
+
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
-import Select from "../../components/common/Select";
-import Textarea from "../../components/common/TextArea";
-import { showToast } from "../../components/common/Toast";
+import ErrorState from "../../components/common/ErrorState";
+import StatCard from "../../components/cards/StatCard";
+import PageHeader from "../../components/layout/PageHeader";
+import DataTable from "../../components/tables/DataTable";
+import TableSearch from "../../components/tables/TableSearch";
+import { CLIENT_APPROVAL_TONE, formatDateTime, matches } from "../../components/testing/testingUtils";
+import { getTestPhases, getTestingError } from "../../services/testingService";
 
-const testingResults = [
-  "Pending",
-  "Passed",
-  "Failed",
-  "Changes Requested",
-];
+/**
+ * Tester → Client Testing (read-only).
+ * Phases that need the client's approval, and what the client said.
+ * When the client asks for changes, re-test the phase in Phase Testing
+ * once it's fixed — it goes back to the client automatically.
+ */
 
-const getResultTone = (value) => {
-  switch (value) {
-    case "Passed":
-      return "success";
-    case "Failed":
-      return "danger";
-    case "Changes Requested":
-      return "warning";
-    default:
-      return "warning";
-  }
+const LABEL = {
+  null: "Waiting for your sign-off",
+  Pending: "With client",
+  Approved: "Approved",
+  Rejected: "Rejected",
+  "Changes Requested": "Changes requested",
 };
 
 export default function ClientTesting() {
-  const [result, setResult] = useState("Pending");
-  const [notes, setNotes] = useState("");
+  const [phases, setPhases] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState("");
 
-  const handleSave = () => {
-    showToast.success("Client testing update saved.");
+  useEffect(() => {
+    let ignore = false;
+
+    getTestPhases()
+      .then((list) => {
+        if (ignore) return;
+        setPhases(list.filter((phase) => phase.needsClientApproval));
+        setLoadError("");
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getTestingError(error, "Couldn't load client approvals."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
+
+  const reload = () => {
+    setIsLoading(true);
+    setReloadKey((key) => key + 1);
   };
 
+  const rows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return phases
+      .filter((phase) => matches(query, phase.name, phase.project.name, phase.clientApprovalStatus))
+      .map((phase) => ({ ...phase, id: phase.uuid }));
+  }, [phases, search]);
+
+  const countOf = (status) => phases.filter((phase) => phase.clientApprovalStatus === status).length;
+  const live = (value) => (isLoading ? "…" : loadError ? "—" : String(value));
+
+  const columns = [
+    {
+      key: "phase",
+      header: "Phase",
+      render: (row) => (
+        <div className="min-w-[170px]">
+          <div className="font-semibold text-slate-800">{row.name}</div>
+          <div className="mt-0.5 text-xs text-slate-500">
+            {row.project.name} · {row.moduleName}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "approval",
+      header: "Client approval",
+      render: (row) =>
+        row.clientApprovalStatus ? (
+          <Badge tone={CLIENT_APPROVAL_TONE[row.clientApprovalStatus]}>{LABEL[row.clientApprovalStatus]}</Badge>
+        ) : (
+          <span className="text-xs font-medium text-slate-500">{LABEL.null}</span>
+        ),
+    },
+    {
+      key: "note",
+      header: "Client's note",
+      render: (row) =>
+        row.clientNote ? (
+          <p className="max-w-[320px] whitespace-pre-line text-sm text-slate-700">{row.clientNote}</p>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+    {
+      key: "answered",
+      header: "Answered",
+      render: (row) => (
+        <span className="whitespace-nowrap text-xs text-slate-600">{formatDateTime(row.clientRespondedAt)}</span>
+      ),
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
-        <div className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full border border-blue-300/10" />
-        <div className="pointer-events-none absolute -right-8 -top-20 h-56 w-56 rounded-full border border-blue-300/10" />
-        <div className="pointer-events-none absolute -bottom-24 right-24 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
+    <div className="flex flex-col gap-6 pb-8">
+      <PageHeader
+        eyebrow="TESTING"
+        title="Client Testing"
+        description="Phases the client has to approve, and what they said. If they ask for changes, re-test the phase in Phase Testing once it's fixed."
+        icon={UserCheck}
+      />
 
-        <div className="relative z-10 flex flex-col justify-between gap-6 xl:flex-row xl:items-center">
-          <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-200">
-                Tester Workspace
-              </span>
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-[34px]">
-              Client Testing
-            </h1>
-
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-[15px]">
-              Track client-side validation, review feedback, and record testing
-              results before project delivery.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
-                Project: PRJ-001
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
-                Acme Retail ERP
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Testing Result
-              </p>
-              <div className="mt-3">
-                <Badge tone={getResultTone(result)}>{result}</Badge>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Client Feedback
-              </p>
-              <p className="mt-2 text-2xl font-bold text-white">
-                {notes.trim() ? "Added" : "Empty"}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Feedback observations
-              </p>
-            </div>
-          </div>
-        </div>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="With client" value={live(countOf("Pending"))} icon={<Clock3 size={18} />} />
+        <StatCard label="Approved" value={live(countOf("Approved"))} icon={<CheckCircle2 size={18} />} accent="success" />
+        <StatCard
+          label="Changes requested"
+          value={live(countOf("Changes Requested"))}
+          icon={<MessageSquareWarning size={18} />}
+          accent="warning"
+        />
+        <StatCard label="Rejected" value={live(countOf("Rejected"))} icon={<MessageSquareWarning size={18} />} accent="purple" />
       </section>
 
-      {/* Testing Overview */}
-      <section className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Project Reference
-              </p>
-              <p className="mt-2 text-lg font-bold text-cm-text">
-                PRJ-001
-              </p>
-            </div>
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m4.5 7.5 7.5 4.3 7.5-4.3M12 12v9"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Client project identification
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Current Result
-              </p>
-              <p className="mt-2 text-lg font-bold text-cm-text">
-                {result}
-              </p>
-            </div>
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m9 12 2 2 4-4"
-                />
-                <circle cx="12" cy="12" r="9" />
-              </svg>
-            </div>
-          </div>
-
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Latest client testing selection
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Feedback Status
-              </p>
-              <p className="mt-2 text-lg font-bold text-cm-text">
-                {notes.trim() ? "Available" : "Not Added"}
-              </p>
-            </div>
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 7h8M8 11h8M8 15h5"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Recorded client observations
-          </p>
-        </div>
-      </section>
-
-      {/* Client Testing Details */}
-      <section className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-cm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cm-text-muted">
-                Client Validation
-              </p>
-            </div>
-
-            <h2 className="mt-2 text-lg font-bold text-cm-text">
-              Acme Retail ERP
-            </h2>
-
-            <p className="mt-1 text-sm text-cm-text-muted">
-              Review the client testing result and document feedback.
-            </p>
+            <h2 className="text-lg font-bold text-[#101a3a]">Client approvals</h2>
+            <p className="text-sm text-slate-500">Only phases the project lead marked “Needs client approval”.</p>
           </div>
-
-          <Badge tone={getResultTone(result)}>{result}</Badge>
+          <Button size="sm" variant="outline" leftIcon={<RefreshCw size={14} />} onClick={reload}>
+            Refresh
+          </Button>
         </div>
 
-        <div className="p-5 sm:p-6">
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="space-y-2">
-              <Select
-                label="Client Testing Result"
-                value={result}
-                options={testingResults.map((value) => ({
-                  value,
-                  label: value,
-                }))}
-                onChange={(e) => setResult(e.target.value)}
-              />
-
-              <p className="text-xs text-cm-text-muted">
-                Select the result of the client-side validation.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Textarea
-                label="Client Feedback"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Record client testing feedback..."
-              />
-
-              <p className="text-xs text-cm-text-muted">
-                Record feedback, requested changes, or validation observations.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-cm-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs leading-5 text-cm-text-muted">
-              Review the selected result and feedback before saving.
-            </p>
-
-            <Button onClick={handleSave}>
-              Save Update
-            </Button>
-          </div>
+        <div className="mb-4">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search phase, project or status…" />
         </div>
+
+        {loadError ? (
+          <ErrorState title="Couldn't load client approvals" description={loadError} onRetry={reload} />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rows}
+            isLoading={isLoading}
+            emptyMessage={
+              phases.length === 0
+                ? "No phases need client approval yet."
+                : "No phases match your search."
+            }
+          />
+        )}
       </section>
     </div>
   );

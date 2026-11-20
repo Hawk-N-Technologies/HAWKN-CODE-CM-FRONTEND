@@ -1,343 +1,347 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { CheckCircle2, Clock3, ExternalLink, Hammer, Plus, RefreshCw, XCircle } from "lucide-react";
+
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
+import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
-import Textarea from "../../components/common/TextArea";
+import TextArea from "../../components/common/TextArea";
+import Modal from "../../components/common/Modal";
+import ErrorState from "../../components/common/ErrorState";
 import { showToast } from "../../components/common/Toast";
+import StatCard from "../../components/cards/StatCard";
+import PageHeader from "../../components/layout/PageHeader";
+import DataTable from "../../components/tables/DataTable";
+import TableSearch from "../../components/tables/TableSearch";
+import ResultModal from "../../components/testing/ResultModal";
+import { RESULT_TONE, formatDateTime, matches } from "../../components/testing/testingUtils";
+import {
+  addBuild,
+  getBuilds,
+  getTesterProjects,
+  getTestingError,
+  recordBuildResult,
+} from "../../services/testingService";
 
-const buildResults = ["Pending", "Passed", "Failed"];
+/**
+ * Tester → Build Testing.
+ * Add each version (build) of a project and record whether it passed.
+ * The project lead is told about every result.
+ */
 
-const getResultTone = (result) => {
-  switch (result) {
-    case "Passed":
-      return "success";
-    case "Failed":
-      return "danger";
-    default:
-      return "warning";
-  }
-};
+const ENVIRONMENTS = ["QA", "Staging", "Production"];
+const FILTERS = ["All", "Pending", "Passed", "Failed"];
 
-export default function BuildTesting() {
-  const [data, setData] = useState([
-    ["BUILD-142", "Acme Retail ERP", "Staging", "v1.4.2", "Pending"],
-    ["BUILD-091", "Internal HRMS", "QA", "v0.9.1", "Passed"],
-  ]);
+function AddBuildModal({ projects, onClose, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    defaultValues: { projectId: projects[0]?.uuid ?? "", versionLabel: "", environment: "QA", buildUrl: "", releaseNotes: "" },
+  });
 
-  const passedCount = data.filter((build) => build[4] === "Passed").length;
-  const failedCount = data.filter((build) => build[4] === "Failed").length;
-  const pendingCount = data.filter((build) => build[4] === "Pending").length;
-
-  const updateBuildResult = (buildId, nextResult) => {
-    setData((previous) =>
-      previous.map((build) =>
-        build[0] === buildId
-          ? [build[0], build[1], build[2], build[3], nextResult]
-          : build,
-      ),
-    );
-  };
-
-  const handleSave = () => {
-    showToast.success("Build test result saved.");
+  const onSubmit = async (values) => {
+    setSaving(true);
+    try {
+      await addBuild(values);
+      showToast.success("Build added.");
+      onSaved();
+    } catch (error) {
+      showToast.error(getTestingError(error, "Couldn't add the build."));
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-[#080d25] via-[#0b1734] to-[#1b2052] px-6 py-7 shadow-[0_18px_45px_rgba(15,23,42,0.16)] sm:px-8 sm:py-8">
-        <div className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full border border-blue-300/10" />
-        <div className="pointer-events-none absolute -right-8 -top-20 h-56 w-56 rounded-full border border-blue-300/10" />
-        <div className="pointer-events-none absolute -bottom-24 right-24 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
-
-        <div className="relative z-10 flex flex-col justify-between gap-6 xl:flex-row xl:items-center">
-          <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-200">
-                Tester Workspace
-              </span>
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-[34px]">
-              Build Testing
-            </h1>
-
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-[15px]">
-              Validate application builds across assigned environments and
-              record testing results before release.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
-                {data.length} Assigned Builds
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
-                Staging & QA Environments
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Total Builds
-              </p>
-              <p className="mt-2 text-3xl font-bold text-white tabular-nums">
-                {data.length}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Assigned for validation
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Passed Builds
-              </p>
-              <p className="mt-2 text-3xl font-bold text-emerald-300 tabular-nums">
-                {passedCount}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Successfully validated
-              </p>
-            </div>
-          </div>
+    <Modal
+      onClose={onClose}
+      closeDisabled={saving}
+      eyebrow="BUILD TESTING"
+      title="Add Build"
+      description="Add the version you're about to test. Record the result once you've checked it."
+      icon={Hammer}
+      size="md"
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-6 py-6 sm:px-8">
+        <Select
+          label="Project"
+          required
+          options={projects.map((project) => ({ value: project.uuid, label: project.name }))}
+          placeholder="Select project"
+          {...register("projectId", { required: "Pick a project" })}
+          error={errors.projectId?.message}
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Version"
+            required
+            maxLength={50}
+            placeholder="e.g. v1.4.2"
+            {...register("versionLabel", { required: "Version is required" })}
+            error={errors.versionLabel?.message}
+          />
+          <Select
+            label="Environment"
+            options={ENVIRONMENTS.map((value) => ({ value, label: value }))}
+            {...register("environment")}
+          />
         </div>
-      </section>
-
-      {/* Build Summary */}
-      <section className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Pending Builds
-              </p>
-              <p className="mt-2 text-2xl font-bold text-cm-text tabular-nums">
-                {pendingCount}
-              </p>
-            </div>
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 7v5l3 2"
-                />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Awaiting testing results
-          </p>
+        <Input
+          label="Build link (optional)"
+          placeholder="https://staging.example.com"
+          {...register("buildUrl", {
+            pattern: { value: /^(https?:\/\/\S+)?$/i, message: "Use a full link starting with https://" },
+          })}
+          error={errors.buildUrl?.message}
+        />
+        <TextArea
+          label="What changed (optional)"
+          rows={3}
+          maxLength={5000}
+          placeholder="Release notes from the developers"
+          {...register("releaseNotes")}
+        />
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving} leftIcon={<Plus size={16} />}>
+            Add build
+          </Button>
         </div>
+      </form>
+    </Modal>
+  );
+}
 
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Passed Builds
-              </p>
-              <p className="mt-2 text-2xl font-bold text-cm-text tabular-nums">
-                {passedCount}
-              </p>
-            </div>
+export default function BuildTesting() {
+  const [builds, setBuilds] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [adding, setAdding] = useState(false);
+  const [recording, setRecording] = useState(null);
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m5 12 4 4L19 6"
-                />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Builds marked as passed
-          </p>
+  useEffect(() => {
+    let ignore = false;
+
+    Promise.all([getBuilds(), getTesterProjects()])
+      .then(([list, projectList]) => {
+        if (ignore) return;
+        setBuilds(list);
+        setProjects(projectList);
+        setLoadError("");
+      })
+      .catch((error) => {
+        if (!ignore) setLoadError(getTestingError(error, "Couldn't load builds."));
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
+
+  const reload = () => {
+    setIsLoading(true);
+    setReloadKey((key) => key + 1);
+  };
+
+  const rows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return builds
+      .filter((build) => filter === "All" || build.result === filter)
+      .filter((build) => matches(query, build.project.name, build.versionLabel, build.environment))
+      .map((build) => ({ ...build, id: build.uuid }));
+  }, [builds, search, filter]);
+
+  const countOf = (result) => builds.filter((build) => build.result === result).length;
+  const live = (value) => (isLoading ? "…" : loadError ? "—" : String(value));
+
+  const saveResult = async (result, testNotes) => {
+    try {
+      await recordBuildResult(recording.uuid, { result, testNotes });
+      showToast.success(`${recording.versionLabel} marked as ${result.toLowerCase()}.`);
+      setRecording(null);
+      reload();
+      return true;
+    } catch (error) {
+      showToast.error(getTestingError(error, "Couldn't save the result."));
+      return false;
+    }
+  };
+
+  const columns = [
+    {
+      key: "build",
+      header: "Build",
+      render: (row) => (
+        <div className="min-w-[150px]">
+          <div className="font-semibold text-slate-800">{row.versionLabel}</div>
+          <div className="mt-0.5 text-xs text-slate-500">{row.project.name}</div>
         </div>
-
-        <div className="rounded-2xl border border-cm-border bg-cm-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-cm-text-muted">
-                Failed Builds
-              </p>
-              <p className="mt-2 text-2xl font-bold text-cm-text tabular-nums">
-                {failedCount}
-              </p>
-            </div>
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m9 9 6 6m0-6-6 6"
-                />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-cm-text-muted">
-            Builds requiring attention
-          </p>
-        </div>
-      </section>
-
-      {/* Build Testing Queue */}
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cm-text-muted">
-              Testing Queue
-            </p>
-            <h2 className="mt-1 text-xl font-bold text-cm-text">
-              Assigned Application Builds
-            </h2>
-            <p className="mt-1 text-sm text-cm-text-muted">
-              Review each build and update its testing result.
-            </p>
-          </div>
-
-          <p className="text-xs font-medium text-cm-text-muted">
-            {data.length} builds listed
-          </p>
-        </div>
-
-        {data.map((build) => (
-          <section
-            key={build[0]}
-            className="overflow-hidden rounded-2xl border border-cm-border bg-cm-card shadow-sm"
+      ),
+    },
+    { key: "environment", header: "Environment", render: (row) => <Badge tone="neutral">{row.environment}</Badge> },
+    {
+      key: "link",
+      header: "Link",
+      render: (row) =>
+        row.buildUrl ? (
+          <a
+            href={row.buildUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline"
           >
-            {/* Build Card Header */}
-            <div className="flex flex-col gap-4 border-b border-cm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    className="h-6 w-6"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m4.5 7.5 7.5 4.3 7.5-4.3M12 12v9"
-                    />
-                  </svg>
-                </div>
+            Open <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+    {
+      key: "result",
+      header: "Result",
+      render: (row) => (
+        <div className="max-w-[260px]">
+          <Badge tone={RESULT_TONE[row.result]}>{row.result}</Badge>
+          {row.testNotes && <p className="mt-1 line-clamp-2 text-xs text-slate-500">{row.testNotes}</p>}
+        </div>
+      ),
+    },
+    {
+      key: "tested",
+      header: "Tested",
+      render: (row) =>
+        row.testedAt ? (
+          <div className="whitespace-nowrap text-xs text-slate-600">
+            {formatDateTime(row.testedAt)}
+            <div className="text-slate-400">{row.testedBy}</div>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400">Not yet</span>
+        ),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (row) => (
+        <Button size="sm" variant={row.result === "Pending" ? "primary" : "outline"} onClick={() => setRecording(row)}>
+          {row.result === "Pending" ? "Record result" : "Change"}
+        </Button>
+      ),
+    },
+  ];
 
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold text-cm-text-muted">
-                      {build[0]}
-                    </span>
-                    <span className="text-cm-text-muted">·</span>
-                    <span className="text-xs font-medium text-cm-text-muted">
-                      {build[3]}
-                    </span>
-                  </div>
+  return (
+    <div className="flex flex-col gap-6 pb-8">
+      <PageHeader
+        eyebrow="TESTING"
+        title="Build Testing"
+        description="Check every version of your projects before it moves on. The project lead hears about each result."
+        icon={Hammer}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            leftIcon={<Plus size={16} />}
+            disabled={isLoading || projects.length === 0}
+            onClick={() => setAdding(true)}
+            className="!min-h-[44px] !whitespace-nowrap"
+          >
+            Add Build
+          </Button>
+        }
+      />
 
-                  <h3 className="mt-1 text-lg font-bold text-cm-text">
-                    {build[1]}
-                  </h3>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-md border border-cm-border bg-cm-bg px-2.5 py-1 text-xs font-medium text-cm-text-muted">
-                      Environment: {build[2]}
-                    </span>
-                    <span className="rounded-md border border-cm-border bg-cm-bg px-2.5 py-1 text-xs font-medium text-cm-text-muted">
-                      Version: {build[3]}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sm:shrink-0">
-                <Badge tone={getResultTone(build[4])}>
-                  {build[4]}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Build Testing Form */}
-            <div className="p-5 sm:p-6">
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Select
-                    label="Build Result"
-                    value={build[4]}
-                    options={buildResults.map((value) => ({
-                      value,
-                      label: value,
-                    }))}
-                    onChange={(e) =>
-                      updateBuildResult(build[0], e.target.value)
-                    }
-                  />
-
-                  <p className="text-xs text-cm-text-muted">
-                    Select the result of the build validation.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Textarea
-                    label="Build Notes"
-                    placeholder="Add build testing notes..."
-                  />
-
-                  <p className="text-xs text-cm-text-muted">
-                    Record relevant build observations or testing details.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col-reverse gap-3 border-t border-cm-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs leading-5 text-cm-text-muted">
-                  Verify the build result before saving.
-                </p>
-
-                <Button size="sm" onClick={handleSave}>
-                  Save Result
-                </Button>
-              </div>
-            </div>
-          </section>
-        ))}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Waiting for testing" value={live(countOf("Pending"))} icon={<Clock3 size={18} />} accent="warning" />
+        <StatCard label="Passed" value={live(countOf("Passed"))} icon={<CheckCircle2 size={18} />} accent="success" />
+        <StatCard label="Failed" value={live(countOf("Failed"))} icon={<XCircle size={18} />} accent="purple" />
       </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#101a3a]">Builds</h2>
+            <p className="text-sm text-slate-500">Newest first.</p>
+          </div>
+          <Button size="sm" variant="outline" leftIcon={<RefreshCw size={14} />} onClick={reload}>
+            Refresh
+          </Button>
+        </div>
+
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex-1">
+            <TableSearch value={search} onChange={setSearch} placeholder="Search project, version or environment…" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={filter === item}
+                onClick={() => setFilter(item)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  filter === item
+                    ? "border-[#0b1932] bg-[#0b1932] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/50"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loadError ? (
+          <ErrorState title="Couldn't load builds" description={loadError} onRetry={reload} />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rows}
+            isLoading={isLoading}
+            emptyMessage={
+              builds.length === 0
+                ? projects.length === 0
+                  ? "You aren't testing any projects yet."
+                  : "No builds yet — add the first one."
+                : "No builds match this filter or search."
+            }
+          />
+        )}
+      </section>
+
+      {adding && (
+        <AddBuildModal
+          projects={projects}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            reload();
+          }}
+        />
+      )}
+
+      {recording && (
+        <ResultModal
+          eyebrow="BUILD TESTING"
+          title={`Result for ${recording.versionLabel}`}
+          description={`${recording.project.name} · ${recording.environment}`}
+          initialNotes={recording.testNotes ?? ""}
+          onClose={() => setRecording(null)}
+          onSave={saveResult}
+        />
+      )}
     </div>
   );
 }
