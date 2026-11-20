@@ -235,7 +235,8 @@ function InternshipModal({
             </button>
           </div>
 
-          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+          {/* Context line — hidden on phones to leave room for the form */}
+          <div className="relative mt-4 hidden flex-wrap items-center gap-2 text-xs text-slate-300 sm:flex">
             <span className="h-2 w-2 rounded-full bg-sky-300" />
             <span>Internship and probation operations</span>
             <span className="text-slate-500">/</span>

@@ -251,7 +251,8 @@ function PayrollModal({ title, description, onClose, children }) {
             </button>
           </div>
 
-          <div className="relative mt-5 flex flex-wrap items-center gap-2 text-xs text-blue-100/90">
+          {/* Context line — hidden on phones to leave room for the form */}
+          <div className="relative mt-5 hidden flex-wrap items-center gap-2 text-xs text-blue-100/90 sm:flex">
             <span className="h-2 w-2 rounded-full bg-blue-300" />
             Payroll operations
             <span className="text-white/40">/</span>
