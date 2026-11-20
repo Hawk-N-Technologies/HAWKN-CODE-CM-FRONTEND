@@ -31,6 +31,15 @@ const STATUS_OPTIONS = [
   { value: "On Hold", label: "On Hold" },
 ];
 
+// Testing module badges
+const TEST_TONE = { Pending: "warning", Passed: "success", Failed: "danger" };
+const CLIENT_TONE = {
+  Pending: "info",
+  Approved: "success",
+  Rejected: "danger",
+  "Changes Requested": "warning",
+};
+
 const EMPTY_FORM = {
   name: "",
   description: "",
@@ -38,6 +47,7 @@ const EMPTY_FORM = {
   endDate: "",
   status: "Not Started",
   sortOrder: 0,
+  needsClientApproval: false,
 };
 
 const getErrorMessage = (error, fallback) =>
@@ -297,6 +307,26 @@ function PhaseFormFields({ values, onChange, disabled }) {
           </p>
         </div>
       </div>
+
+      {/* Testing module: the client approves this phase after the tester passes it */}
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-600"
+          checked={Boolean(values.needsClientApproval)}
+          onChange={(e) => onChange("needsClientApproval", e.target.checked)}
+          disabled={disabled}
+        />
+        <span>
+          <span className="block text-sm font-semibold text-slate-800">
+            Needs client approval
+          </span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            Usually the UI / design phase. Once the tester passes it, the client
+            approves it, rejects it or asks for changes.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }
@@ -629,6 +659,7 @@ function Phases() {
       endDate: form.endDate || null,
       status: form.status,
       sortOrder: Number(form.sortOrder),
+      needsClientApproval: Boolean(form.needsClientApproval),
     };
 
     setCreating(true);
@@ -681,6 +712,7 @@ function Phases() {
       endDate: phase.endDate || "",
       status: phase.status || "Not Started",
       sortOrder: phase.sortOrder ?? 0,
+      needsClientApproval: Boolean(phase.needsClientApproval),
     });
 
     setModal({
@@ -707,6 +739,7 @@ function Phases() {
       endDate: editForm.endDate || null,
       status: editForm.status,
       sortOrder: Number(editForm.sortOrder),
+      needsClientApproval: Boolean(editForm.needsClientApproval),
     };
 
     setSaving(true);
@@ -1151,6 +1184,26 @@ function Phases() {
                         {phase.status}
                       </span>
                     </div>
+                  </div>
+
+                  {/* TESTING: tester sign-off + client approval */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <Badge tone={TEST_TONE[phase.testStatus] ?? "warning"}>
+                      Test: {phase.testStatus ?? "Pending"}
+                    </Badge>
+                    {phase.needsClientApproval && (
+                      <Badge tone={CLIENT_TONE[phase.clientApprovalStatus] ?? "neutral"}>
+                        Client:{" "}
+                        {phase.clientApprovalStatus
+                          ? phase.clientApprovalStatus === "Pending"
+                            ? "Waiting"
+                            : phase.clientApprovalStatus
+                          : "After testing"}
+                      </Badge>
+                    )}
+                    {phase.clientNote && phase.clientApprovalStatus !== "Approved" && (
+                      <span className="text-slate-500">“{phase.clientNote}”</span>
+                    )}
                   </div>
 
                   {/* PHASE PROGRESS */}

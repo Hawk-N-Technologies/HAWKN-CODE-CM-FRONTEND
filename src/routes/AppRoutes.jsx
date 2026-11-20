@@ -81,6 +81,7 @@ import ClientBugs from "../pages/client/Bugs";
 import ClientDelivery from "../pages/client/Delivery";
 import ClientPhases from "../pages/client/Phases";
 import ClientPhaseTesting from "../pages/client/PhaseTesting";
+import ClientTraining from "../pages/client/Training";
 import ClientProjectDetails from "../pages/client/ProjectDetails";
 import ClientNotifications from "../pages/client/Notifications";
 import TesterNotifications from "../pages/tester/Notifications";
@@ -223,9 +224,15 @@ function AppRoutes() {
             />
             <Route path="/client/phases" element={<ClientPhases />} />
             <Route
-              path="/client/phase-testing"
+              path="/client/phase-approval"
               element={<ClientPhaseTesting />}
             />
+            {/* old link → new name */}
+            <Route
+              path="/client/phase-testing"
+              element={<Navigate to="/client/phase-approval" replace />}
+            />
+            <Route path="/client/training" element={<ClientTraining />} />
             <Route path="/client/bugs" element={<ClientBugs />} />
             <Route path="/client/delivery" element={<ClientDelivery />} />
             <Route path="/client/brd" element={<ClientBRD />} />

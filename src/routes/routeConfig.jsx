@@ -252,11 +252,11 @@ const CLIENT_NAV_SECTIONS = [
       //   path: "/client/phases",
       //   icon: ICONS.checklist,
       // },
-      // {
-      //   label: "Phase Testing",
-      //   path: "/client/phase-testing",
-      //   icon: ICONS.testing,
-      // },
+      {
+        label: "Phase Approval",
+        path: "/client/phase-approval",
+        icon: ICONS.testing,
+      },
       {
         label: "Bugs",
         path: "/client/bugs",
@@ -266,6 +266,11 @@ const CLIENT_NAV_SECTIONS = [
         label: "Delivery",
         path: "/client/delivery",
         icon: ICONS.delivery,
+      },
+      {
+        label: "Training",
+        path: "/client/training",
+        icon: ICONS.internship,
       },
     ],
   },
