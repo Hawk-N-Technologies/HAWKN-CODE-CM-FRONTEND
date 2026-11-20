@@ -4,6 +4,8 @@ import axios from "axios";
 
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
+import PageHeader from "../../components/layout/PageHeader";
+import { FileText } from "lucide-react";
 import { showToast } from "../../components/common/Toast";
 import { getErrorMessage } from "../../services/developerProjectService";
 
@@ -110,32 +112,29 @@ export default function BRD() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">
-            Business Requirements
-          </h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            Review the business requirements document for your project.
-          </p>
-        </div>
-
-        {brds.length > 1 && (
-          <select
-            aria-label="Select BRD"
-            value={selectedUuid}
-            onChange={(event) => setSelectedUuid(event.target.value)}
-            className="h-10 min-w-[16rem] rounded-lg border border-cm-border bg-white px-3 text-sm text-cm-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {brds.map((item) => (
-              <option key={item.uuid} value={item.uuid}>
-                {item.project?.name ? `${item.project.name} — ` : ""}
-                {item.title}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="CLIENT PORTAL"
+        title="Business Requirements"
+        description="Review the business requirements document for your project."
+        icon={FileText}
+        actions={
+          brds.length > 1 && (
+            <select
+              aria-label="Select BRD"
+              value={selectedUuid}
+              onChange={(event) => setSelectedUuid(event.target.value)}
+              className="h-10 min-w-[16rem] rounded-lg border border-cm-border bg-white px-3 text-sm text-cm-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {brds.map((item) => (
+                <option key={item.uuid} value={item.uuid}>
+                  {item.project?.name ? `${item.project.name} — ` : ""}
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          )
+        }
+      />
 
       {isLoading && <p className="text-sm text-cm-text-muted">Loading…</p>}
 

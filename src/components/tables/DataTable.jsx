@@ -57,6 +57,8 @@ const DataTable = ({
   isLoading = false,
   // false → the page slices rows itself (server paging without `pagination`)
   paginate = true,
+  // Optional (row, index) => unique key, when `id` alone isn't unique
+  rowKey,
 }) => {
   // No `pagination` prop → page through `rows` here, 10 at a time
   const clientPager = usePagination(rows, CLIENT_PAGE_SIZE);
@@ -130,7 +132,12 @@ const DataTable = ({
   };
 
   const getRowKey = (row, index) =>
-    row?.id ?? row?.uuid ?? row?.userUuid ?? row?.employeeUuid ?? index;
+    rowKey?.(row, index) ??
+    row?.id ??
+    row?.uuid ??
+    row?.userUuid ??
+    row?.employeeUuid ??
+    index;
 
   const navButtonClass = [
     "inline-flex h-9 items-center justify-center gap-1.5",

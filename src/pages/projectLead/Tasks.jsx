@@ -14,7 +14,6 @@ import {
   Plus,
   Search,
   ShieldAlert,
-  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -26,6 +25,7 @@ import Select from "../../components/common/Select";
 import TableSearch from "../../components/tables/TableSearch";
 import DataTable from "../../components/tables/DataTable";
 import { showToast } from "../../components/common/Toast";
+import InlineDeleteButton from "../../components/common/InlineDeleteButton";
 
 const API = {
   projects: "/api/project-lead/planning/projects",
@@ -653,7 +653,7 @@ function Tasks() {
 
   // Escape key handling for dialogs.
   useEffect(() => {
-    if (!showForm && !deleteTarget) return undefined;
+    if (!showForm && !deleteTarget) return undefined; // Esc also cancels a pending delete
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape" && !saving && !busyTask) {
@@ -936,10 +936,12 @@ function Tasks() {
     }
   };
 
-  const confirmDeleteTask = async () => {
-    if (!deleteTarget) return;
-
-    const task = deleteTarget;
+  // Two clicks, inline: Delete → Confirm delete? (no pop-up)
+  const confirmDeleteTask = async (task) => {
+    if (deleteTarget?.uuid !== task.uuid) {
+      setDeleteTarget(task);
+      return;
+    }
 
     setBusyTask(task.uuid);
 
@@ -956,14 +958,14 @@ function Tasks() {
         closeForm();
       }
 
-      setDeleteTarget(null);
-      showToast.success("Task deleted successfully.");
+      showToast.success(`Task "${task.title}" deleted.`);
     } catch (error) {
       showToast.error(
         errorMessage(error, "Failed to delete task."),
       );
     } finally {
       setBusyTask("");
+      setDeleteTarget(null);
     }
   };
 
@@ -1076,7 +1078,7 @@ function Tasks() {
       key: "actions",
       header: "Actions",
       render: (row) => (
-        <div className="flex min-w-28 items-center gap-2">
+        <div className="flex min-w-44 items-center gap-2">
           <button
             type="button"
             onClick={() => openEditForm(row)}
@@ -1087,15 +1089,13 @@ function Tasks() {
             <Pencil size={14} />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setDeleteTarget(row)}
-            disabled={Boolean(busyTask || saving)}
-            title="Delete task"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Trash2 size={14} />
-          </button>
+          <InlineDeleteButton
+            isConfirming={deleteTarget?.uuid === row.uuid}
+            loading={busyTask === row.uuid && deleteTarget?.uuid === row.uuid}
+            disabled={Boolean(saving || (busyTask && busyTask !== row.uuid))}
+            onDelete={() => confirmDeleteTask(row)}
+            onKeep={() => setDeleteTarget(null)}
+          />
         </div>
       ),
     },
@@ -1939,71 +1939,6 @@ function Tasks() {
         </ModalShell>
       )}
 
-      {/* DELETE CONFIRMATION MODAL */}
-      {deleteTarget && (
-        <ModalShell
-          eyebrow="Task Management"
-          title="Delete Task"
-          description="Confirm removal of this task from the project."
-          onClose={() => {
-            if (!busyTask) setDeleteTarget(null);
-          }}
-          maxWidth="max-w-lg"
-        >
-          <div className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                <Trash2 size={22} />
-              </div>
-
-              <div className="min-w-0">
-                <h3 className="text-base font-bold text-slate-800">
-                  Delete this task?
-                </h3>
-
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  You are about to delete{" "}
-                  <span className="font-semibold text-slate-800">
-                    "{deleteTarget.title}"
-                  </span>
-                  . This action cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
-                Task reference
-              </p>
-              <p className="mt-1 break-all text-sm font-medium text-red-800">
-                {deleteTarget.uuid}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setDeleteTarget(null)}
-              disabled={Boolean(busyTask)}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              type="button"
-              variant="danger"
-              onClick={confirmDeleteTask}
-              disabled={Boolean(busyTask)}
-            >
-              {busyTask === deleteTarget.uuid
-                ? "Deleting..."
-                : "Delete Task"}
-            </Button>
-          </div>
-        </ModalShell>
-      )}
     </div>
   );
 }

@@ -5,7 +5,6 @@ import {
   CalendarClock,
   Plus,
   Search,
-  Trash2,
   X,
   CheckCircle2,
   CircleDollarSign,
@@ -18,7 +17,7 @@ import Button from "../../components/common/Button";
 import DataTable from "../../components/tables/DataTable";
 import Input from "../../components/common/Input";
 import { showToast } from "../../components/common/Toast";
-import { showAlert } from "../../components/common/Alert";
+import InlineDeleteButton from "../../components/common/InlineDeleteButton";
 import axios from "axios";
 
 // --------------------------------------------------
@@ -227,6 +226,7 @@ function Holiday() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingUuid, setDeletingUuid] = useState(null);
+  const [confirmDeleteUuid, setConfirmDeleteUuid] = useState(null);
 
   // Server-side pagination
   const [page, setPage] = useState(1);
@@ -398,15 +398,12 @@ function Holiday() {
   // DELETE HOLIDAY
   // --------------------------------------------------
 
+  // Two clicks, inline: Delete → Confirm delete? (no pop-up)
   async function deleteHoliday(uuid, holidayName) {
-    const result = await showAlert.confirm({
-      title: "Delete holiday?",
-      text: `Are you sure you want to delete "${holidayName}"? This action cannot be undone.`,
-      confirmButtonText: "Yes, delete it",
-      cancelButtonText: "Cancel",
-    });
-
-    if (!result.isConfirmed) return;
+    if (confirmDeleteUuid !== uuid) {
+      setConfirmDeleteUuid(uuid);
+      return;
+    }
 
     try {
       setDeletingUuid(uuid);
@@ -416,7 +413,7 @@ function Holiday() {
       });
 
       if (res.status === 200) {
-        showToast.success("Holiday removed successfully.");
+        showToast.success(`Holiday "${holidayName}" removed.`);
 
         // If the last row on this page was deleted, go to the previous page.
         if (holidays.length === 1 && page > 1) {
@@ -433,6 +430,7 @@ function Holiday() {
       );
     } finally {
       setDeletingUuid(null);
+      setConfirmDeleteUuid(null);
     }
   }
 
@@ -555,30 +553,17 @@ function Holiday() {
     {
       key: "actions",
       header: "ACTIONS",
-      render: (row) => {
-        const isDeleting = deletingUuid === row.uuid;
-
-        return (
-          <Button
-            size="sm"
-            variant="danger"
-            disabled={Boolean(deletingUuid)}
-            onClick={() => deleteHoliday(row.uuid, row.name)}
-          >
-            {isDeleting ? (
-              <span className="inline-flex items-center gap-2">
-                <RefreshCw size={14} className="animate-spin" />
-                Deleting
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2">
-                <Trash2 size={14} />
-                Delete
-              </span>
-            )}
-          </Button>
-        );
-      },
+      render: (row) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <InlineDeleteButton
+            isConfirming={confirmDeleteUuid === row.uuid}
+            loading={deletingUuid === row.uuid}
+            disabled={Boolean(deletingUuid) && deletingUuid !== row.uuid}
+            onDelete={() => deleteHoliday(row.uuid, row.name)}
+            onKeep={() => setConfirmDeleteUuid(null)}
+          />
+        </div>
+      ),
     },
   ];
 
@@ -637,18 +622,11 @@ function Holiday() {
               </span>
             </Button>
 
-            <Button
-              onClick={() => {
-                if (showForm) {
-                  closeForm();
-                } else {
-                  setShowForm(true);
-                }
-              }}
-            >
+            {/* Opens the Add Holiday pop-up */}
+            <Button onClick={() => setShowForm(true)}>
               <span className="inline-flex items-center gap-2">
-                {showForm ? <X size={16} /> : <Plus size={16} />}
-                {showForm ? "Close Form" : "Add Holiday"}
+                <Plus size={16} />
+                Add Holiday
               </span>
             </Button>
           </div>

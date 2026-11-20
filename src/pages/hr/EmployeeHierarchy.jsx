@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import Badge from "../../components/common/Badge";
+import PageHeader from "../../components/layout/PageHeader";
+import { Network } from "lucide-react";
 import { getErrorMessage } from "../../services/developerProjectService";
 
 /**
@@ -41,20 +43,20 @@ function EmployeeHierarchy() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-cm-text">Employee Hierarchy</h1>
-          <p className="mt-1 text-sm text-cm-text-muted">
-            The company hierarchy, as maintained by the Admin.
-          </p>
-        </div>
-
-        {!isLoading && !loadError && (
-          <Badge tone="info">
-            {images.length} {images.length === 1 ? "image" : "images"}
-          </Badge>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="HR MANAGEMENT"
+        title="Employee Hierarchy"
+        description="The company hierarchy, as maintained by the Admin."
+        icon={Network}
+        actions={
+          !isLoading &&
+          !loadError && (
+            <Badge tone="info">
+              {images.length} {images.length === 1 ? "image" : "images"}
+            </Badge>
+          )
+        }
+      />
 
       {isLoading && (
         <p className="text-sm text-cm-text-muted">Loading hierarchy…</p>

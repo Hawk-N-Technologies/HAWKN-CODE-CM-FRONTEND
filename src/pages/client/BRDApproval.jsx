@@ -25,7 +25,6 @@ import Badge from "../../components/common/Badge";
 import Textarea from "../../components/common/TextArea";
 import Loader from "../../components/common/Loader";
 import { showToast } from "../../components/common/Toast";
-import showAlert from "../../components/common/Alert";
 import usePagination from "../../hooks/usePagination";
 import TablePagination from "../../components/tables/TablePagination";
 
@@ -536,20 +535,7 @@ export default function BRDApproval() {
     const isApproval = action === "APPROVED";
 
     try {
-      const result = await showAlert.confirm({
-        title: isApproval ? "Approve this BRD?" : "Request changes?",
-        text: isApproval
-          ? "Your approval will complete the BRD approval workflow."
-          : "The BRD will be returned for corrections. Your reason will be saved.",
-        confirmButtonText: isApproval ? "Approve BRD" : "Request changes",
-        cancelButtonText: "Cancel",
-      });
-
-      const confirmed =
-        typeof result === "boolean" ? result : Boolean(result?.isConfirmed);
-
-      if (!confirmed) return;
-
+      // No extra "are you sure?" pop-up: the decision is made inside the review dialog
       setSubmitting(true);
 
       const response = await axios.patch(

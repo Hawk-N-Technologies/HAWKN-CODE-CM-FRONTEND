@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Badge from "../../components/common/Badge";
+import PageHeader from "../../components/layout/PageHeader";
+import { Layers3 } from "lucide-react";
 import {
   getClientProjects,
   getClientProjectPhases,
@@ -178,14 +180,12 @@ export default function Phases() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold text-cm-text">
-          Project Phases
-        </h1>
-        <p className="mt-1 text-sm text-cm-text-muted">
-          View modules, phases, tasks, and progress for your projects.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="CLIENT PORTAL"
+        title="Project Phases"
+        description="View modules, phases, tasks, and progress for your projects."
+        icon={Layers3}
+      />
 
       {/* Project selector */}
       <section className="rounded-cm-lg border border-cm-border bg-cm-card p-5 shadow-sm">

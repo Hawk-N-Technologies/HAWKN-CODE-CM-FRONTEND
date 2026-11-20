@@ -5,7 +5,6 @@ import {
   Layers3,
   Plus,
   Pencil,
-  Trash2,
   ListOrdered,
   CheckCircle2,
   AlertCircle,
@@ -20,6 +19,7 @@ import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
 import { showToast } from "../../components/common/Toast";
+import InlineDeleteButton from "../../components/common/InlineDeleteButton";
 
 const PRIORITIES = ["Low", "Medium", "High", "Critical"].map((value) => ({
   value,
@@ -47,11 +47,6 @@ const getPriorityTone = (priority) => {
   return "neutral";
 };
 
-const getStatusTone = (status) => {
-  if (status === "Completed") return "success";
-  if (status === "In Progress") return "info";
-  return "neutral";
-};
 
 const getStatusClasses = (status) => {
   const styles = {
@@ -118,12 +113,6 @@ function ModalHeader({ mode, onClose, disabled }) {
       eyebrow: "MODULE MANAGEMENT",
       title: "Edit Module",
       description: "Update the module configuration and details.",
-    },
-    delete: {
-      icon: Trash2,
-      eyebrow: "MODULE MANAGEMENT",
-      title: "Delete Module",
-      description: "Review the module information before deleting it.",
     },
   };
 
@@ -255,6 +244,8 @@ function ModulesFeatures() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Two-click inline delete: which card is showing "Confirm delete?"
+  const [confirmDeleteUuid, setConfirmDeleteUuid] = useState(null);
 
   const [modal, setModal] = useState({
     open: false,
@@ -498,14 +489,6 @@ function ModulesFeatures() {
     });
   };
 
-  // Open Delete Module confirmation modal.
-  const openDeleteModal = (module) => {
-    setModal({
-      open: true,
-      mode: "delete",
-      module,
-    });
-  };
 
   // Update module.
   const updateModule = async (e) => {
@@ -586,33 +569,31 @@ function ModulesFeatures() {
   };
 
   // Delete module.
-  const deleteModule = async () => {
-    if (!modal.module?.uuid) return;
+  const deleteModule = async (module) => {
+    if (confirmDeleteUuid !== module.uuid) {
+      setConfirmDeleteUuid(module.uuid);
+      return;
+    }
 
     setDeleting(true);
 
     try {
-      await axios.delete(`/api/modules/${modal.module.uuid}`, {
+      await axios.delete(`/api/modules/${module.uuid}`, {
         withCredentials: true,
       });
 
       setModules((previous) =>
-        previous.filter((module) => module.uuid !== modal.module.uuid),
+        previous.filter((item) => item.uuid !== module.uuid),
       );
 
-      setModal({
-        open: false,
-        mode: "",
-        module: null,
-      });
-
-      showToast.success("Module deleted successfully.");
+      showToast.success(`Module "${module.name}" deleted.`);
     } catch (error) {
       showToast.error(
         getErrorMessage(error, "Failed to delete module."),
       );
     } finally {
       setDeleting(false);
+      setConfirmDeleteUuid(null);
     }
   };
 
@@ -916,15 +897,13 @@ function ModulesFeatures() {
                           </span>
                         </Button>
 
-                        <button
-                          type="button"
-                          onClick={() => openDeleteModal(module)}
-                          disabled={modalBusy}
-                          className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
+                        <InlineDeleteButton
+                          isConfirming={confirmDeleteUuid === module.uuid}
+                          loading={deleting && confirmDeleteUuid === module.uuid}
+                          disabled={modalBusy && !(deleting && confirmDeleteUuid === module.uuid)}
+                          onDelete={() => deleteModule(module)}
+                          onKeep={() => setConfirmDeleteUuid(null)}
+                        />
                       </div>
                     </div>
                   </article>
@@ -1077,93 +1056,6 @@ function ModulesFeatures() {
             {/* =================================================
                 DELETE MODULE MODAL
             ================================================== */}
-            {modal.mode === "delete" && (
-              <>
-                <div className="space-y-4 overflow-y-auto p-6">
-                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
-                      <AlertCircle size={20} />
-                    </div>
-
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-red-800">
-                        Confirm module deletion
-                      </h3>
-
-                      <p className="mt-1 text-sm leading-6 text-red-700">
-                        Are you sure you want to delete{" "}
-                        <span className="font-bold">
-                          {modal.module?.name}
-                        </span>
-                        ? This action cannot be undone.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Module Details
-                    </p>
-
-                    <p className="mt-2 break-words text-sm font-semibold text-slate-800">
-                      {modal.module?.name}
-                    </p>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      {modal.module?.description ||
-                        "No description provided."}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Badge
-                        tone={getPriorityTone(modal.module?.priority)}
-                      >
-                        {modal.module?.priority}
-                      </Badge>
-
-                      <Badge
-                        tone={getStatusTone(modal.module?.status)}
-                      >
-                        {modal.module?.status}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-semibold text-amber-800">
-                      Important
-                    </p>
-
-                    <p className="mt-1 text-sm leading-6 text-amber-700">
-                      Check whether this module contains phases or tasks
-                      before deleting it. Related records may be removed by
-                      database cascade rules.
-                    </p>
-                  </div>
-                </div>
-
-                {/* DELETE MODAL FOOTER */}
-                <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-                  <Button
-                    type="button"
-                    onClick={closeModal}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </Button>
-
-                  <button
-                    type="button"
-                    onClick={deleteModule}
-                    disabled={deleting}
-                    className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Trash2 size={15} />
-                    {deleting ? "Deleting..." : "Delete Module"}
-                  </button>
-                </div>
-              </>
-            )}
           </section>
         </div>
       )}

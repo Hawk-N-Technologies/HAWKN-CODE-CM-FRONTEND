@@ -492,7 +492,8 @@ function ProjectProgress() {
                 Active Project
               </p>
               <p className="text-sm font-semibold text-white">
-                Acme Retail ERP
+                {projects.find((project) => project.uuid === projectUuid)?.name ??
+                  (isLoading ? "Loading…" : "None selected")}
               </p>
             </div>
           </div>
